@@ -1,4 +1,4 @@
-use crate::{AttrSet, Diff, List, Platform, Unmount};
+use crate::{AttrSet, Children, Diff, Platform, Unmount, ViewState};
 
 impl Diff for () {
     type State = ();
@@ -10,8 +10,10 @@ impl Diff for () {
     fn diff<P: Platform>(self, _: &mut Self::State, _cursor: &mut P::Cursor) {}
 }
 
-impl List for () {}
-impl AttrSet for () {}
 impl Unmount for () {
     fn unmount<P: Platform>(&mut self, _cursor: &mut P::Cursor) {}
 }
+
+impl Children for () {}
+impl AttrSet for () {}
+impl ViewState for () {}

@@ -1,4 +1,4 @@
-use crate::{AttrSet, Diff, Handle, List, Platform, Unmount};
+use crate::{AttrSet, Children, Diff, Handle, Platform, Unmount, ViewState};
 
 pub struct Element<A, C> {
     name: &'static str,
@@ -6,7 +6,7 @@ pub struct Element<A, C> {
     children: C,
 }
 
-impl<A: List, C: List> Element<A, C> {
+impl<A: AttrSet, C: Children> Element<A, C> {
     pub fn new(name: &'static str, attrs: A, children: C) -> Self {
         Self {
             name,
@@ -16,8 +16,8 @@ impl<A: List, C: List> Element<A, C> {
     }
 }
 
-impl<A: AttrSet, C: List> Diff for Element<A, C> {
-    type State = ElementState<A, C>;
+impl<A: AttrSet, C: Children> Diff for Element<A, C> {
+    type State = State<A, C>;
 
     fn init<P: Platform>(self, cursor: &mut P::Cursor) -> Self::State {
         let handle = P::new_element(cursor, self.name);
@@ -28,7 +28,7 @@ impl<A: AttrSet, C: List> Diff for Element<A, C> {
 
         let children = self.children.init::<P>(cursor);
 
-        ElementState {
+        State {
             handle,
             attrs,
             children,
@@ -44,14 +44,16 @@ impl<A: AttrSet, C: List> Diff for Element<A, C> {
     }
 }
 
-pub struct ElementState<A: AttrSet, C: List> {
+pub struct State<A: AttrSet, C: Children> {
     handle: Handle,
-    attrs: <A as Diff>::State,
-    children: <C as Diff>::State,
+    attrs: A::State,
+    children: C::State,
 }
 
-impl<A: AttrSet, C: List> Unmount for ElementState<A, C> {
+impl<A: AttrSet, C: Children> Unmount for State<A, C> {
     fn unmount<P: Platform>(&mut self, cursor: &mut P::Cursor) {
         P::unmount(&mut self.handle, cursor);
     }
 }
+
+impl<A: AttrSet, C: Children> ViewState for State<A, C> {}

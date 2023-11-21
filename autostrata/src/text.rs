@@ -1,4 +1,4 @@
-use crate::{Diff, Handle, Platform};
+use crate::{Diff, Handle, Platform, ViewState};
 
 impl Diff for &'static str {
     type State = (Handle, Self);
@@ -14,3 +14,5 @@ impl Diff for &'static str {
         }
     }
 }
+
+impl ViewState for (Handle, &'static str) {}

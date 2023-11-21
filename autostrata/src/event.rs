@@ -23,11 +23,11 @@ impl On {
 }
 
 impl Diff for On {
-    type State = EventState;
+    type State = OnState;
 
     fn init<P: crate::Platform>(self, cursor: &mut P::Cursor) -> Self::State {
         let handle = P::register_event(cursor, &self);
-        EventState {
+        OnState {
             event: self.0,
             handle,
         }
@@ -38,12 +38,12 @@ impl Diff for On {
 
 impl Attr for On {}
 
-pub struct EventState {
+pub struct OnState {
     event: Event,
     handle: Handle,
 }
 
-impl Unmount for EventState {
+impl Unmount for OnState {
     fn unmount<P: crate::Platform>(&mut self, cursor: &mut P::Cursor) {
         P::unmount(&mut self.handle, cursor);
     }

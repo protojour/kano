@@ -22,7 +22,9 @@ pub trait Diff {
 
 pub trait View: Diff {}
 
-impl<T: Diff> View for T where T::State: Unmount {}
+pub trait ViewState: Unmount {}
+
+impl<T: Diff> View for T where T::State: ViewState {}
 
 pub trait Platform {
     type Cursor: Clone + 'static;
@@ -68,7 +70,7 @@ impl<T> Unmount for (Handle, T) {
     }
 }
 
-pub trait List: Diff {}
+pub trait Children: Diff {}
 
 pub trait AttrSet: Diff {}
 
