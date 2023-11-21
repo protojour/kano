@@ -1,0 +1,21 @@
+[package]
+name = "autostrata-dom"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[features]
+
+[dependencies]
+autostrata = { path = "../autostrata", features = ["dom"] }
+js-sys = "0.3"
+web-sys = { version = "0.3", features = [
+    "Window",
+    "Node",
+    "Text",
+    "Document",
+    "Element",
+    "HtmlElement",
+] }
+wasm-bindgen = "0.2"

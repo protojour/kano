@@ -1,4 +1,4 @@
-use autostrata::{dom::*, *};
+use autostrata::*;
 
 fn poc() -> impl View {
     let opt: Option<i32> = Some(32);
@@ -17,12 +17,12 @@ fn poc() -> impl View {
                     Element::new("li", (), ("Three",)),
                 ),
             ),
-            Element::new("button", (on_click(),), ("click me",)),
+            Element::new("button", (On::click(),), ("click me",)),
         ),
     )
 }
 
 fn main() {
     console_error_panic_hook::set_once();
-    Dom::hydrate(poc());
+    autostrata_dom::Dom::hydrate(poc());
 }

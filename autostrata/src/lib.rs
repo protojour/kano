@@ -8,9 +8,6 @@ mod text;
 mod tuple;
 mod unit;
 
-#[cfg(feature = "dom")]
-pub mod dom;
-
 pub use element::*;
 pub use event::*;
 pub use style::*;
@@ -35,7 +32,7 @@ pub trait Platform {
 
     fn new_element(cursor: &mut Self::Cursor, name: &str) -> Handle;
 
-    fn register_event(cursor: &mut Self::Cursor, event: &OnEvent) -> Handle;
+    fn register_event(cursor: &mut Self::Cursor, event: &On) -> Handle;
 
     fn enter_child(cursor: &mut Self::Cursor);
     fn exit_child(cursor: &mut Self::Cursor);

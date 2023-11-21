@@ -1,7 +1,7 @@
 use js_sys::wasm_bindgen::JsCast;
 use web_sys::{window, Document};
 
-use crate::{Diff, Event, Handle, OnEvent, Platform};
+use autostrata::{Diff, Event, Handle, On, Platform};
 
 pub struct Dom;
 
@@ -32,10 +32,10 @@ impl Platform for Dom {
         Handle::DomNode(element.into())
     }
 
-    fn register_event(cursor: &mut Self::Cursor, event: &OnEvent) -> Handle {
+    fn register_event(cursor: &mut Self::Cursor, on_event: &On) -> Handle {
         match cursor {
             Cursor::AttrsOf(element) => {
-                let event_type = match event.0 {
+                let event_type = match on_event.event() {
                     Event::Click => "onclick",
                     Event::MouseOver => "onmouseover",
                 };

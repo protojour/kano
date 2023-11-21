@@ -6,17 +6,23 @@ pub enum Event {
     MouseOver,
 }
 
-pub struct OnEvent(pub(crate) Event);
+pub struct On(pub(crate) Event);
 
-pub fn on_click() -> OnEvent {
-    OnEvent(Event::Click)
+impl On {
+    pub fn click() -> On {
+        On(Event::Click)
+    }
+
+    pub fn mouseover() -> On {
+        On(Event::MouseOver)
+    }
+
+    pub fn event(&self) -> &Event {
+        &self.0
+    }
 }
 
-pub fn on_mouseover() -> OnEvent {
-    OnEvent(Event::MouseOver)
-}
-
-impl Diff for OnEvent {
+impl Diff for On {
     type State = EventState;
 
     fn init<P: crate::Platform>(self, cursor: &mut P::Cursor) -> Self::State {
@@ -30,7 +36,7 @@ impl Diff for OnEvent {
     fn diff<P: crate::Platform>(self, state: &mut Self::State, cursor: &mut P::Cursor) {}
 }
 
-impl Attr for OnEvent {}
+impl Attr for On {}
 
 pub struct EventState {
     event: Event,
