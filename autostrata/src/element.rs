@@ -1,4 +1,7 @@
-use crate::{AttrSet, Children, Diff, Handle, Platform, Unmount, ViewState};
+use crate::{
+    platform::{Handle, Platform},
+    AttrSet, Children, Diff, Unmount, ViewState,
+};
 
 pub struct Element<A, C> {
     name: &'static str,

@@ -1,10 +1,11 @@
+use autostrata::platform::{Handle, Platform};
 use gloo::events::EventListener;
 use js_sys::wasm_bindgen::*;
 use wasm_bindgen::prelude::*;
 use web_sys::EventTarget;
 use web_sys::{window, Document};
 
-use autostrata::{Event, Handle, On, Platform, View};
+use autostrata::{Event, On, View};
 
 pub struct Dom {}
 

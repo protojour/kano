@@ -1,4 +1,7 @@
-use crate::{Attr, Diff, Handle, Unmount};
+use crate::{
+    platform::{Handle, Platform},
+    Attr, Diff, Unmount,
+};
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Event {
@@ -39,13 +42,13 @@ impl On {
 impl Diff for On {
     type State = OnState;
 
-    fn init<P: crate::Platform>(self, cursor: &mut P::Cursor) -> Self::State {
+    fn init<P: Platform>(self, cursor: &mut P::Cursor) -> Self::State {
         OnState {
             handle: P::register_event(cursor, self),
         }
     }
 
-    fn diff<P: crate::Platform>(self, _state: &mut Self::State, _cursor: &mut P::Cursor) {}
+    fn diff<P: Platform>(self, _state: &mut Self::State, _cursor: &mut P::Cursor) {}
 }
 
 impl Attr for On {}
@@ -55,7 +58,7 @@ pub struct OnState {
 }
 
 impl Unmount for OnState {
-    fn unmount<P: crate::Platform>(&mut self, cursor: &mut P::Cursor) {
+    fn unmount<P: Platform>(&mut self, cursor: &mut P::Cursor) {
         P::unmount(&mut self.handle, cursor);
     }
 }
