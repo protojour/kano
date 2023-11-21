@@ -1,7 +1,7 @@
 use js_sys::wasm_bindgen::JsCast;
 use web_sys::{window, Document};
 
-use crate::{Diff, Handle, Platform};
+use crate::{Diff, Event, Handle, OnEvent, Platform};
 
 pub struct Dom;
 
@@ -32,8 +32,29 @@ impl Platform for Dom {
         Handle::DomNode(element.into())
     }
 
-    fn enter_attrs(_cursor: &mut Self::Cursor) {}
-    fn exit_attrs(_cursor: &mut Self::Cursor) {}
+    fn register_event(cursor: &mut Self::Cursor, event: &OnEvent) -> Handle {
+        match cursor {
+            Cursor::AttrsOf(element) => {
+                let event_type = match event.0 {
+                    Event::Click => "onclick",
+                    Event::MouseOver => "onmouseover",
+                };
+
+                let rust_fn: Box<dyn FnMut()> = Box::new(|| panic!("vfdsfds"));
+                let js_closure = wasm_bindgen::closure::Closure::wrap(rust_fn);
+
+                element
+                    .add_event_listener_with_callback(
+                        event_type,
+                        js_closure.as_ref().unchecked_ref(),
+                    )
+                    .unwrap();
+
+                Handle::DomAttr(event_type)
+            }
+            Cursor::LastChildOf(_) => panic!(),
+        }
+    }
 
     fn enter_child(cursor: &mut Self::Cursor) {
         match cursor {
@@ -41,6 +62,7 @@ impl Platform for Dom {
                 let last_child = element.last_element_child().unwrap();
                 *cursor = Cursor::LastChildOf(last_child);
             }
+            Cursor::AttrsOf(_) => {}
         }
     }
     fn exit_child(cursor: &mut Self::Cursor) {
@@ -49,18 +71,47 @@ impl Platform for Dom {
                 let parent = element.parent_element().unwrap();
                 *cursor = Cursor::LastChildOf(parent);
             }
+            Cursor::AttrsOf(_) => {}
         }
     }
 
-    fn unmount(handle: &mut Handle) {
-        let node = dom_node(handle);
-        node.parent_element().unwrap().remove_child(node).unwrap();
+    fn enter_attrs(cursor: &mut Self::Cursor) {
+        match cursor {
+            Cursor::LastChildOf(element) => {
+                let last_child = element.last_element_child().unwrap();
+                *cursor = Cursor::AttrsOf(last_child);
+            }
+            Cursor::AttrsOf(_) => panic!(),
+        }
+    }
+
+    fn exit_attrs(cursor: &mut Self::Cursor) {
+        match cursor {
+            Cursor::AttrsOf(element) => {
+                let parent = element.parent_element().unwrap();
+                *cursor = Cursor::LastChildOf(parent);
+            }
+            Cursor::LastChildOf(_) => panic!(),
+        }
+    }
+
+    fn unmount(handle: &mut Handle, cursor: &mut Cursor) {
+        match (cursor, handle) {
+            (Cursor::LastChildOf(_), Handle::DomNode(node)) => {
+                node.parent_element().unwrap().remove_child(node).unwrap();
+            }
+            (Cursor::AttrsOf(element), Handle::DomAttr(name)) => {
+                let _ = element.remove_attribute(name);
+            }
+            _ => panic!("Can't unmount"),
+        }
     }
 }
 
 #[derive(Clone)]
 pub enum Cursor {
     LastChildOf(web_sys::Element),
+    AttrsOf(web_sys::Element),
 }
 
 impl Cursor {
@@ -69,6 +120,7 @@ impl Cursor {
             Self::LastChildOf(element) => {
                 element.append_child(node).unwrap();
             }
+            Self::AttrsOf(_) => panic!(),
         }
     }
 }

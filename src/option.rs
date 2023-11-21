@@ -16,7 +16,7 @@ where
                 value.diff::<P>(state, cursor);
             }
             (Some(state), None) => {
-                state.unmount::<P>();
+                state.unmount::<P>(cursor);
             }
             (state @ None, Some(value)) => {
                 *state = Some(value.init::<P>(cursor));

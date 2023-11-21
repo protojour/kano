@@ -1,4 +1,4 @@
-use crate::{Diff, List, Platform};
+use crate::{Attr, AttrSet, Diff, List, Platform};
 
 macro_rules! tuples {
     ($(($t:ident, $i:tt)),+) => {
@@ -20,6 +20,9 @@ macro_rules! tuples {
         }
 
         impl<$($t: Diff),+> List for ($($t),+,) {
+        }
+
+        impl<$($t: Attr),+> AttrSet for ($($t),+,) {
         }
     }
 }

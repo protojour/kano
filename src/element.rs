@@ -1,4 +1,4 @@
-use crate::{Diff, Handle, List, Platform, Unmount};
+use crate::{AttrSet, Diff, Handle, List, Platform, Unmount};
 
 pub struct Element<A, C> {
     name: &'static str,
@@ -16,7 +16,7 @@ impl<A: List, C: List> Element<A, C> {
     }
 }
 
-impl<A: Diff, C: Diff> Diff for Element<A, C> {
+impl<A: AttrSet, C: List> Diff for Element<A, C> {
     type State = ElementState<A, C>;
 
     fn init<P: Platform>(self, cursor: &mut P::Cursor) -> Self::State {
@@ -44,14 +44,14 @@ impl<A: Diff, C: Diff> Diff for Element<A, C> {
     }
 }
 
-pub struct ElementState<A: Diff, C: Diff> {
+pub struct ElementState<A: AttrSet, C: List> {
     handle: Handle,
     attrs: <A as Diff>::State,
     children: <C as Diff>::State,
 }
 
-impl<A: Diff, C: Diff> Unmount for ElementState<A, C> {
-    fn unmount<P: Platform>(&mut self) {
-        P::unmount(&mut self.handle);
+impl<A: AttrSet, C: List> Unmount for ElementState<A, C> {
+    fn unmount<P: Platform>(&mut self, cursor: &mut P::Cursor) {
+        P::unmount(&mut self.handle, cursor);
     }
 }

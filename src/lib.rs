@@ -1,7 +1,9 @@
 use std::any::Any;
 
 mod element;
+mod event;
 mod option;
+mod style;
 mod text;
 mod tuple;
 mod unit;
@@ -10,6 +12,8 @@ mod unit;
 pub mod dom;
 
 pub use element::*;
+pub use event::*;
+pub use style::*;
 
 pub trait Diff {
     type State;
@@ -31,13 +35,15 @@ pub trait Platform {
 
     fn new_element(cursor: &mut Self::Cursor, name: &str) -> Handle;
 
-    fn enter_attrs(cursor: &mut Self::Cursor);
-    fn exit_attrs(cursor: &mut Self::Cursor);
+    fn register_event(cursor: &mut Self::Cursor, event: &OnEvent) -> Handle;
 
     fn enter_child(cursor: &mut Self::Cursor);
     fn exit_child(cursor: &mut Self::Cursor);
 
-    fn unmount(handle: &mut Handle);
+    fn enter_attrs(cursor: &mut Self::Cursor);
+    fn exit_attrs(cursor: &mut Self::Cursor);
+
+    fn unmount(handle: &mut Handle, cursor: &mut Self::Cursor);
 }
 
 pub enum Handle {
@@ -45,22 +51,28 @@ pub enum Handle {
     Dyn(Box<dyn Any>),
     #[cfg(feature = "dom")]
     DomNode(web_sys::Node),
+    #[cfg(feature = "dom")]
+    DomAttr(&'static str),
 }
 
 pub trait Unmount: Sized {
-    fn unmount<P: Platform>(&mut self);
+    fn unmount<P: Platform>(&mut self, cursor: &mut P::Cursor);
 }
 
 impl Unmount for Handle {
-    fn unmount<P: Platform>(&mut self) {
-        P::unmount(self);
+    fn unmount<P: Platform>(&mut self, cursor: &mut P::Cursor) {
+        P::unmount(self, cursor);
     }
 }
 
 impl<T> Unmount for (Handle, T) {
-    fn unmount<P: Platform>(&mut self) {
-        P::unmount(&mut self.0);
+    fn unmount<P: Platform>(&mut self, cursor: &mut P::Cursor) {
+        P::unmount(&mut self.0, cursor);
     }
 }
 
 pub trait List: Diff {}
+
+pub trait AttrSet: Diff {}
+
+pub trait Attr: Diff {}

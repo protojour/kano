@@ -1,4 +1,4 @@
-use crate::{Diff, List, Platform, Unmount};
+use crate::{AttrSet, Diff, List, Platform, Unmount};
 
 impl Diff for () {
     type State = ();
@@ -11,6 +11,7 @@ impl Diff for () {
 }
 
 impl List for () {}
+impl AttrSet for () {}
 impl Unmount for () {
-    fn unmount<P: Platform>(&mut self) {}
+    fn unmount<P: Platform>(&mut self, _cursor: &mut P::Cursor) {}
 }

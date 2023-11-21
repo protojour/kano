@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 autostrata = { path = "../..", features = ["dom"]}
 wasm-bindgen = "0.2"
+console_error_panic_hook = "0.1"
