@@ -1,0 +1,20 @@
+[package]
+name = "autostrata"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[features]
+dom = ["js-sys", "web-sys"]
+
+[dependencies]
+js-sys = { version = "0.3", optional = true }
+web-sys = { version = "0.3.64", optional = true, features = [
+    "Window",
+    "Node",
+    "Text",
+    "Document",
+    "Element",
+    "HtmlElement",
+] }
