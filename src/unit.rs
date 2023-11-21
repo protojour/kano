@@ -1,16 +1,16 @@
-use crate::{Diff, List, Renderer, Unmount};
+use crate::{Diff, List, Platform, Unmount};
 
 impl Diff for () {
     type State = ();
 
-    fn init<R: Renderer>(self, _cursor: &mut R::Cursor) -> () {
+    fn init<P: Platform>(self, _cursor: &mut P::Cursor) -> () {
         ()
     }
 
-    fn diff<R: Renderer>(self, _: &mut Self::State, _cursor: &mut R::Cursor) {}
+    fn diff<P: Platform>(self, _: &mut Self::State, _cursor: &mut P::Cursor) {}
 }
 
 impl List for () {}
 impl Unmount for () {
-    fn unmount<R: Renderer>(&mut self) {}
+    fn unmount<P: Platform>(&mut self) {}
 }

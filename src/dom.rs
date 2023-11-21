@@ -1,7 +1,7 @@
 use js_sys::wasm_bindgen::JsCast;
 use web_sys::{window, Document};
 
-use crate::{Diff, Handle, Renderer};
+use crate::{Diff, Handle, Platform};
 
 pub struct Dom;
 
@@ -12,7 +12,7 @@ impl Dom {
     }
 }
 
-impl Renderer for Dom {
+impl Platform for Dom {
     type Cursor = Cursor;
 
     fn new_text(text: &str, cursor: &mut Self::Cursor) -> Handle {

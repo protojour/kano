@@ -1,15 +1,15 @@
-use crate::{Diff, Handle, Renderer};
+use crate::{Diff, Handle, Platform};
 
 impl Diff for &'static str {
     type State = (Handle, Self);
 
-    fn init<R: Renderer>(self, cursor: &mut R::Cursor) -> (Handle, Self) {
-        (R::new_text(self, cursor), self)
+    fn init<P: Platform>(self, cursor: &mut P::Cursor) -> (Handle, Self) {
+        (P::new_text(self, cursor), self)
     }
 
-    fn diff<R: Renderer>(self, (handle, old): &mut Self::State, _cursor: &mut R::Cursor) {
+    fn diff<P: Platform>(self, (handle, old): &mut Self::State, _cursor: &mut P::Cursor) {
         if self != *old {
-            R::update_text(handle, &self);
+            P::update_text(handle, &self);
             *old = self;
         }
     }

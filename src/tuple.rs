@@ -1,21 +1,21 @@
-use crate::{Diff, List, Renderer};
+use crate::{Diff, List, Platform};
 
 macro_rules! tuples {
     ($(($t:ident, $i:tt)),+) => {
         impl<$($t: Diff),+> Diff for ($($t),+,) {
             type State = ($($t::State),+,);
 
-            fn init<R: Renderer>(self, cursor: &mut R::Cursor) -> Self::State {
-                R::enter_child(cursor);
-                let ret = ($(self.$i.init::<R>(cursor)),+,);
-                R::exit_child(cursor);
+            fn init<P: Platform>(self, cursor: &mut P::Cursor) -> Self::State {
+                P::enter_child(cursor);
+                let ret = ($(self.$i.init::<P>(cursor)),+,);
+                P::exit_child(cursor);
                 ret
             }
 
-            fn diff<R: Renderer>(self, state: &mut Self::State, cursor: &mut R::Cursor) {
-                R::enter_child(cursor);
-                $(self.$i.diff::<R>(&mut state.$i, cursor));+;
-                R::exit_child(cursor);
+            fn diff<P: Platform>(self, state: &mut Self::State, cursor: &mut P::Cursor) {
+                P::enter_child(cursor);
+                $(self.$i.diff::<P>(&mut state.$i, cursor));+;
+                P::exit_child(cursor);
             }
         }
 

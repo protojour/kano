@@ -11,14 +11,19 @@ pub mod dom;
 
 pub use element::*;
 
-pub enum Handle {
-    Index(usize),
-    Dyn(Box<dyn Any>),
-    #[cfg(feature = "dom")]
-    DomNode(web_sys::Node),
+pub trait Diff {
+    type State;
+
+    // TODO: Should take renderer instance?
+    fn init<P: Platform>(self, cursor: &mut P::Cursor) -> Self::State;
+    fn diff<P: Platform>(self, state: &mut Self::State, cursor: &mut P::Cursor);
 }
 
-pub trait Renderer {
+pub trait View: Diff {}
+
+impl<T: Diff> View for T where T::State: Unmount {}
+
+pub trait Platform {
     type Cursor: Clone + 'static;
 
     fn new_text(text: &str, cursor: &mut Self::Cursor) -> Handle;
@@ -35,31 +40,26 @@ pub trait Renderer {
     fn unmount(handle: &mut Handle);
 }
 
-pub trait Diff {
-    type State;
-
-    // TODO: Should take renderer instance?
-    fn init<R: Renderer>(self, cursor: &mut R::Cursor) -> Self::State;
-    fn diff<R: Renderer>(self, state: &mut Self::State, cursor: &mut R::Cursor);
+pub enum Handle {
+    Index(usize),
+    Dyn(Box<dyn Any>),
+    #[cfg(feature = "dom")]
+    DomNode(web_sys::Node),
 }
 
-pub trait View: Diff {}
-
-impl<T: Diff> View for T where T::State: Unmount {}
-
 pub trait Unmount: Sized {
-    fn unmount<R: Renderer>(&mut self);
+    fn unmount<P: Platform>(&mut self);
 }
 
 impl Unmount for Handle {
-    fn unmount<R: Renderer>(&mut self) {
-        R::unmount(self);
+    fn unmount<P: Platform>(&mut self) {
+        P::unmount(self);
     }
 }
 
 impl<T> Unmount for (Handle, T) {
-    fn unmount<R: Renderer>(&mut self) {
-        R::unmount(&mut self.0);
+    fn unmount<P: Platform>(&mut self) {
+        P::unmount(&mut self.0);
     }
 }
 

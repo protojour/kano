@@ -1,4 +1,4 @@
-use crate::{Diff, Unmount};
+use crate::{Diff, Platform, Unmount};
 
 impl<T: Diff> Diff for Option<T>
 where
@@ -6,20 +6,20 @@ where
 {
     type State = Option<T::State>;
 
-    fn init<R: crate::Renderer>(self, cursor: &mut R::Cursor) -> Self::State {
-        self.map(|value| value.init::<R>(cursor))
+    fn init<P: Platform>(self, cursor: &mut P::Cursor) -> Self::State {
+        self.map(|value| value.init::<P>(cursor))
     }
 
-    fn diff<R: crate::Renderer>(self, state: &mut Self::State, cursor: &mut R::Cursor) {
+    fn diff<P: Platform>(self, state: &mut Self::State, cursor: &mut P::Cursor) {
         match (state, self) {
             (Some(state), Some(value)) => {
-                value.diff::<R>(state, cursor);
+                value.diff::<P>(state, cursor);
             }
             (Some(state), None) => {
-                state.unmount::<R>();
+                state.unmount::<P>();
             }
             (state @ None, Some(value)) => {
-                *state = Some(value.init::<R>(cursor));
+                *state = Some(value.init::<P>(cursor));
             }
             (None, None) => {}
         }

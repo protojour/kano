@@ -1,4 +1,4 @@
-use crate::{Diff, Handle, List, Renderer, Unmount};
+use crate::{Diff, Handle, List, Platform, Unmount};
 
 pub struct Element<A, C> {
     name: &'static str,
@@ -19,14 +19,14 @@ impl<A: List, C: List> Element<A, C> {
 impl<A: Diff, C: Diff> Diff for Element<A, C> {
     type State = ElementState<A, C>;
 
-    fn init<R: Renderer>(self, cursor: &mut R::Cursor) -> Self::State {
-        let handle = R::new_element(cursor, self.name);
+    fn init<P: Platform>(self, cursor: &mut P::Cursor) -> Self::State {
+        let handle = P::new_element(cursor, self.name);
 
-        R::enter_attrs(cursor);
-        let attrs = self.attrs.init::<R>(cursor);
-        R::exit_attrs(cursor);
+        P::enter_attrs(cursor);
+        let attrs = self.attrs.init::<P>(cursor);
+        P::exit_attrs(cursor);
 
-        let children = self.children.init::<R>(cursor);
+        let children = self.children.init::<P>(cursor);
 
         ElementState {
             handle,
@@ -35,12 +35,12 @@ impl<A: Diff, C: Diff> Diff for Element<A, C> {
         }
     }
 
-    fn diff<R: Renderer>(self, state: &mut Self::State, cursor: &mut R::Cursor) {
-        R::enter_attrs(cursor);
-        self.attrs.diff::<R>(&mut state.attrs, cursor);
-        R::exit_attrs(cursor);
+    fn diff<P: Platform>(self, state: &mut Self::State, cursor: &mut P::Cursor) {
+        P::enter_attrs(cursor);
+        self.attrs.diff::<P>(&mut state.attrs, cursor);
+        P::exit_attrs(cursor);
 
-        self.children.diff::<R>(&mut state.children, cursor);
+        self.children.diff::<P>(&mut state.children, cursor);
     }
 }
 
@@ -51,7 +51,7 @@ pub struct ElementState<A: Diff, C: Diff> {
 }
 
 impl<A: Diff, C: Diff> Unmount for ElementState<A, C> {
-    fn unmount<R: Renderer>(&mut self) {
-        R::unmount(&mut self.handle);
+    fn unmount<P: Platform>(&mut self) {
+        P::unmount(&mut self.handle);
     }
 }
