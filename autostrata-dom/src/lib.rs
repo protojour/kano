@@ -1,15 +1,29 @@
-use js_sys::wasm_bindgen::JsCast;
+use gloo::events::EventListener;
+use js_sys::wasm_bindgen::*;
+use wasm_bindgen::prelude::*;
+use web_sys::EventTarget;
 use web_sys::{window, Document};
 
-use autostrata::{Diff, Event, Handle, On, Platform};
+use autostrata::{Event, Handle, On, Platform, View};
 
-pub struct Dom;
+pub struct Dom {}
 
 impl Dom {
-    pub fn hydrate(tree: impl Diff) {
+    pub fn hydrate<V: View>(view: V) {
         let mut cursor = Cursor::LastChildOf(document().body().unwrap().into());
-        let _state = tree.init::<Self>(&mut cursor);
+        let state = view.init::<Self>(&mut cursor);
+
+        // Need to keep the initial state around, it keeps EventListeners alive
+        std::mem::forget(state);
     }
+}
+
+#[wasm_bindgen]
+extern "C" {
+    // Use `js_namespace` here to bind `console.log(..)` instead of just
+    // `log(..)`
+    #[wasm_bindgen(js_namespace = console)]
+    fn log(s: &str);
 }
 
 impl Platform for Dom {
@@ -32,25 +46,18 @@ impl Platform for Dom {
         Handle::DomNode(element.into())
     }
 
-    fn register_event(cursor: &mut Self::Cursor, on_event: &On) -> Handle {
+    fn register_event(cursor: &mut Self::Cursor, on_event: On) -> Handle {
         match cursor {
             Cursor::AttrsOf(element) => {
+                let event_target: &EventTarget = element.dyn_ref().unwrap();
                 let event_type = match on_event.event() {
-                    Event::Click => "onclick",
-                    Event::MouseOver => "onmouseover",
+                    Event::Click => "click",
+                    Event::MouseOver => "mouseover",
                 };
 
-                let rust_fn: Box<dyn FnMut()> = Box::new(|| panic!("vfdsfds"));
-                let js_closure = wasm_bindgen::closure::Closure::wrap(rust_fn);
-
-                element
-                    .add_event_listener_with_callback(
-                        event_type,
-                        js_closure.as_ref().unchecked_ref(),
-                    )
-                    .unwrap();
-
-                Handle::DomAttr(event_type)
+                Handle::DomEvent(EventListener::new(&event_target, event_type, move |_| {
+                    on_event.invoke();
+                }))
             }
             Cursor::LastChildOf(_) => panic!(),
         }
@@ -102,6 +109,9 @@ impl Platform for Dom {
             }
             (Cursor::AttrsOf(element), Handle::DomAttr(name)) => {
                 let _ = element.remove_attribute(name);
+            }
+            (Cursor::AttrsOf(_element), Handle::DomEvent(_listener)) => {
+                // Should auto-register after listener is dropped
             }
             _ => panic!("Can't unmount"),
         }

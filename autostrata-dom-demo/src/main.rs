@@ -1,4 +1,13 @@
 use autostrata::*;
+use wasm_bindgen::prelude::*;
+
+#[wasm_bindgen]
+extern "C" {
+    // Use `js_namespace` here to bind `console.log(..)` instead of just
+    // `log(..)`
+    #[wasm_bindgen(js_namespace = console)]
+    fn log(s: &str);
+}
 
 fn poc() -> impl View {
     let opt: Option<i32> = Some(32);
@@ -17,7 +26,18 @@ fn poc() -> impl View {
                     Element::new("li", (), ("Three",)),
                 ),
             ),
-            Element::new("button", (On::click(),), ("click me",)),
+            Element::new(
+                "button",
+                (
+                    On::click(|| {
+                        log("clicked!");
+                    }),
+                    On::mouseover(|| {
+                        log("mouseover!");
+                    }),
+                ),
+                ("click me",),
+            ),
         ),
     )
 }

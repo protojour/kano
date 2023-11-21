@@ -34,7 +34,7 @@ pub trait Platform {
 
     fn new_element(cursor: &mut Self::Cursor, name: &str) -> Handle;
 
-    fn register_event(cursor: &mut Self::Cursor, event: &On) -> Handle;
+    fn register_event(cursor: &mut Self::Cursor, event: On) -> Handle;
 
     fn enter_child(cursor: &mut Self::Cursor);
     fn exit_child(cursor: &mut Self::Cursor);
@@ -52,6 +52,8 @@ pub enum Handle {
     DomNode(web_sys::Node),
     #[cfg(feature = "dom")]
     DomAttr(&'static str),
+    #[cfg(feature = "dom")]
+    DomEvent(gloo::events::EventListener),
 }
 
 pub trait Unmount: Sized {

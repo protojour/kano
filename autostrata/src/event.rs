@@ -6,19 +6,33 @@ pub enum Event {
     MouseOver,
 }
 
-pub struct On(pub(crate) Event);
+pub struct On {
+    event: Event,
+    func: Box<dyn Fn()>,
+}
 
 impl On {
-    pub fn click() -> On {
-        On(Event::Click)
+    pub fn click(func: impl Fn() + 'static) -> Self {
+        Self::new(Event::Click, func)
     }
 
-    pub fn mouseover() -> On {
-        On(Event::MouseOver)
+    pub fn mouseover(func: impl Fn() + 'static) -> Self {
+        Self::new(Event::MouseOver, func)
+    }
+
+    fn new(event: Event, func: impl Fn() + 'static) -> Self {
+        Self {
+            event,
+            func: Box::new(func),
+        }
     }
 
     pub fn event(&self) -> &Event {
-        &self.0
+        &self.event
+    }
+
+    pub fn invoke(&self) {
+        (self.func)();
     }
 }
 
@@ -26,20 +40,17 @@ impl Diff for On {
     type State = OnState;
 
     fn init<P: crate::Platform>(self, cursor: &mut P::Cursor) -> Self::State {
-        let handle = P::register_event(cursor, &self);
         OnState {
-            event: self.0,
-            handle,
+            handle: P::register_event(cursor, self),
         }
     }
 
-    fn diff<P: crate::Platform>(self, state: &mut Self::State, cursor: &mut P::Cursor) {}
+    fn diff<P: crate::Platform>(self, _state: &mut Self::State, _cursor: &mut P::Cursor) {}
 }
 
 impl Attr for On {}
 
 pub struct OnState {
-    event: Event,
     handle: Handle,
 }
 
