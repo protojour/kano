@@ -16,6 +16,8 @@ impl<T: Diff + 'static, F: (Fn() -> T) + 'static> Diff for Reactive<F> {
             move |prev_state, cursor| {
                 let cursor = cursor.downcast_mut::<P::Cursor>().unwrap();
 
+                P::debug_start_reactive_update(cursor);
+
                 let value = (self.0)();
                 if let Some(mut state) = prev_state {
                     value.diff::<P>(&mut state, cursor);
@@ -24,7 +26,8 @@ impl<T: Diff + 'static, F: (Fn() -> T) + 'static> Diff for Reactive<F> {
                     value.init::<P>(cursor)
                 }
             },
-            Box::new(cursor.clone()),
+            cursor,
+            &|cursor| Box::new(cursor.downcast_mut::<P::Cursor>().unwrap().clone()),
         );
 
         let weak_shared = Arc::downgrade(&reactive_state.shared);
@@ -69,9 +72,11 @@ impl<T: Diff> Clone for ReactiveState<T> {
 impl<T: Diff> ReactiveState<T> {
     fn new(
         func: impl Fn(Option<T::State>, RefMutDynCursor) -> T::State + 'static,
-        mut cursor: Box<dyn Any>,
+        cursor: &mut dyn Any,
+        box_cursor: &dyn Fn(&mut dyn Any) -> Box<dyn Any>,
     ) -> Self {
-        let state = func(None, cursor.as_mut());
+        let state = func(None, cursor);
+        let cursor = box_cursor(cursor);
         let shared = Arc::new(Mutex::new(SharedState {
             state: Some(state),
             func: Box::new(func),

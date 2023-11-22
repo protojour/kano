@@ -34,13 +34,15 @@ where
             (Either::Right(right_state), Either::Right(right)) => {
                 right.diff::<P>(right_state, cursor);
             }
-            (Either::Left(left_state), Either::Right(right)) => {
-                left_state.unmount::<P>(cursor);
-                state.state = Either::Right(right.init::<P>(cursor));
+            (Either::Left(_), Either::Right(right)) => {
+                P::replace_at_cursor(cursor, |cursor| {
+                    state.state = Either::Right(right.init::<P>(cursor));
+                });
             }
-            (Either::Right(right_state), Either::Left(left)) => {
-                right_state.unmount::<P>(cursor);
-                state.state = Either::Left(left.init::<P>(cursor));
+            (Either::Right(_), Either::Left(left)) => {
+                P::replace_at_cursor(cursor, |cursor| {
+                    state.state = Either::Left(left.init::<P>(cursor));
+                });
             }
         }
     }

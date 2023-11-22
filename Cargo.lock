@@ -15,6 +15,7 @@ dependencies = [
  "futures",
  "gloo",
  "gloo-timers",
+ "js-sys",
  "web-sys",
 ]
 

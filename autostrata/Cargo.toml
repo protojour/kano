@@ -6,10 +6,11 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [features]
-dom = ["web-sys", "gloo"]
+dom = ["js-sys", "web-sys", "gloo"]
 
 [dependencies]
 web-sys = { version = "0.3", optional = true, features = ["Node"] }
+js-sys = { version = "0.3", optional = true }
 gloo = { version = "0.10", optional = true, features = ["events"] }
 futures = "0.3"
 # for DOM testing (remove later):

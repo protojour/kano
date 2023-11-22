@@ -15,8 +15,9 @@ where
             (State(Some(state)), Some(value)) => {
                 value.diff::<P>(state, cursor);
             }
-            (State(Some(state)), None) => {
-                state.unmount::<P>(cursor);
+            (state @ State(Some(_)), None) => {
+                P::replace_at_cursor(cursor, |_| {});
+                *state = State(None);
             }
             (state @ State(None), Some(value)) => {
                 *state = State(Some(value.init::<P>(cursor)));

@@ -23,7 +23,7 @@ impl<A: AttrSet, C: Children> Diff for Element<A, C> {
     type State = State<A, C>;
 
     fn init<P: Platform>(self, cursor: &mut P::Cursor) -> Self::State {
-        let handle = P::new_element(cursor, self.name);
+        let handle = P::new_element(self.name, cursor);
 
         P::enter_attrs(cursor);
         let attrs = self.attrs.init::<P>(cursor);

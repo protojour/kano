@@ -1,14 +1,14 @@
-use std::any::Any;
+use std::{any::Any, fmt::Debug};
 
 use crate::On;
 
 pub trait Platform {
-    type Cursor: Clone + Any;
+    type Cursor: Any + Clone + Debug;
 
     fn new_text(text: &str, cursor: &mut Self::Cursor) -> Handle;
     fn update_text(handle: &mut Handle, text: &str);
 
-    fn new_element(cursor: &mut Self::Cursor, name: &str) -> Handle;
+    fn new_element(name: &str, cursor: &mut Self::Cursor) -> Handle;
 
     fn register_event(cursor: &mut Self::Cursor, event: On) -> Handle;
 
@@ -19,8 +19,11 @@ pub trait Platform {
     fn exit_attrs(cursor: &mut Self::Cursor);
 
     fn unmount(handle: &mut Handle, cursor: &mut Self::Cursor);
+    fn replace_at_cursor(cursor: &mut Self::Cursor, func: impl FnOnce(&mut Self::Cursor));
 
     fn spawn_task(task: impl std::future::Future<Output = ()> + 'static);
+
+    fn debug_start_reactive_update(cursor: &mut Self::Cursor);
 }
 
 pub enum Handle {
