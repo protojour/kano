@@ -117,6 +117,10 @@ impl Platform for Dom {
             _ => panic!("Can't unmount"),
         }
     }
+
+    fn spawn_task(task: impl std::future::Future<Output = ()> + 'static) {
+        wasm_bindgen_futures::spawn_local(task);
+    }
 }
 
 #[derive(Clone)]

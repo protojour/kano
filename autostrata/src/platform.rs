@@ -19,6 +19,8 @@ pub trait Platform {
     fn exit_attrs(cursor: &mut Self::Cursor);
 
     fn unmount(handle: &mut Handle, cursor: &mut Self::Cursor);
+
+    fn spawn_task(task: impl std::future::Future<Output = ()> + 'static);
 }
 
 pub enum Handle {

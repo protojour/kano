@@ -11,6 +11,11 @@ extern "C" {
     fn log(s: &str);
 }
 
+fn rand_bool() -> bool {
+    let ms = js_sys::Date::now() as u128;
+    (ms & 0x1) > 0
+}
+
 fn poc() -> impl View {
     let alt: Either<&'static str, ()> = Either::Left("Two");
     let opt: Option<i32> = Some(32);
@@ -33,7 +38,7 @@ fn poc() -> impl View {
                 Element::new(
                     "span",
                     (),
-                    (if (Instant::now().elapsed().as_millis() & 0x1) > 0 {
+                    (if rand_bool() {
                         Either::Left(Element::new("strong", (), ("yes",)))
                     } else {
                         Either::Right("no")

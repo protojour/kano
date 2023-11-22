@@ -14,6 +14,7 @@ version = "0.1.0"
 dependencies = [
  "futures",
  "gloo",
+ "gloo-timers",
  "web-sys",
 ]
 
@@ -25,6 +26,7 @@ dependencies = [
  "gloo",
  "js-sys",
  "wasm-bindgen",
+ "wasm-bindgen-futures",
  "web-sys",
 ]
 
@@ -35,7 +37,9 @@ dependencies = [
  "autostrata",
  "autostrata-dom",
  "console_error_panic_hook",
+ "js-sys",
  "wasm-bindgen",
+ "web-sys",
 ]
 
 [[package]]
@@ -331,6 +335,8 @@ version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bbb143cf96099802033e0d4f4963b19fd2e0b728bcf076cd9cf7f6634f092994"
 dependencies = [
+ "futures-channel",
+ "futures-core",
  "js-sys",
  "wasm-bindgen",
 ]

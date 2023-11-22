@@ -1,14 +1,18 @@
-use std::any::Any;
+use std::{
+    any::Any,
+    sync::{Arc, Mutex},
+    time::Duration,
+};
 
 use crate::{platform::Platform, Attr, Diff, Unmount, ViewState};
 
 pub struct Reactive<F>(pub F);
 
-impl<T: Diff, F: (Fn() -> T) + 'static> Diff for Reactive<F> {
+impl<T: Diff + 'static, F: (Fn() -> T) + 'static> Diff for Reactive<F> {
     type State = ReactiveState<T>;
 
     fn init<P: Platform>(self, cursor: &mut P::Cursor) -> Self::State {
-        ReactiveState::new(
+        let reactive_state = ReactiveState::new(
             move |prev_state, cursor| {
                 let cursor = cursor.downcast_mut::<P::Cursor>().unwrap();
 
@@ -21,7 +25,24 @@ impl<T: Diff, F: (Fn() -> T) + 'static> Diff for Reactive<F> {
                 }
             },
             Box::new(cursor.clone()),
-        )
+        );
+
+        let weak_shared = Arc::downgrade(&reactive_state.shared);
+
+        // Test: Update it at an interval as long as it's alive
+        P::spawn_task(async move {
+            loop {
+                gloo_timers::future::sleep(Duration::from_secs(1)).await;
+                if let Some(shared) = weak_shared.upgrade() {
+                    let mut lock = shared.lock().unwrap();
+                    lock.update();
+                } else {
+                    return;
+                }
+            }
+        });
+
+        reactive_state
     }
 
     fn diff<P: Platform>(self, state: &mut Self::State, cursor: &mut P::Cursor) {
@@ -29,14 +50,20 @@ impl<T: Diff, F: (Fn() -> T) + 'static> Diff for Reactive<F> {
     }
 }
 
-impl<T: Attr, F: (Fn() -> T) + 'static> Attr for Reactive<F> {}
+impl<T: Attr + 'static, F: (Fn() -> T) + 'static> Attr for Reactive<F> {}
 
 type RefMutDynCursor<'a> = &'a mut dyn Any;
 
 pub struct ReactiveState<T: Diff> {
-    state: Option<T::State>,
-    func: Box<dyn Fn(Option<T::State>, RefMutDynCursor) -> T::State>,
-    cursor: Box<dyn Any>,
+    shared: Arc<Mutex<SharedState<T>>>,
+}
+
+impl<T: Diff> Clone for ReactiveState<T> {
+    fn clone(&self) -> Self {
+        Self {
+            shared: Arc::clone(&self.shared),
+        }
+    }
 }
 
 impl<T: Diff> ReactiveState<T> {
@@ -45,15 +72,24 @@ impl<T: Diff> ReactiveState<T> {
         mut cursor: Box<dyn Any>,
     ) -> Self {
         let state = func(None, cursor.as_mut());
-
-        Self {
+        let shared = Arc::new(Mutex::new(SharedState {
             state: Some(state),
             func: Box::new(func),
             cursor,
-        }
-    }
+        }));
 
-    fn _call_func_works(&mut self) {
+        Self { shared }
+    }
+}
+
+struct SharedState<T: Diff> {
+    state: Option<T::State>,
+    func: Box<dyn Fn(Option<T::State>, RefMutDynCursor) -> T::State>,
+    cursor: Box<dyn Any>,
+}
+
+impl<T: Diff> SharedState<T> {
+    fn update(&mut self) {
         let state = self.state.take();
         let new_state = (self.func)(state, self.cursor.as_mut());
         self.state = Some(new_state);
@@ -65,7 +101,8 @@ where
     T::State: Unmount,
 {
     fn unmount<P: Platform>(&mut self, cursor: &mut P::Cursor) {
-        if let Some(mut state) = self.state.take() {
+        let mut lock = self.shared.lock().unwrap();
+        if let Some(mut state) = lock.state.take() {
             state.unmount::<P>(cursor);
         }
     }
