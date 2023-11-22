@@ -1,6 +1,6 @@
 use crate::{
     platform::{Handle, Platform},
-    AttrSet, Children, Diff, Unmount, ViewState,
+    AttrSet, Children, Diff, ViewState,
 };
 
 pub struct Element<A, C> {
@@ -51,12 +51,6 @@ pub struct State<A: AttrSet, C: Children> {
     handle: Handle,
     attrs: A::State,
     children: C::State,
-}
-
-impl<A: AttrSet, C: Children> Unmount for State<A, C> {
-    fn unmount<P: Platform>(&mut self, cursor: &mut P::Cursor) {
-        P::unmount(&mut self.handle, cursor);
-    }
 }
 
 impl<A: AttrSet, C: Children> ViewState for State<A, C> {}

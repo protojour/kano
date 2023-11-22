@@ -4,7 +4,7 @@ use std::{
     time::Duration,
 };
 
-use crate::{platform::Platform, Attr, Diff, Unmount, ViewState};
+use crate::{platform::Platform, Attr, Diff, ViewState};
 
 pub struct Reactive<F>(pub F);
 
@@ -98,18 +98,6 @@ impl<T: Diff> SharedState<T> {
         let state = self.state.take();
         let new_state = (self.func)(state, self.cursor.as_mut());
         self.state = Some(new_state);
-    }
-}
-
-impl<T: Diff> Unmount for ReactiveState<T>
-where
-    T::State: Unmount,
-{
-    fn unmount<P: Platform>(&mut self, cursor: &mut P::Cursor) {
-        let mut lock = self.shared.lock().unwrap();
-        if let Some(mut state) = lock.state.take() {
-            state.unmount::<P>(cursor);
-        }
     }
 }
 

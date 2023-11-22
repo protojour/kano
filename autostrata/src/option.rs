@@ -1,9 +1,6 @@
-use crate::{Attr, Diff, Platform, Unmount, View, ViewState};
+use crate::{Attr, Diff, Platform, View, ViewState};
 
-impl<T: Diff> Diff for Option<T>
-where
-    T::State: Unmount,
-{
+impl<T: Diff> Diff for Option<T> {
     type State = State<T>;
 
     fn init<P: Platform>(self, cursor: &mut P::Cursor) -> Self::State {
@@ -29,16 +26,5 @@ where
 
 pub struct State<T: Diff>(Option<T::State>);
 
-impl<T: Diff> Unmount for State<T>
-where
-    T::State: Unmount,
-{
-    fn unmount<P: Platform>(&mut self, cursor: &mut P::Cursor) {
-        if let Some(state) = &mut self.0 {
-            <T::State as Unmount>::unmount::<P>(state, cursor);
-        }
-    }
-}
-
-impl<T: View> ViewState for State<T> where Self: Unmount {}
-impl<T: Attr> Attr for Option<T> where T::State: Unmount {}
+impl<T: View> ViewState for State<T> {}
+impl<T: Attr> Attr for Option<T> {}

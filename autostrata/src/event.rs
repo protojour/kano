@@ -1,6 +1,6 @@
 use crate::{
     platform::{Handle, Platform},
-    Attr, Diff, Unmount,
+    Attr, Diff,
 };
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -55,10 +55,4 @@ impl Attr for On {}
 
 pub struct OnState {
     handle: Handle,
-}
-
-impl Unmount for OnState {
-    fn unmount<P: Platform>(&mut self, cursor: &mut P::Cursor) {
-        P::unmount(&mut self.handle, cursor);
-    }
 }

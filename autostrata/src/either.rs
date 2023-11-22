@@ -1,6 +1,6 @@
 //! Just a test for reactivity
 
-use crate::{platform::Platform, Attr, Diff, Unmount, View, ViewState};
+use crate::{platform::Platform, Attr, Diff, View, ViewState};
 
 #[derive(Clone, Copy)]
 pub enum Either<L, R> {
@@ -8,11 +8,7 @@ pub enum Either<L, R> {
     Right(R),
 }
 
-impl<L: Diff, R: Diff> Diff for Either<L, R>
-where
-    L::State: Unmount,
-    R::State: Unmount,
-{
+impl<L: Diff, R: Diff> Diff for Either<L, R> {
     type State = State<L, R>;
 
     fn init<P: Platform>(self, cursor: &mut P::Cursor) -> Self::State {
@@ -52,27 +48,5 @@ pub struct State<L: Diff, R: Diff> {
     state: Either<L::State, R::State>,
 }
 
-impl<L: Diff, R: Diff> Unmount for State<L, R>
-where
-    L::State: Unmount,
-    R::State: Unmount,
-{
-    fn unmount<P: Platform>(&mut self, cursor: &mut P::Cursor) {
-        match &mut self.state {
-            Either::Left(left) => {
-                <L::State as Unmount>::unmount::<P>(left, cursor);
-            }
-            Either::Right(right) => {
-                <R::State as Unmount>::unmount::<P>(right, cursor);
-            }
-        }
-    }
-}
-
-impl<L: View, R: View> ViewState for State<L, R> where Self: Unmount {}
-impl<L: Attr, R: Attr> Attr for Either<L, R>
-where
-    L::State: Unmount,
-    R::State: Unmount,
-{
-}
+impl<L: View, R: View> ViewState for State<L, R> {}
+impl<L: Attr, R: Attr> Attr for Either<L, R> {}

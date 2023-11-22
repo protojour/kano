@@ -28,28 +28,12 @@ pub trait Diff {
 
 pub trait View: Diff {}
 
-pub trait ViewState: Unmount {}
+pub trait ViewState {}
 
 impl<T: Diff> View for T where T::State: ViewState {}
-
-pub trait Unmount: Sized {
-    fn unmount<P: Platform>(&mut self, cursor: &mut P::Cursor);
-}
 
 pub trait Children: Diff {}
 
 pub trait AttrSet: Diff {}
 
 pub trait Attr: Diff {}
-
-impl Unmount for Handle {
-    fn unmount<P: Platform>(&mut self, cursor: &mut P::Cursor) {
-        P::unmount(self, cursor);
-    }
-}
-
-impl<T> Unmount for (Handle, T) {
-    fn unmount<P: Platform>(&mut self, cursor: &mut P::Cursor) {
-        P::unmount(&mut self.0, cursor);
-    }
-}
