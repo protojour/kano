@@ -11,7 +11,7 @@ The platform API has been designed to not leak types into business logic.
 ## Trying out the DOM platform
 
 ```sh
-cd autostrata-dom-demo
+cd dom-demo
 cargo install trunk
 trunk serve --watch ..
 ```

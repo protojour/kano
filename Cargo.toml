@@ -2,6 +2,6 @@
 members = [
     "autostrata",
     "autostrata-dom",
-    "autostrata-dom-demo",
+    "dom-demo",
 ]
 resolver = "2"
