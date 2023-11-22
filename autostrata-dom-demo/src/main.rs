@@ -1,5 +1,3 @@
-use std::time::Instant;
-
 use autostrata::*;
 use wasm_bindgen::prelude::*;
 
