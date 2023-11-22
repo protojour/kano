@@ -1,18 +1,19 @@
-use crate::{Diff, Handle, Platform, ViewState};
+use crate::{platform::Cursor, Diff, ElementHandle, Platform, ViewState};
 
 impl Diff for &'static str {
-    type State = (Handle, Self);
+    type State = (ElementHandle, Self);
 
-    fn init<P: Platform>(self, cursor: &mut P::Cursor) -> (Handle, Self) {
-        (P::new_text(self, cursor), self)
+    fn init<P: Platform>(self, cursor: &mut P::Cursor) -> (ElementHandle, Self) {
+        (cursor.text(self), self)
     }
 
     fn diff<P: Platform>(self, (handle, old): &mut Self::State, _cursor: &mut P::Cursor) {
         if self != *old {
-            P::update_text(handle, &self);
+            let mut cursor = P::Cursor::from_element_handle(&handle);
+            cursor.update_text(&self);
             *old = self;
         }
     }
 }
 
-impl ViewState for (Handle, &'static str) {}
+impl ViewState for (ElementHandle, &'static str) {}

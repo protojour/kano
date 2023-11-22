@@ -1,5 +1,5 @@
 use crate::{
-    platform::{Handle, Platform},
+    platform::{Cursor, Platform},
     AttrSet, Children, Diff, ViewState,
 };
 
@@ -23,32 +23,27 @@ impl<A: AttrSet, C: Children> Diff for Element<A, C> {
     type State = State<A, C>;
 
     fn init<P: Platform>(self, cursor: &mut P::Cursor) -> Self::State {
-        let handle = P::new_element(self.name, cursor);
+        let _ = cursor.element(self.name);
 
-        P::enter_attrs(cursor);
+        cursor.enter_attrs();
         let attrs = self.attrs.init::<P>(cursor);
-        P::exit_attrs(cursor);
+        cursor.exit_attrs();
 
         let children = self.children.init::<P>(cursor);
 
-        State {
-            handle,
-            attrs,
-            children,
-        }
+        State { attrs, children }
     }
 
     fn diff<P: Platform>(self, state: &mut Self::State, cursor: &mut P::Cursor) {
-        P::enter_attrs(cursor);
+        cursor.enter_attrs();
         self.attrs.diff::<P>(&mut state.attrs, cursor);
-        P::exit_attrs(cursor);
+        cursor.exit_attrs();
 
         self.children.diff::<P>(&mut state.children, cursor);
     }
 }
 
 pub struct State<A: AttrSet, C: Children> {
-    handle: Handle,
     attrs: A::State,
     children: C::State,
 }

@@ -1,5 +1,5 @@
 use crate::{
-    platform::{Handle, Platform},
+    platform::{AttrHandle, Cursor, Platform},
     Attr, Diff,
 };
 
@@ -44,7 +44,7 @@ impl Diff for On {
 
     fn init<P: Platform>(self, cursor: &mut P::Cursor) -> Self::State {
         OnState {
-            handle: P::register_event(cursor, self),
+            handle: cursor.on_event(self),
         }
     }
 
@@ -54,5 +54,7 @@ impl Diff for On {
 impl Attr for On {}
 
 pub struct OnState {
-    handle: Handle,
+    /// This is used to keep listeners alive
+    #[allow(unused)]
+    handle: AttrHandle,
 }

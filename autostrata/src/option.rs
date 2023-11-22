@@ -1,4 +1,4 @@
-use crate::{Attr, Diff, Platform, View, ViewState};
+use crate::{platform::Cursor, Attr, Diff, Platform, View, ViewState};
 
 impl<T: Diff> Diff for Option<T> {
     type State = State<T>;
@@ -13,7 +13,7 @@ impl<T: Diff> Diff for Option<T> {
                 value.diff::<P>(state, cursor);
             }
             (state @ State(Some(_)), None) => {
-                P::replace_at_cursor(cursor, |_| {});
+                cursor.replace(|_| {});
                 *state = State(None);
             }
             (state @ State(None), Some(value)) => {

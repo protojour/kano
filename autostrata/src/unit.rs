@@ -1,10 +1,10 @@
-use crate::{AttrSet, Children, Diff, Platform, ViewState};
+use crate::{platform::Cursor, AttrSet, Children, Diff, Platform, ViewState};
 
 impl Diff for () {
     type State = ();
 
     fn init<P: Platform>(self, cursor: &mut P::Cursor) -> () {
-        P::mark_empty(cursor);
+        cursor.empty();
     }
     fn diff<P: Platform>(self, _: &mut Self::State, _cursor: &mut P::Cursor) {}
 }

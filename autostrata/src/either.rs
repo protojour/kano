@@ -1,6 +1,9 @@
 //! Just a test for reactivity
 
-use crate::{platform::Platform, Attr, Diff, View, ViewState};
+use crate::{
+    platform::{Cursor, Platform},
+    Attr, Diff, View, ViewState,
+};
 
 #[derive(Clone, Copy)]
 pub enum Either<L, R> {
@@ -30,16 +33,12 @@ impl<L: Diff, R: Diff> Diff for Either<L, R> {
             (Either::Right(right_state), Either::Right(right)) => {
                 right.diff::<P>(right_state, cursor);
             }
-            (Either::Left(_), Either::Right(right)) => {
-                P::replace_at_cursor(cursor, |cursor| {
-                    state.state = Either::Right(right.init::<P>(cursor));
-                });
-            }
-            (Either::Right(_), Either::Left(left)) => {
-                P::replace_at_cursor(cursor, |cursor| {
-                    state.state = Either::Left(left.init::<P>(cursor));
-                });
-            }
+            (Either::Left(_), Either::Right(right)) => cursor.replace(|cursor| {
+                state.state = Either::Right(right.init::<P>(cursor));
+            }),
+            (Either::Right(_), Either::Left(left)) => cursor.replace(|cursor| {
+                state.state = Either::Left(left.init::<P>(cursor));
+            }),
         }
     }
 }

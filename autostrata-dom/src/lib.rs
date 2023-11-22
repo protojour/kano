@@ -1,4 +1,4 @@
-use autostrata::platform::{Handle, Platform};
+use autostrata::platform::{AttrHandle, ElementHandle, Platform};
 use gloo::events::EventListener;
 use js_sys::wasm_bindgen::*;
 use wasm_bindgen::prelude::*;
@@ -37,144 +37,6 @@ impl Dom {
 impl Platform for Dom {
     type Cursor = Cursor;
 
-    fn mark_empty(cursor: &mut Self::Cursor) {
-        match &cursor {
-            Cursor::AttrsOf(_) => {}
-            _ => {
-                let comment = document().create_comment("");
-                cursor.append_node(&comment);
-            }
-        }
-    }
-
-    fn new_text(text: &str, cursor: &mut Self::Cursor) -> Handle {
-        let text_node = document().create_text_node(text);
-        cursor.append_node(&text_node);
-        log(&format!("new text node cursor: {cursor:?}"));
-        Handle::DomNode(text_node.into())
-    }
-
-    fn update_text(handle: &mut Handle, text: &str) {
-        let text_node: web_sys::Text = dom_node(handle).clone().dyn_into().unwrap();
-        text_node.set_node_value(Some(text));
-    }
-
-    fn new_element(name: &str, cursor: &mut Self::Cursor) -> Handle {
-        let element = document().create_element(name).unwrap();
-        // log(&format!(
-        //     "NEW ELEMENT first child: {:?}",
-        //     element.first_child(),
-        // ));
-        cursor.append_node(&element);
-        // log(&format!("new element cursor: {cursor:?}"));
-        Handle::DomNode(element.into())
-    }
-
-    fn register_event(cursor: &mut Self::Cursor, on_event: On) -> Handle {
-        match cursor {
-            Cursor::AttrsOf(element) => {
-                let event_target: &EventTarget = element.dyn_ref().unwrap();
-                let event_type = match on_event.event() {
-                    Event::Click => "click",
-                    Event::MouseOver => "mouseover",
-                };
-
-                Handle::DomEvent(EventListener::new(&event_target, event_type, move |_| {
-                    on_event.invoke();
-                }))
-            }
-            Cursor::Node(_) => panic!(),
-            Cursor::Detached => panic!(),
-            Cursor::EmptyChildrenOf(_) => panic!(),
-        }
-    }
-
-    fn enter_child(cursor: &mut Self::Cursor) {
-        match cursor {
-            Cursor::Node(node) => {
-                if let Some(child) = node.first_child() {
-                    // log(&format!("enter child: had child {child:?}"));
-                    *cursor = Cursor::Node(child);
-                } else if let Some(element) = node.dyn_ref::<web_sys::Element>() {
-                    // log(&format!("enter child: had no children"));
-                    *cursor = Cursor::EmptyChildrenOf(element.clone());
-                } else {
-                    panic!("No children");
-                }
-            }
-            Cursor::EmptyChildrenOf(_) | Cursor::Detached => {
-                panic!("Enter empty children");
-            }
-            Cursor::AttrsOf(_) => {}
-        }
-    }
-    fn exit_child(cursor: &mut Self::Cursor) {
-        // log("exit child");
-        match cursor {
-            Cursor::Node(node) => {
-                let parent = node.parent_element().unwrap();
-                *cursor = Cursor::Node(parent.dyn_into().unwrap());
-            }
-            Cursor::EmptyChildrenOf(element) => {
-                *cursor = Cursor::Node(element.dyn_ref::<web_sys::Node>().unwrap().clone());
-            }
-            Cursor::AttrsOf(_) => {}
-            Cursor::Detached => panic!("no children"),
-        }
-    }
-
-    fn enter_attrs(cursor: &mut Self::Cursor) {
-        match cursor {
-            Cursor::Node(node) => {
-                if let Some(element) = node.dyn_ref::<web_sys::Element>() {
-                    *cursor = Cursor::AttrsOf(element.clone());
-                } else {
-                    panic!("Non-element attributes");
-                }
-            }
-            Cursor::EmptyChildrenOf(_) => {
-                panic!("Entering attrs of empty children");
-            }
-            Cursor::AttrsOf(_) | Cursor::Detached => panic!(),
-        }
-    }
-
-    fn exit_attrs(cursor: &mut Self::Cursor) {
-        match cursor {
-            Cursor::AttrsOf(element) => {
-                *cursor = Cursor::Node(element.dyn_ref::<web_sys::Node>().unwrap().clone());
-            }
-            Cursor::EmptyChildrenOf(_) => panic!(),
-            Cursor::Node(_) => panic!(),
-            Cursor::Detached => panic!(),
-        }
-    }
-
-    fn replace_at_cursor(cursor: &mut Self::Cursor, func: impl FnOnce(&mut Self::Cursor)) {
-        let mut replacement_cursor = Cursor::Detached;
-        func(&mut replacement_cursor);
-
-        match (&cursor, replacement_cursor) {
-            (Cursor::Detached, _) => {}
-            (Cursor::Node(node), Cursor::Node(replacement)) => {
-                let parent = node.parent_element().unwrap();
-                parent.replace_child(&replacement, node).unwrap();
-
-                *cursor = Cursor::Node(replacement);
-            }
-            (Cursor::Node(_node), Cursor::Detached) => {
-                panic!();
-            }
-            (Cursor::AttrsOf(_el), _) => {
-                panic!()
-            }
-            (Cursor::EmptyChildrenOf(_), _) => {
-                panic!();
-            }
-            _ => panic!(),
-        }
-    }
-
     fn spawn_task(task: impl std::future::Future<Output = ()> + 'static) {
         wasm_bindgen_futures::spawn_local(task);
     }
@@ -190,6 +52,157 @@ pub enum Cursor {
     Node(web_sys::Node),
     EmptyChildrenOf(web_sys::Element),
     AttrsOf(web_sys::Element),
+}
+
+impl autostrata::platform::Cursor for Cursor {
+    fn from_element_handle(handle: &ElementHandle) -> Self {
+        match handle {
+            ElementHandle::DomNode(node) => Self::Node(node.clone()),
+        }
+    }
+
+    fn empty(&mut self) {
+        match &self {
+            Cursor::AttrsOf(_) => {}
+            _ => {
+                let comment = document().create_comment("");
+                self.append_node(&comment);
+            }
+        }
+    }
+
+    fn text(&mut self, text: &str) -> ElementHandle {
+        let text_node = document().create_text_node(text);
+        self.append_node(&text_node);
+        log(&format!("new text node cursor: {self:?}"));
+        ElementHandle::DomNode(text_node.into())
+    }
+
+    fn update_text(&mut self, text: &str) {
+        match self {
+            Self::Node(node) => {
+                node.set_node_value(Some(text));
+            }
+            _ => panic!(),
+        }
+    }
+
+    fn element(&mut self, name: &str) -> ElementHandle {
+        let element = document().create_element(name).unwrap();
+        // log(&format!(
+        //     "NEW ELEMENT first child: {:?}",
+        //     element.first_child(),
+        // ));
+        self.append_node(&element);
+        // log(&format!("new element cursor: {cursor:?}"));
+        ElementHandle::DomNode(element.into())
+    }
+
+    fn on_event(&mut self, on_event: On) -> AttrHandle {
+        match self {
+            Cursor::AttrsOf(element) => {
+                let event_target: &EventTarget = element.dyn_ref().unwrap();
+                let event_type = match on_event.event() {
+                    Event::Click => "click",
+                    Event::MouseOver => "mouseover",
+                };
+
+                AttrHandle::DomEvent(EventListener::new(&event_target, event_type, move |_| {
+                    on_event.invoke();
+                }))
+            }
+            Cursor::Node(_) => panic!(),
+            Cursor::Detached => panic!(),
+            Cursor::EmptyChildrenOf(_) => panic!(),
+        }
+    }
+
+    fn enter_children(&mut self) {
+        match self {
+            Cursor::Node(node) => {
+                if let Some(child) = node.first_child() {
+                    // log(&format!("enter child: had child {child:?}"));
+                    *self = Cursor::Node(child);
+                } else if let Some(element) = node.dyn_ref::<web_sys::Element>() {
+                    // log(&format!("enter child: had no children"));
+                    *self = Cursor::EmptyChildrenOf(element.clone());
+                } else {
+                    panic!("No children");
+                }
+            }
+            Cursor::EmptyChildrenOf(_) | Cursor::Detached => {
+                panic!("Enter empty children");
+            }
+            Cursor::AttrsOf(_) => {}
+        }
+    }
+
+    fn exit_children(&mut self) {
+        // log("exit child");
+        match self {
+            Cursor::Node(node) => {
+                let parent = node.parent_element().unwrap();
+                *self = Cursor::Node(parent.dyn_into().unwrap());
+            }
+            Cursor::EmptyChildrenOf(element) => {
+                *self = Cursor::Node(element.dyn_ref::<web_sys::Node>().unwrap().clone());
+            }
+            Cursor::AttrsOf(_) => {}
+            Cursor::Detached => panic!("no children"),
+        }
+    }
+
+    fn enter_attrs(&mut self) {
+        match self {
+            Cursor::Node(node) => {
+                if let Some(element) = node.dyn_ref::<web_sys::Element>() {
+                    *self = Cursor::AttrsOf(element.clone());
+                } else {
+                    panic!("Non-element attributes");
+                }
+            }
+            Cursor::EmptyChildrenOf(_) => {
+                panic!("Entering attrs of empty children");
+            }
+            Cursor::AttrsOf(_) | Cursor::Detached => panic!(),
+        }
+    }
+
+    fn exit_attrs(&mut self) {
+        match self {
+            Cursor::AttrsOf(element) => {
+                *self = Cursor::Node(element.dyn_ref::<web_sys::Node>().unwrap().clone());
+            }
+            Cursor::EmptyChildrenOf(_) => panic!(),
+            Cursor::Node(_) => panic!(),
+            Cursor::Detached => panic!(),
+        }
+    }
+
+    fn replace(&mut self, func: impl FnOnce(&mut Self)) {
+        let mut replacement_cursor = Cursor::Detached;
+        func(&mut replacement_cursor);
+
+        match (&self, replacement_cursor) {
+            (Cursor::Detached, _) => {}
+            (Cursor::Node(node), Cursor::Node(replacement)) => {
+                let parent = node.parent_element().unwrap();
+                parent.replace_child(&replacement, node).unwrap();
+
+                *self = Cursor::Node(replacement);
+            }
+            (Cursor::Node(_node), Cursor::Detached) => {
+                panic!();
+            }
+            (Cursor::AttrsOf(_el), _) => {
+                panic!()
+            }
+            (Cursor::EmptyChildrenOf(_), _) => {
+                panic!();
+            }
+            _ => panic!(),
+        }
+    }
 }
 
 impl Cursor {
@@ -219,12 +232,4 @@ impl Cursor {
 
 fn document() -> Document {
     window().unwrap().document().unwrap()
-}
-
-#[inline]
-fn dom_node(handle: &Handle) -> &web_sys::Node {
-    match handle {
-        Handle::DomNode(node) => node,
-        _ => panic!(),
-    }
 }

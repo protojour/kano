@@ -1,4 +1,4 @@
-use crate::{Attr, AttrSet, Children, Diff, Platform, View};
+use crate::{Attr, AttrSet, Children, Cursor, Diff, Platform, View};
 
 macro_rules! tuples {
     ($(($t:ident, $i:tt)),+) => {
@@ -6,16 +6,16 @@ macro_rules! tuples {
             type State = ($($t::State),+,);
 
             fn init<P: Platform>(self, cursor: &mut P::Cursor) -> Self::State {
-                P::enter_child(cursor);
+                cursor.enter_children();
                 let ret = ($(self.$i.init::<P>(cursor)),+,);
-                P::exit_child(cursor);
+                cursor.exit_children();
                 ret
             }
 
             fn diff<P: Platform>(self, state: &mut Self::State, cursor: &mut P::Cursor) {
-                P::enter_child(cursor);
+                cursor.enter_children();
                 $(self.$i.diff::<P>(&mut state.$i, cursor));+;
-                P::exit_child(cursor);
+                cursor.exit_children();
             }
         }
 

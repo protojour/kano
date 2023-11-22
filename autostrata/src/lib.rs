@@ -14,7 +14,7 @@ pub mod platform;
 pub use either::Either;
 pub use element::*;
 pub use event::*;
-use platform::{Handle, Platform};
+use platform::{Cursor, ElementHandle, Platform};
 pub use reactive::Reactive;
 pub use style::*;
 
