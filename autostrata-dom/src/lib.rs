@@ -1,3 +1,5 @@
+#![allow(non_snake_case, non_upper_case_globals)]
+
 use autostrata::platform::{AttrHandle, ElementHandle, Platform};
 use gloo::events::EventListener;
 use js_sys::wasm_bindgen::*;
@@ -6,6 +8,9 @@ use web_sys::EventTarget;
 use web_sys::{window, Document};
 
 use autostrata::{Event, On, View};
+
+#[cfg(feature = "web-component")]
+pub mod web_component;
 
 #[wasm_bindgen]
 extern "C" {

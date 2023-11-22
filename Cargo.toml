@@ -3,5 +3,6 @@ members = [
     "autostrata",
     "autostrata-dom",
     "dom-demo",
+    "web-components-demo"
 ]
 resolver = "2"
