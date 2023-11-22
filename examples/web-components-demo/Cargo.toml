@@ -7,8 +7,8 @@ publish = false
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-autostrata = { path = "../autostrata", features = ["dom"] }
-autostrata-dom = { path = "../autostrata-dom", features = ["web-component"] }
+autostrata = { path = "../../autostrata", features = ["dom"] }
+autostrata-dom = { path = "../../autostrata-dom", features = ["web-component"] }
 wasm-bindgen = "0.2"
 console_error_panic_hook = "0.1"
 js-sys = "0.3"
