@@ -18,6 +18,8 @@ use platform::{Cursor, ElementHandle, Platform};
 pub use reactive::Reactive;
 pub use style::*;
 
+pub use autostrata_macros::view;
+
 pub trait Diff {
     type State;
 

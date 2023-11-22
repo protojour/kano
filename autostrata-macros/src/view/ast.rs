@@ -123,6 +123,12 @@ pub fn parse_tag_name(input: ParseStream) -> Result<TagName, syn::Error> {
     })
 }
 
+impl Parse for Node {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        Parser.parse_node(input)
+    }
+}
+
 impl Parser {
     pub fn parse_at_least_one(&self, input: ParseStream) -> syn::Result<Node> {
         let mut nodes = vec![self.parse_node(input)?];

@@ -1,14 +1,14 @@
-use autostrata::{Element, View};
+use autostrata::{view, View};
 use autostrata_dom::web_component::{ComponentConfig, Shadow, WebComponent};
 
 fn test_comp() -> impl View {
-    Element::new(
-        "section",
-        (),
-        (
-            Element::new("h1", (), ("This is AutoStrata Web Component!",)),
-            Element::new("button", (), (Element::new("slot", (), ()),)),
-        ),
+    view!(
+        <section>
+            <h1>"This is AutoStrata Web Component!"</h1>
+            <button>
+                <slot />
+            </button>
+        </section>
     )
 }
 

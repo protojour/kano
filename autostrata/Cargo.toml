@@ -9,6 +9,7 @@ edition = "2021"
 dom = ["js-sys", "web-sys", "gloo"]
 
 [dependencies]
+autostrata-macros.path = "../autostrata-macros"
 web-sys = { version = "0.3", optional = true, features = ["Node"] }
 js-sys = { version = "0.3", optional = true }
 gloo = { version = "0.10", optional = true, features = ["events"] }
