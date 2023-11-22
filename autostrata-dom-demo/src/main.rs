@@ -1,3 +1,5 @@
+use std::time::Instant;
+
 use autostrata::*;
 use wasm_bindgen::prelude::*;
 
@@ -10,6 +12,7 @@ extern "C" {
 }
 
 fn poc() -> impl View {
+    let alt: Either<&'static str, ()> = Either::Left("Two");
     let opt: Option<i32> = Some(32);
 
     Element::new(
@@ -22,10 +25,21 @@ fn poc() -> impl View {
                 (),
                 (
                     Element::new("li", (), ("One",)),
-                    opt.map(|_| Element::new("li", (), ("Two",))),
+                    opt.map(|_| Element::new("li", (), (alt,))),
                     Element::new("li", (), ("Three",)),
                 ),
             ),
+            Reactive(move || {
+                Element::new(
+                    "span",
+                    (),
+                    (if (Instant::now().elapsed().as_millis() & 0x1) > 0 {
+                        Either::Left(Element::new("strong", (), ("yes",)))
+                    } else {
+                        Either::Right("no")
+                    },),
+                )
+            }),
             Element::new(
                 "button",
                 (

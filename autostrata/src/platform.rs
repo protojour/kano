@@ -1,7 +1,9 @@
+use std::any::Any;
+
 use crate::On;
 
 pub trait Platform {
-    type Cursor: Clone + 'static;
+    type Cursor: Clone + Any;
 
     fn new_text(text: &str, cursor: &mut Self::Cursor) -> Handle;
     fn update_text(handle: &mut Handle, text: &str);

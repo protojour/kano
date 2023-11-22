@@ -11,3 +11,4 @@ dom = ["web-sys", "gloo"]
 [dependencies]
 web-sys = { version = "0.3", optional = true, features = ["Node"] }
 gloo = { version = "0.10", optional = true, features = ["events"] }
+futures = "0.3"

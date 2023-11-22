@@ -1,8 +1,9 @@
-use std::any::Any;
-
+mod either;
 mod element;
 mod event;
 mod option;
+mod pubsub;
+mod reactive;
 mod style;
 mod text;
 mod tuple;
@@ -10,9 +11,11 @@ mod unit;
 
 pub mod platform;
 
+pub use either::Either;
 pub use element::*;
 pub use event::*;
 use platform::{Handle, Platform};
+pub use reactive::Reactive;
 pub use style::*;
 
 pub trait Diff {
