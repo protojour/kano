@@ -2,6 +2,7 @@
 members = [
     "autostrata",
     "autostrata-dom",
+    "autostrata-macros",
     "dom-demo",
     "web-components-demo"
 ]
