@@ -37,6 +37,16 @@ impl Dom {
 impl Platform for Dom {
     type Cursor = Cursor;
 
+    fn mark_empty(cursor: &mut Self::Cursor) {
+        match &cursor {
+            Cursor::AttrsOf(_) => {}
+            _ => {
+                let comment = document().create_comment("");
+                cursor.append_node(&comment);
+            }
+        }
+    }
+
     fn new_text(text: &str, cursor: &mut Self::Cursor) -> Handle {
         let text_node = document().create_text_node(text);
         cursor.append_node(&text_node);
@@ -140,21 +150,6 @@ impl Platform for Dom {
         }
     }
 
-    fn unmount(handle: &mut Handle, cursor: &mut Cursor) {
-        match (cursor, handle) {
-            (Cursor::Node(_), Handle::DomNode(node)) => {
-                node.parent_element().unwrap().remove_child(node).unwrap();
-            }
-            (Cursor::AttrsOf(element), Handle::DomAttr(name)) => {
-                let _ = element.remove_attribute(name);
-            }
-            (Cursor::AttrsOf(_element), Handle::DomEvent(_listener)) => {
-                // Should auto-register after listener is dropped
-            }
-            _ => panic!("Can't unmount"),
-        }
-    }
-
     fn replace_at_cursor(cursor: &mut Self::Cursor, func: impl FnOnce(&mut Self::Cursor)) {
         let mut replacement_cursor = Cursor::Detached;
         func(&mut replacement_cursor);
@@ -166,6 +161,9 @@ impl Platform for Dom {
                 parent.replace_child(&replacement, node).unwrap();
 
                 *cursor = Cursor::Node(replacement);
+            }
+            (Cursor::Node(_node), Cursor::Detached) => {
+                panic!();
             }
             (Cursor::AttrsOf(_el), _) => {
                 panic!()
@@ -214,7 +212,7 @@ impl Cursor {
                     .expect("insert_before");
                 *self = Self::Node(appendee.clone());
             }
-            Self::AttrsOf(_) => panic!(),
+            Self::AttrsOf(_) => panic!("append to attrs"),
         }
     }
 }

@@ -32,17 +32,36 @@ fn poc() -> impl View {
                     Element::new("li", (), ("Three",)),
                 ),
             ),
-            Reactive(move || {
-                Element::new(
-                    "span",
-                    (),
-                    (if rand_bool() {
-                        Either::Left(Element::new("strong", (), ("yes",)))
-                    } else {
-                        Either::Right("no")
-                    },),
-                )
-            }),
+            Element::new(
+                "div",
+                (),
+                (Reactive(move || {
+                    Element::new(
+                        "span",
+                        (),
+                        (if rand_bool() {
+                            Either::Left(Element::new("strong", (), ("yes",)))
+                        } else {
+                            Either::Right("no")
+                        },),
+                    )
+                }),),
+            ),
+            Element::new(
+                "div",
+                (),
+                (Reactive(move || {
+                    Element::new(
+                        "span",
+                        (),
+                        (if rand_bool() {
+                            Either::Left(Element::new("strong", (), ("PRESENT",)))
+                        } else {
+                            Either::Right(())
+                        },),
+                    )
+                }),),
+            ),
             Element::new(
                 "button",
                 (
