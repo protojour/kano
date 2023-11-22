@@ -11,9 +11,9 @@ The platform API has been designed to not leak types into business logic.
 ## Trying out the DOM platform
 
 ```sh
-cd examples/dom-demo
 cargo install trunk
-trunk serve --watch ..
+
+(cd examples/dom-demo/; trunk serve -w ../..)
 ```
 
 ## Reactivity
