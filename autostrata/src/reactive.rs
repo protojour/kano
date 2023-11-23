@@ -6,9 +6,7 @@ use std::{
 
 use crate::{
     platform::Platform,
-    pubsub::{
-        with_current_reactive_subscriber, OnSignal, Signal, SignalId, Subscriber, SubscriberId,
-    },
+    pubsub::{OnSignal, Signal, SignalId, Subscriber, SubscriberId},
     Attr, Diff, ViewState,
 };
 
@@ -41,13 +39,13 @@ impl<T: Diff + 'static, F: (Fn() -> T) + 'static> Diff for Reactive<F> {
             let handler = SignalHandler {
                 weak_handle: Arc::downgrade(&reactive_state.shared_state),
             };
-            let subscriber_id = reactive_state.subscriber_keepalive.subscriber_id();
+            let subscriber_id = reactive_state.subscriber_keepalive.id();
 
             P::spawn_task(async move {
                 let signal = Signal::new();
                 loop {
                     gloo_timers::future::sleep(Duration::from_secs(1)).await;
-                    if !handler.on_signal(signal.signal_id(), subscriber_id) {
+                    if !handler.on_signal(signal.id(), subscriber_id) {
                         return;
                     }
                 }
@@ -94,9 +92,9 @@ impl<T: Diff + 'static> ReactiveState<T> {
         }));
 
         {
-            let state = with_current_reactive_subscriber(subscriber.subscriber_id(), || {
-                update_view(None, cursor)
-            });
+            let state = subscriber
+                .id()
+                .invoke_as_current_reactive(|| update_view(None, cursor));
 
             // let mut lock = subscriber_state.shared_state.lock().unwrap();
             let mut lock = shared_state.lock().unwrap();
@@ -135,7 +133,7 @@ struct SignalHandler<T: Diff> {
 impl<T: Diff + 'static> OnSignal for SignalHandler<T> {
     fn on_signal(&self, _signal_id: SignalId, subscriber_id: SubscriberId) -> bool {
         if let Some(strong_handle) = self.weak_handle.upgrade() {
-            with_current_reactive_subscriber(subscriber_id, || {
+            subscriber_id.invoke_as_current_reactive(|| {
                 let mut shared_state_lock = strong_handle.lock().unwrap();
                 if let Some(shared_state) = &mut *shared_state_lock {
                     shared_state.update_view();

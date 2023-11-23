@@ -1,6 +1,6 @@
 use std::sync::{Arc, Mutex};
 
-use crate::pubsub::{register_signal_dependency, Signal, SignalId};
+use crate::pubsub::{Signal, SignalId};
 
 pub fn use_state<T: 'static>(value: T) -> (State<T>, StateMut<T>) {
     let signal = Signal::new();
@@ -8,7 +8,7 @@ pub fn use_state<T: 'static>(value: T) -> (State<T>, StateMut<T>) {
 
     (
         State {
-            signal_id: signal.signal_id(),
+            signal_id: signal.id(),
             mutex: mutex.clone(),
         },
         StateMut { mutex, signal },
@@ -22,7 +22,7 @@ pub struct State<T> {
 
 impl<T: 'static> State<T> {
     pub fn get(&self) -> Arc<T> {
-        register_signal_dependency(self.signal_id);
+        self.signal_id.register_dependency();
 
         let lock = self.mutex.lock().unwrap();
         (*lock).clone()
