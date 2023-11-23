@@ -130,6 +130,7 @@ impl Parse for Node {
 }
 
 impl Parser {
+    #[allow(unused)]
     pub fn parse_at_least_one(&self, input: ParseStream) -> syn::Result<Node> {
         let mut nodes = vec![self.parse_node(input)?];
 
@@ -519,6 +520,7 @@ mod tests {
         Node::Component(Component { type_path, attrs })
     }
 
+    #[allow(unused)]
     fn attr(name: &str, value: AttrValue) -> Attr {
         Attr {
             name: quote::format_ident!("{}", name),
@@ -526,6 +528,7 @@ mod tests {
         }
     }
 
+    #[allow(unused)]
     fn html_attr(tag: &str, name: &str, value: AttrValue) -> Attr {
         Attr {
             name: quote::format_ident!("{name}"),

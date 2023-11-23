@@ -10,7 +10,7 @@ pub struct Element<A, C> {
 }
 
 impl<A: AttrSet, C: Children> Element<A, C> {
-    pub fn new(name: &'static str, attrs: A, children: C) -> Self {
+    pub const fn new(name: &'static str, attrs: A, children: C) -> Self {
         Self {
             name,
             attrs,

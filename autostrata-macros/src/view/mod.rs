@@ -9,7 +9,7 @@ pub fn view(node: Node) -> TokenStream {
     match node {
         Node::Element(Element {
             tag_name,
-            attrs,
+            attrs: _,
             children,
         }) => {
             let tag_name = syn::LitStr::new(&tag_name.to_string(), tag_name.span());
@@ -21,20 +21,20 @@ pub fn view(node: Node) -> TokenStream {
                 ))
             }
         }
-        Node::Fragment(frag) => {
+        Node::Fragment(_frag) => {
             quote!()
         }
         Node::Text(text) => text.0.into_token_stream(),
-        Node::TextExpr(expr) => {
+        Node::TextExpr(_expr) => {
             quote!()
         }
-        Node::Component(component) => {
+        Node::Component(_component) => {
             quote!()
         }
-        Node::Match(match_) => {
+        Node::Match(_match) => {
             quote!()
         }
-        Node::For(for_) => {
+        Node::For(_for) => {
             quote!()
         }
     }
