@@ -32,7 +32,11 @@ struct SubscriberGc {
 impl Drop for SubscriberGc {
     fn drop(&mut self) {
         REGISTRY.with_borrow_mut(|registry| {
-            registry.subscribers.remove(&self.subscriber_id);
+            let subscriber_id = self.subscriber_id;
+            registry.notifiers.remove(&subscriber_id);
+            registry
+                .subscriptions
+                .retain(|entry| entry.1 != subscriber_id);
         });
     }
 }
@@ -49,11 +53,32 @@ static SUBSCRIBER_ID: AtomicU64 = AtomicU64::new(0);
 
 #[derive(Default)]
 struct Registry {
-    subscribers: HashMap<SubscriberId, Arc<dyn Notify>>,
+    notifiers: HashMap<SubscriberId, Arc<dyn Notify>>,
     subscriptions: BTreeSet<(SignalId, SubscriberId)>,
 }
 
-pub(crate) fn with_active_subscriber<T>(
+pub(crate) fn new_subscriber(notify: Arc<dyn Notify>) -> SubscriberHandle {
+    let subscriber_id = SubscriberId(SUBSCRIBER_ID.fetch_add(1, Ordering::SeqCst));
+
+    REGISTRY.with_borrow_mut(|registry| {
+        registry.notifiers.insert(subscriber_id, notify);
+    });
+
+    SubscriberHandle {
+        gc: Arc::new(SubscriberGc { subscriber_id }),
+    }
+}
+
+pub(crate) fn new_signal_id() -> SignalId {
+    SignalId(SIGNAL_ID.fetch_add(1, Ordering::SeqCst))
+}
+
+/// Set the subscriber id as the current reactive one,
+/// and execute the given function, before resetting state to previous state again.
+///
+/// Setting a subscriber to the current reactive one, enables
+/// automatic subscription creation when a signal dependency is registered.
+pub(crate) fn with_current_reactive_subscriber<T>(
     subscriber_id: SubscriberId,
     func: impl FnOnce() -> T,
 ) -> T {
@@ -69,26 +94,9 @@ pub(crate) fn with_active_subscriber<T>(
     ret
 }
 
-pub(crate) fn new_signal_id() -> SignalId {
-    SignalId(SIGNAL_ID.fetch_add(1, Ordering::SeqCst))
-}
-
-pub(crate) fn new_subscriber_id() -> SubscriberId {
-    SubscriberId(SUBSCRIBER_ID.fetch_add(1, Ordering::SeqCst))
-}
-
-pub(crate) fn new_subscriber(notify: Arc<dyn Notify>) -> SubscriberHandle {
-    let subscriber_id = new_subscriber_id();
-
-    REGISTRY.with_borrow_mut(|registry| {
-        registry.subscribers.insert(subscriber_id, notify);
-    });
-
-    SubscriberHandle {
-        gc: Arc::new(SubscriberGc { subscriber_id }),
-    }
-}
-
+/// register a dependency upon a signal.
+///
+/// This will register a subscription between the current active subscriber (if any) and the signal.
 pub(crate) fn register_signal_dependency(signal_id: SignalId) {
     let active = ACTIVE_SUBSCRIBER.with_borrow_mut(|active| active.clone());
 
@@ -107,7 +115,7 @@ pub(crate) fn notify(signal_id: SignalId) {
             .iter()
             .filter_map(|(filter_signal_id, subscriber_id)| {
                 if filter_signal_id == &signal_id {
-                    if let Some(notify) = registry.subscribers.get(subscriber_id) {
+                    if let Some(notify) = registry.notifiers.get(subscriber_id) {
                         Some((notify.clone(), *subscriber_id))
                     } else {
                         // FIXME: BUG

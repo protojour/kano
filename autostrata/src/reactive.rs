@@ -7,8 +7,8 @@ use std::{
 use crate::{
     platform::Platform,
     pubsub::{
-        new_signal_id, new_subscriber, with_active_subscriber, Notify, SignalId, SubscriberHandle,
-        SubscriberId,
+        new_signal_id, new_subscriber, with_current_reactive_subscriber, Notify, SignalId,
+        SubscriberHandle, SubscriberId,
     },
     Attr, Diff, ViewState,
 };
@@ -100,7 +100,8 @@ impl<T: Diff + 'static> ReactiveState<T> {
         };
 
         {
-            let state = with_active_subscriber(subscriber_id, || update_view(None, cursor));
+            let state =
+                with_current_reactive_subscriber(subscriber_id, || update_view(None, cursor));
 
             let mut lock = subscriber_state.shared_state.lock().unwrap();
             *lock = Some(SharedState {
@@ -151,7 +152,7 @@ struct NotificationReceiver<T: Diff> {
 impl<T: Diff + 'static> Notify for NotificationReceiver<T> {
     fn notify(&self, _signal_id: SignalId, subscriber_id: SubscriberId) -> bool {
         if let Some(arc) = self.weak.upgrade() {
-            with_active_subscriber(subscriber_id, || {
+            with_current_reactive_subscriber(subscriber_id, || {
                 let mut lock = arc.lock().unwrap();
                 if let Some(shared_state) = &mut *lock {
                     shared_state.update_view();
