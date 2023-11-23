@@ -18,6 +18,7 @@ pub use event::*;
 use platform::{Cursor, ElementHandle, Platform};
 pub use reactive::Reactive;
 pub use style::*;
+pub use use_state::*;
 
 pub use autostrata_macros::view;
 

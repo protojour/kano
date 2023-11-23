@@ -1,12 +1,18 @@
 use std::cell::RefCell;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 pub trait Notify {
+    fn subscriber_id(&self) -> u64;
     fn notify(&self) -> bool;
 }
 
 thread_local! {
     static ACTIVE_NOTIFIER: RefCell<ActiveNotifier> = RefCell::new(ActiveNotifier { current_notifier: RefCell::new(None) });
 }
+
+static SIGNAL_ID: AtomicU64 = AtomicU64::new(0);
+
+static SUBSCRIBER_ID: AtomicU64 = AtomicU64::new(0);
 
 #[derive(Default)]
 struct ActiveNotifier {
@@ -26,6 +32,14 @@ pub(crate) fn with_active_notifier<T>(notifier: Box<dyn Notify>, func: impl FnOn
 
         ret
     })
+}
+
+pub(crate) fn new_signal_id() -> u64 {
+    SIGNAL_ID.fetch_add(1, Ordering::SeqCst)
+}
+
+pub(crate) fn new_subscriber_id() -> u64 {
+    SUBSCRIBER_ID.fetch_add(1, Ordering::SeqCst)
 }
 
 /*

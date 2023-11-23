@@ -17,6 +17,7 @@ dependencies = [
  "gloo",
  "gloo-timers",
  "js-sys",
+ "wasm-bindgen-futures",
  "web-sys",
 ]
 

@@ -18,6 +18,8 @@ fn poc() -> impl View {
     let alt: Either<&'static str, ()> = Either::Left("Two");
     let opt: Option<i32> = Some(32);
 
+    let (clicks, clicks_mut) = use_state(0);
+
     Element::new(
         "div",
         (),
@@ -31,6 +33,26 @@ fn poc() -> impl View {
                     opt.map(|_| Element::new("li", (), (alt,))),
                     Element::new("li", (), ("Three",)),
                 ),
+            ),
+            Element::new(
+                "div",
+                (),
+                (Reactive(move || {
+                    Element::new("span", (), (format!("Clicked {} times", clicks.get()),))
+                }),),
+            ),
+            Element::new(
+                "button",
+                (
+                    On::click(move || {
+                        log("clicked!");
+                        clicks_mut.update(|clicks| clicks + 1);
+                    }),
+                    On::mouseover(|| {
+                        log("mouseover!");
+                    }),
+                ),
+                ("click me",),
             ),
             Element::new(
                 "div",
@@ -61,18 +83,6 @@ fn poc() -> impl View {
                         },),
                     )
                 }),),
-            ),
-            Element::new(
-                "button",
-                (
-                    On::click(|| {
-                        log("clicked!");
-                    }),
-                    On::mouseover(|| {
-                        log("mouseover!");
-                    }),
-                ),
-                ("click me",),
             ),
         ),
     )
