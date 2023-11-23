@@ -16,7 +16,7 @@ pub fn view(node: Node) -> TokenStream {
             let children = children.into_iter().map(view);
 
             quote! {
-                autostrata::Element::new(#tag_name, (), (
+                autostrata::view::Element::new(#tag_name, (), (
                     #(#children,)*
                 ))
             }

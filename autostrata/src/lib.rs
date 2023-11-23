@@ -1,22 +1,13 @@
-mod either;
-mod element;
+pub mod platform;
+pub mod view;
+
 mod event;
-mod option;
 mod pubsub;
-mod reactive;
 mod style;
-mod text;
-mod tuple;
-mod unit;
 mod use_state;
 
-pub mod platform;
-
-pub use either::Either;
-pub use element::*;
 pub use event::*;
 use platform::{Cursor, ElementHandle, Platform};
-pub use reactive::Reactive;
 pub use style::*;
 pub use use_state::*;
 

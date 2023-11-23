@@ -1,3 +1,4 @@
+use autostrata::view::*;
 use autostrata::*;
 
 fn rand_bool() -> bool {
@@ -7,7 +8,6 @@ fn rand_bool() -> bool {
 
 fn poc() -> impl View {
     let alt: Either<&'static str, ()> = Either::Left("Two");
-    let opt: Option<i32> = Some(32);
 
     let (clicks, clicks_mut) = use_state(0);
 
@@ -21,7 +21,7 @@ fn poc() -> impl View {
                 (),
                 (
                     Element::new("li", (), ("One",)),
-                    opt.map(|_| Element::new("li", (), (alt,))),
+                    Element::new("li", (), (alt,)),
                     Element::new("li", (), ("Three",)),
                 ),
             ),
