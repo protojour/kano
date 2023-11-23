@@ -25,16 +25,16 @@ impl Signal {
     /// A signal can be sent at any time to notify subscribers to it.
     pub fn new() -> Signal {
         let notification_sender = REGISTRY.with_borrow_mut(|registry| {
-            if let Some(notification_sender) = &registry.signal_sender {
-                notification_sender.clone()
+            if let Some(signal_sender) = &registry.signal_sender {
+                signal_sender.clone()
             } else {
-                let (tx, mut rx) = futures::channel::mpsc::unbounded::<SignalId>();
+                let (sender, mut receiver) = futures::channel::mpsc::unbounded::<SignalId>();
 
                 #[cfg(feature = "dom")]
                 {
                     wasm_bindgen_futures::spawn_local(async move {
                         loop {
-                            if let Some(signal_id) = rx.next().await {
+                            if let Some(signal_id) = receiver.next().await {
                                 crate::log(&format!("signal received: {signal_id:?}"));
                                 on_signal(signal_id);
                             } else {
@@ -44,8 +44,8 @@ impl Signal {
                     });
                 }
 
-                registry.signal_sender = Some(tx.clone());
-                tx
+                registry.signal_sender = Some(sender.clone());
+                sender
             }
         });
 
