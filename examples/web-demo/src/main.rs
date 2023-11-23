@@ -1,5 +1,4 @@
-use autostrata::view::*;
-use autostrata::*;
+use autostrata::{reactive::*, view::*, *};
 
 fn rand_bool() -> bool {
     let ms = js_sys::Date::now() as u128;
