@@ -1,12 +1,34 @@
-#![allow(unused)]
+use std::cell::RefCell;
 
-use std::{
-    marker::PhantomData,
-    sync::{Arc, Mutex},
-};
+pub trait Notify {
+    fn notify(&self) -> bool;
+}
 
-use futures::StreamExt;
+thread_local! {
+    static ACTIVE_NOTIFIER: RefCell<ActiveNotifier> = RefCell::new(ActiveNotifier { current_notifier: RefCell::new(None) });
+}
 
+#[derive(Default)]
+struct ActiveNotifier {
+    current_notifier: RefCell<Option<Box<dyn Notify>>>,
+}
+
+pub(crate) fn with_active_notifier<T>(notifier: Box<dyn Notify>, func: impl FnOnce() -> T) -> T {
+    ACTIVE_NOTIFIER.with_borrow_mut(|active_notifier| {
+        let previous_notifier = active_notifier
+            .current_notifier
+            .borrow_mut()
+            .replace(notifier);
+
+        let ret = func();
+
+        *active_notifier.current_notifier.borrow_mut() = previous_notifier;
+
+        ret
+    })
+}
+
+/*
 pub struct Signal<T> {
     phantom: PhantomData<T>,
 }
@@ -25,3 +47,5 @@ impl<T> SignalMut<T> {
 async fn signal_reader<T>(mut receiver: futures::channel::mpsc::Receiver<T>) {
     while let Some(value) = receiver.next().await {}
 }
+
+*/
