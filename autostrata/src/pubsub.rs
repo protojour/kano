@@ -1,13 +1,46 @@
+use std::borrow::BorrowMut;
 use std::cell::RefCell;
+use std::collections::{BTreeSet, HashMap};
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Arc;
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
+pub struct SignalId(u64);
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
+pub struct SubscriberId(u64);
 
 pub trait Notify {
-    fn subscriber_id(&self) -> u64;
-    fn notify(&self) -> bool;
+    fn notify(&self, signal_id: SignalId, subscriber_id: SubscriberId) -> bool;
+}
+
+#[derive(Clone)]
+pub struct SubscriberHandle {
+    gc: Arc<SubscriberGc>,
+}
+
+impl SubscriberHandle {
+    pub fn subscriber_id(&self) -> SubscriberId {
+        self.gc.subscriber_id
+    }
+}
+
+struct SubscriberGc {
+    subscriber_id: SubscriberId,
+}
+
+impl Drop for SubscriberGc {
+    fn drop(&mut self) {
+        REGISTRY.with_borrow_mut(|registry| {
+            registry.subscribers.remove(&self.subscriber_id);
+        });
+    }
 }
 
 thread_local! {
-    static ACTIVE_NOTIFIER: RefCell<ActiveNotifier> = RefCell::new(ActiveNotifier { current_notifier: RefCell::new(None) });
+    static ACTIVE_SUBSCRIBER: RefCell<Option<SubscriberId>> = RefCell::new(None);
+
+    static REGISTRY: RefCell<Registry> = RefCell::new(Registry::default());
 }
 
 static SIGNAL_ID: AtomicU64 = AtomicU64::new(0);
@@ -15,51 +48,79 @@ static SIGNAL_ID: AtomicU64 = AtomicU64::new(0);
 static SUBSCRIBER_ID: AtomicU64 = AtomicU64::new(0);
 
 #[derive(Default)]
-struct ActiveNotifier {
-    current_notifier: RefCell<Option<Box<dyn Notify>>>,
+struct Registry {
+    subscribers: HashMap<SubscriberId, Arc<dyn Notify>>,
+    subscriptions: BTreeSet<(SignalId, SubscriberId)>,
 }
 
-pub(crate) fn with_active_notifier<T>(notifier: Box<dyn Notify>, func: impl FnOnce() -> T) -> T {
-    ACTIVE_NOTIFIER.with_borrow_mut(|active_notifier| {
-        let previous_notifier = active_notifier
-            .current_notifier
-            .borrow_mut()
-            .replace(notifier);
+pub(crate) fn with_active_subscriber<T>(
+    subscriber_id: SubscriberId,
+    func: impl FnOnce() -> T,
+) -> T {
+    let prev = ACTIVE_SUBSCRIBER
+        .with_borrow_mut(|active_subscriber| active_subscriber.replace(subscriber_id));
 
-        let ret = func();
+    let ret = func();
 
-        *active_notifier.current_notifier.borrow_mut() = previous_notifier;
+    ACTIVE_SUBSCRIBER.with_borrow_mut(|active_subscriber| {
+        *active_subscriber.borrow_mut() = prev;
+    });
 
-        ret
-    })
+    ret
 }
 
-pub(crate) fn new_signal_id() -> u64 {
-    SIGNAL_ID.fetch_add(1, Ordering::SeqCst)
+pub(crate) fn new_signal_id() -> SignalId {
+    SignalId(SIGNAL_ID.fetch_add(1, Ordering::SeqCst))
 }
 
-pub(crate) fn new_subscriber_id() -> u64 {
-    SUBSCRIBER_ID.fetch_add(1, Ordering::SeqCst)
+pub(crate) fn new_subscriber_id() -> SubscriberId {
+    SubscriberId(SUBSCRIBER_ID.fetch_add(1, Ordering::SeqCst))
 }
 
-/*
-pub struct Signal<T> {
-    phantom: PhantomData<T>,
-}
+pub(crate) fn new_subscriber(notify: Arc<dyn Notify>) -> SubscriberHandle {
+    let subscriber_id = new_subscriber_id();
 
-pub struct SignalMut<T> {
-    tx: Arc<Mutex<futures::channel::mpsc::Sender<T>>>,
-}
+    REGISTRY.with_borrow_mut(|registry| {
+        registry.subscribers.insert(subscriber_id, notify);
+    });
 
-impl<T> SignalMut<T> {
-    pub async fn set(&mut self, value: T) {
-        let mut lock = self.tx.lock().unwrap();
-        let _ = lock.try_send(value);
+    SubscriberHandle {
+        gc: Arc::new(SubscriberGc { subscriber_id }),
     }
 }
 
-async fn signal_reader<T>(mut receiver: futures::channel::mpsc::Receiver<T>) {
-    while let Some(value) = receiver.next().await {}
+pub(crate) fn register_signal_dependency(signal_id: SignalId) {
+    let active = ACTIVE_SUBSCRIBER.with_borrow_mut(|active| active.clone());
+
+    if let Some(subscriber_id) = active {
+        REGISTRY.with_borrow_mut(|registry| {
+            registry.subscriptions.insert((signal_id, subscriber_id));
+        })
+    }
 }
 
-*/
+pub(crate) fn notify(signal_id: SignalId) {
+    let notifiers: Vec<(Arc<dyn Notify>, SubscriberId)> = REGISTRY.with_borrow_mut(|registry| {
+        // FIXME: More optimal traversal of subscription
+        registry
+            .subscriptions
+            .iter()
+            .filter_map(|(filter_signal_id, subscriber_id)| {
+                if filter_signal_id == &signal_id {
+                    if let Some(notify) = registry.subscribers.get(subscriber_id) {
+                        Some((notify.clone(), *subscriber_id))
+                    } else {
+                        // FIXME: BUG
+                        None
+                    }
+                } else {
+                    None
+                }
+            })
+            .collect()
+    });
+
+    for (notifier, subscriber_id) in notifiers {
+        notifier.notify(signal_id, subscriber_id);
+    }
+}

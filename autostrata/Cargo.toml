@@ -6,14 +6,16 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [features]
-dom = ["js-sys", "web-sys", "gloo", "wasm-bindgen-futures"]
+dom = ["js-sys", "web-sys", "gloo", "wasm-bindgen", "wasm-bindgen-futures"]
 
 [dependencies]
 autostrata-macros.path = "../autostrata-macros"
+lazy_static = "1"
+futures = "0.3"
 web-sys = { version = "0.3", optional = true, features = ["Node"] }
 js-sys = { version = "0.3", optional = true }
 gloo = { version = "0.10", optional = true, features = ["events"] }
-futures = "0.3"
-wasm-bindgen-futures = { version = "0.4", optional = true }
 # for DOM testing (remove later):
 gloo-timers = { version = "0.3", features = ["futures"] }
+wasm-bindgen = { version = "0.2", optional = true }
+wasm-bindgen-futures = { version = "0.4", optional = true }

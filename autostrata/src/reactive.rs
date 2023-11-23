@@ -6,7 +6,10 @@ use std::{
 
 use crate::{
     platform::Platform,
-    pubsub::{new_subscriber_id, with_active_notifier, Notify},
+    pubsub::{
+        new_signal_id, new_subscriber, with_active_subscriber, Notify, SignalId, SubscriberHandle,
+        SubscriberId,
+    },
     Attr, Diff, ViewState,
 };
 
@@ -36,14 +39,18 @@ impl<T: Diff + 'static, F: (Fn() -> T) + 'static> Diff for Reactive<F> {
 
         let notify = NotificationReceiver {
             weak: Arc::downgrade(&reactive_state.subscriber_state.shared_state),
-            subscriber_id: reactive_state.subscriber_state.subscriber_id,
         };
+        let subscriber_id = reactive_state
+            .subscriber_state
+            .subscriber_handle
+            .subscriber_id();
 
         // Test: Update it at an interval as long as it's alive
         P::spawn_task(async move {
+            let signal_id = new_signal_id();
             loop {
                 gloo_timers::future::sleep(Duration::from_secs(1)).await;
-                if !notify.notify() {
+                if !notify.notify(signal_id, subscriber_id) {
                     return;
                 }
             }
@@ -81,20 +88,19 @@ impl<T: Diff + 'static> ReactiveState<T> {
         cursor: &mut dyn Any,
         box_cursor: &dyn Fn(&mut dyn Any) -> Box<dyn Any>,
     ) -> Self {
+        let shared_state: Arc<Mutex<Option<SharedState<T>>>> = Arc::new(Mutex::new(None));
+        let subscriber_handle = new_subscriber(Arc::new(NotificationReceiver {
+            weak: Arc::downgrade(&shared_state),
+        }));
+        let subscriber_id = subscriber_handle.subscriber_id();
+
         let subscriber_state = SubscriberState {
-            shared_state: Arc::new(Mutex::new(None)),
-            subscriber_id: new_subscriber_id(),
+            shared_state,
+            subscriber_handle,
         };
 
         {
-            let notification_receiver = NotificationReceiver {
-                weak: Arc::downgrade(&subscriber_state.shared_state),
-                subscriber_id: subscriber_state.subscriber_id,
-            };
-
-            let state = with_active_notifier(Box::new(notification_receiver), || {
-                update_view(None, cursor)
-            });
+            let state = with_active_subscriber(subscriber_id, || update_view(None, cursor));
 
             let mut lock = subscriber_state.shared_state.lock().unwrap();
             *lock = Some(SharedState {
@@ -112,14 +118,14 @@ impl<T: Diff + 'static> ReactiveState<T> {
 
 struct SubscriberState<T: Diff> {
     shared_state: Arc<Mutex<Option<SharedState<T>>>>,
-    subscriber_id: u64,
+    subscriber_handle: SubscriberHandle,
 }
 
 impl<T: Diff> Clone for SubscriberState<T> {
     fn clone(&self) -> Self {
         Self {
             shared_state: self.shared_state.clone(),
-            subscriber_id: self.subscriber_id,
+            subscriber_handle: self.subscriber_handle.clone(),
         }
     }
 }
@@ -140,22 +146,12 @@ impl<T: Diff> SharedState<T> {
 
 struct NotificationReceiver<T: Diff> {
     weak: Weak<Mutex<Option<SharedState<T>>>>,
-    subscriber_id: u64,
 }
 
 impl<T: Diff + 'static> Notify for NotificationReceiver<T> {
-    fn subscriber_id(&self) -> u64 {
-        self.subscriber_id
-    }
-
-    fn notify(&self) -> bool {
+    fn notify(&self, _signal_id: SignalId, subscriber_id: SubscriberId) -> bool {
         if let Some(arc) = self.weak.upgrade() {
-            let next_receiver = NotificationReceiver {
-                weak: self.weak.clone(),
-                subscriber_id: self.subscriber_id,
-            };
-
-            with_active_notifier(Box::new(next_receiver), || {
+            with_active_subscriber(subscriber_id, || {
                 let mut lock = arc.lock().unwrap();
                 if let Some(shared_state) = &mut *lock {
                     shared_state.update_view();

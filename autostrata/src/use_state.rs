@@ -1,16 +1,18 @@
 use std::sync::{Arc, Mutex};
 
-use futures::SinkExt;
+use futures::{SinkExt, StreamExt};
 
-use crate::pubsub::new_signal_id;
+use crate::pubsub::{new_signal_id, notify, register_signal_dependency, SignalId};
 
 pub struct State<T> {
     mutex: Arc<Mutex<Arc<T>>>,
-    signal_id: u64,
+    signal_id: SignalId,
 }
 
 impl<T: 'static> State<T> {
     pub fn get(&self) -> Arc<T> {
+        register_signal_dependency(self.signal_id);
+
         let lock = self.mutex.lock().unwrap();
         (*lock).clone()
     }
@@ -28,7 +30,7 @@ impl<T> Clone for State<T> {
 pub struct StateMut<T> {
     mutex: Arc<Mutex<Arc<T>>>,
     tx: futures::channel::mpsc::Sender<()>,
-    signal_id: u64,
+    signal_id: SignalId,
 }
 
 impl<T: 'static> StateMut<T> {
@@ -73,8 +75,24 @@ impl<T> Clone for StateMut<T> {
 
 pub fn use_state<T: 'static>(value: T) -> (State<T>, StateMut<T>) {
     let signal_id = new_signal_id();
+    crate::log(&format!("use_state signal id: {signal_id:?}"));
     let mutex = Arc::new(Mutex::new(Arc::new(value)));
-    let (tx, rx) = futures::channel::mpsc::channel(1);
+    let (tx, mut rx) = futures::channel::mpsc::channel(1);
+
+    #[cfg(feature = "dom")]
+    {
+        wasm_bindgen_futures::spawn_local(async move {
+            loop {
+                if let Some(_) = rx.next().await {
+                    crate::log(&format!("use_state notify: {signal_id:?}"));
+                    notify(signal_id);
+                } else {
+                    crate::log(&format!("signal receiver {signal_id:?} lost"));
+                    break;
+                }
+            }
+        });
+    }
 
     (
         State {

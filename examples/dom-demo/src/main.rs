@@ -62,9 +62,9 @@ fn poc() -> impl View {
                         "span",
                         (),
                         (if rand_bool() {
-                            Either::Left(Element::new("strong", (), ("yes",)))
+                            Either::Left(Element::new("strong", (), ("PRESENT",)))
                         } else {
-                            Either::Right("no")
+                            Either::Right(())
                         },),
                     )
                 }),),
@@ -77,9 +77,9 @@ fn poc() -> impl View {
                         "span",
                         (),
                         (if rand_bool() {
-                            Either::Left(Element::new("strong", (), ("PRESENT",)))
+                            Either::Left(Element::new("strong", (), ("yes",)))
                         } else {
-                            Either::Right(())
+                            Either::Right("no")
                         },),
                     )
                 }),),
