@@ -1,9 +1,9 @@
 [workspace]
 members = [
     "autostrata",
-    "autostrata-dom",
     "autostrata-macros",
-    "examples/dom-demo",
-    "examples/web-components-demo"
+    "autostrata-web",
+    "examples/web-components-demo",
+    "examples/web-demo",
 ]
 resolver = "2"

@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [features]
-dom = ["js-sys", "web-sys", "gloo", "wasm-bindgen", "wasm-bindgen-futures"]
+web = ["js-sys", "web-sys", "gloo", "wasm-bindgen", "wasm-bindgen-futures"]
 
 [dependencies]
 autostrata-macros.path = "../autostrata-macros"

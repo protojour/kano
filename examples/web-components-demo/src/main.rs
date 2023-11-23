@@ -1,5 +1,5 @@
 use autostrata::{view, View};
-use autostrata_dom::web_component::{ComponentConfig, Shadow, WebComponent};
+use autostrata_web::web_component::{ComponentConfig, Shadow, WebComponent};
 
 fn test_comp() -> impl View {
     view!(

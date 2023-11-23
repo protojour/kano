@@ -64,7 +64,7 @@ impl Signal {
             } else {
                 let (sender, mut receiver) = futures::channel::mpsc::unbounded::<SignalId>();
 
-                #[cfg(feature = "dom")]
+                #[cfg(feature = "web")]
                 {
                     wasm_bindgen_futures::spawn_local(async move {
                         loop {
@@ -98,7 +98,7 @@ impl Signal {
         let signal_id = signal_gc.signal_id;
         let mut signal_tx = signal_gc.signal_tx.clone();
 
-        #[cfg(feature = "dom")]
+        #[cfg(feature = "web")]
         {
             wasm_bindgen_futures::spawn_local(async move {
                 let _ = signal_tx.send(signal_id).await;

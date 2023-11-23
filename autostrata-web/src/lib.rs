@@ -20,9 +20,9 @@ extern "C" {
     fn log(s: &str);
 }
 
-pub struct Dom {}
+pub struct Web {}
 
-impl Dom {
+impl Web {
     pub fn hydrate<V: View>(view: V) {
         // let mut cursor = Cursor::EmptyChildrenOf(document().body().unwrap().into());
         let mut cursor = Cursor::Detached;
@@ -39,7 +39,7 @@ impl Dom {
     }
 }
 
-impl Platform for Dom {
+impl Platform for Web {
     type Cursor = Cursor;
 
     fn spawn_task(task: impl std::future::Future<Output = ()> + 'static) {

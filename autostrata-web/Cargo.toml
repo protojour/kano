@@ -1,5 +1,5 @@
 [package]
-name = "autostrata-dom"
+name = "autostrata-web"
 version = "0.1.0"
 edition = "2021"
 
@@ -9,7 +9,7 @@ edition = "2021"
 web-component = []
 
 [dependencies]
-autostrata = { path = "../autostrata", features = ["dom"] }
+autostrata = { path = "../autostrata", features = ["web"] }
 js-sys = "0.3"
 web-sys = { version = "0.3", features = [
     "Window",

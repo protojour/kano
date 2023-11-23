@@ -8,12 +8,12 @@ It has a `Platform` abstraction, and is designed to work on lots of platforms.
 
 The platform API has been designed to not leak types into business logic.
 
-## Trying out the DOM platform
+## Trying out the Web platform
 
 ```sh
 cargo install trunk
 
-(cd examples/dom-demo/; trunk serve -w ../..)
+(cd examples/web-demo/; trunk serve -w ../..)
 ```
 
 ## Reactivity

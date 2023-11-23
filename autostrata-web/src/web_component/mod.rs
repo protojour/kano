@@ -6,7 +6,7 @@ use wasm_bindgen::closure::Closure;
 use wasm_bindgen::prelude::*;
 use web_sys::HtmlElement;
 
-use crate::{Cursor, Dom};
+use crate::{Cursor, Web};
 
 pub struct ComponentConfig {
     pub tag_name: &'static str,
@@ -60,7 +60,7 @@ where
 
     fn hydrate(&self, _this: &HtmlElement, anchor: &HtmlElement) -> ComponentHandle {
         let mut cursor = Cursor::Detached;
-        let state = self().init::<Dom>(&mut cursor);
+        let state = self().init::<Web>(&mut cursor);
 
         let Cursor::Node(node) = cursor else {
             panic!("No node rendered");

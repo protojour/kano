@@ -32,13 +32,13 @@ pub trait Cursor: Any + Clone + Debug {
 }
 
 pub enum ElementHandle {
-    #[cfg(feature = "dom")]
+    #[cfg(feature = "web")]
     DomNode(web_sys::Node),
 }
 
 pub enum AttrHandle {
-    #[cfg(feature = "dom")]
+    #[cfg(feature = "web")]
     DomAttr(&'static str),
-    #[cfg(feature = "dom")]
+    #[cfg(feature = "web")]
     DomEvent(gloo::events::EventListener),
 }

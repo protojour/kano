@@ -42,8 +42,13 @@ pub trait AttrSet: Diff {}
 
 pub trait Attr: Diff {}
 
-#[cfg(feature = "dom")]
-mod dom_util {
+pub fn log(s: &str) {
+    #[cfg(feature = "web")]
+    web_util::log(s);
+}
+
+#[cfg(feature = "web")]
+mod web_util {
     use wasm_bindgen::prelude::*;
 
     #[wasm_bindgen]
@@ -53,9 +58,4 @@ mod dom_util {
         #[wasm_bindgen(js_namespace = console)]
         pub fn log(s: &str);
     }
-}
-
-fn log(s: &str) {
-    #[cfg(feature = "dom")]
-    dom_util::log(s);
 }
