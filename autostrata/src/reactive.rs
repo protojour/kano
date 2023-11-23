@@ -7,7 +7,7 @@ use std::{
 use crate::{
     platform::Platform,
     pubsub::{
-        with_current_reactive_subscriber, Notify, Signal, SignalId, Subscriber, SubscriberId,
+        with_current_reactive_subscriber, OnSignal, Signal, SignalId, Subscriber, SubscriberId,
     },
     Attr, Diff, ViewState,
 };
@@ -36,21 +36,23 @@ impl<T: Diff + 'static, F: (Fn() -> T) + 'static> Diff for Reactive<F> {
             &|cursor| Box::new(cursor.downcast_mut::<P::Cursor>().unwrap().clone()),
         );
 
-        let notify = ReactiveCallback {
-            weak_handle: Arc::downgrade(&reactive_state.subscriber_state.shared_state),
-        };
-        let subscriber_id = reactive_state.subscriber_state.subscriber.subscriber_id();
-
         // Test: Update it at an interval as long as it's alive
-        P::spawn_task(async move {
-            let signal = Signal::new();
-            loop {
-                gloo_timers::future::sleep(Duration::from_secs(1)).await;
-                if !notify.notify(signal.signal_id(), subscriber_id) {
-                    return;
+        {
+            let handler = SignalHandler {
+                weak_handle: Arc::downgrade(&reactive_state.shared_state),
+            };
+            let subscriber_id = reactive_state.subscriber_keepalive.subscriber_id();
+
+            P::spawn_task(async move {
+                let signal = Signal::new();
+                loop {
+                    gloo_timers::future::sleep(Duration::from_secs(1)).await;
+                    if !handler.on_signal(signal.signal_id(), subscriber_id) {
+                        return;
+                    }
                 }
-            }
-        });
+            });
+        }
 
         reactive_state
     }
@@ -67,13 +69,15 @@ impl<T: Diff> ViewState for ReactiveState<T> where T::State: ViewState {}
 type RefMutDynCursor<'a> = &'a mut dyn Any;
 
 pub struct ReactiveState<T: Diff> {
-    subscriber_state: SubscriberState<T>,
+    shared_state: Arc<Mutex<Option<SharedState<T>>>>,
+    subscriber_keepalive: Subscriber,
 }
 
 impl<T: Diff> Clone for ReactiveState<T> {
     fn clone(&self) -> Self {
         Self {
-            subscriber_state: self.subscriber_state.clone(),
+            shared_state: self.shared_state.clone(),
+            subscriber_keepalive: self.subscriber_keepalive.clone(),
         }
     }
 }
@@ -85,7 +89,7 @@ impl<T: Diff + 'static> ReactiveState<T> {
         box_cursor: &dyn Fn(&mut dyn Any) -> Box<dyn Any>,
     ) -> Self {
         let shared_state: Arc<Mutex<Option<SharedState<T>>>> = Arc::new(Mutex::new(None));
-        let subscriber = Subscriber::new(Arc::new(ReactiveCallback {
+        let subscriber = Subscriber::new(Arc::new(SignalHandler {
             weak_handle: Arc::downgrade(&shared_state),
         }));
 
@@ -104,24 +108,8 @@ impl<T: Diff + 'static> ReactiveState<T> {
         }
 
         Self {
-            subscriber_state: SubscriberState {
-                shared_state,
-                subscriber,
-            },
-        }
-    }
-}
-
-struct SubscriberState<T: Diff> {
-    shared_state: Arc<Mutex<Option<SharedState<T>>>>,
-    subscriber: Subscriber,
-}
-
-impl<T: Diff> Clone for SubscriberState<T> {
-    fn clone(&self) -> Self {
-        Self {
-            shared_state: self.shared_state.clone(),
-            subscriber: self.subscriber.clone(),
+            shared_state,
+            subscriber_keepalive: subscriber,
         }
     }
 }
@@ -140,12 +128,12 @@ impl<T: Diff> SharedState<T> {
     }
 }
 
-struct ReactiveCallback<T: Diff> {
+struct SignalHandler<T: Diff> {
     weak_handle: Weak<Mutex<Option<SharedState<T>>>>,
 }
 
-impl<T: Diff + 'static> Notify for ReactiveCallback<T> {
-    fn notify(&self, _signal_id: SignalId, subscriber_id: SubscriberId) -> bool {
+impl<T: Diff + 'static> OnSignal for SignalHandler<T> {
+    fn on_signal(&self, _signal_id: SignalId, subscriber_id: SubscriberId) -> bool {
         if let Some(strong_handle) = self.weak_handle.upgrade() {
             with_current_reactive_subscriber(subscriber_id, || {
                 let mut shared_state_lock = strong_handle.lock().unwrap();

@@ -16,8 +16,7 @@ pub struct SubscriberId(u64);
 
 #[derive(Clone)]
 pub struct Signal {
-    signal_id: SignalId,
-    signal_tx: futures::channel::mpsc::UnboundedSender<SignalId>,
+    gc: Arc<SignalGc>,
 }
 
 impl Signal {
@@ -51,18 +50,22 @@ impl Signal {
         });
 
         Signal {
-            signal_id: SignalId(SIGNAL_ID.fetch_add(1, Ordering::SeqCst)),
-            signal_tx: notification_sender,
+            gc: Arc::new(SignalGc {
+                signal_id: SignalId(SIGNAL_ID.fetch_add(1, Ordering::SeqCst)),
+                signal_tx: notification_sender.clone(),
+            }),
         }
     }
 
     pub fn signal_id(&self) -> SignalId {
-        self.signal_id
+        self.gc.signal_id
     }
 
     pub fn send(&self) {
-        let signal_id = self.signal_id;
-        let mut signal_tx = self.signal_tx.clone();
+        let gc = self.gc.as_ref();
+
+        let signal_id = gc.signal_id;
+        let mut signal_tx = gc.signal_tx.clone();
 
         #[cfg(feature = "dom")]
         {
@@ -73,17 +76,25 @@ impl Signal {
     }
 }
 
-pub trait Notify {
-    fn notify(&self, signal_id: SignalId, subscriber_id: SubscriberId) -> bool;
+/// A signal handler
+pub trait OnSignal {
+    fn on_signal(&self, signal_id: SignalId, subscriber_id: SubscriberId) -> bool;
 }
 
+/// A subscriber associates a SubscriberId with an actual notification callback.
 #[derive(Clone)]
 pub struct Subscriber {
     gc: Arc<SubscriberGc>,
 }
 
 impl Subscriber {
-    pub fn new(notify: Arc<dyn Notify>) -> Self {
+    /// Create a new subscriber that wraps the given OnSignal callback.
+    ///
+    /// The subscriber can be associated with any signal after creation.
+    ///
+    /// The relationship between the subscriber's ID and the OnSignal handler
+    /// is retained while the returned Subscriber is in scope.
+    pub fn new(notify: Arc<dyn OnSignal>) -> Self {
         let subscriber_id = SubscriberId(SUBSCRIBER_ID.fetch_add(1, Ordering::SeqCst));
 
         REGISTRY.with_borrow_mut(|registry| {
@@ -109,28 +120,42 @@ pub(crate) fn with_current_reactive_subscriber<T>(
     subscriber_id: SubscriberId,
     func: impl FnOnce() -> T,
 ) -> T {
-    let prev = ACTIVE_SUBSCRIBER
-        .with_borrow_mut(|active_subscriber| active_subscriber.replace(subscriber_id));
+    let prev_id =
+        CURRENT_REACTIVE_SUBSCRIBER.with_borrow_mut(|current| current.replace(subscriber_id));
 
-    let ret = func();
+    let value = func();
 
-    ACTIVE_SUBSCRIBER.with_borrow_mut(|active_subscriber| {
-        *active_subscriber.borrow_mut() = prev;
+    CURRENT_REACTIVE_SUBSCRIBER.with_borrow_mut(|current| {
+        *current.borrow_mut() = prev_id;
     });
 
-    ret
+    value
 }
 
 /// register a dependency upon a signal.
 ///
 /// This will register a subscription between the current active subscriber (if any) and the signal.
 pub(crate) fn register_signal_dependency(signal_id: SignalId) {
-    let active = ACTIVE_SUBSCRIBER.with_borrow_mut(|active| active.clone());
+    let active = CURRENT_REACTIVE_SUBSCRIBER.with_borrow_mut(|active| active.clone());
 
     if let Some(subscriber_id) = active {
         REGISTRY.with_borrow_mut(|registry| {
             registry.subscriptions.insert((signal_id, subscriber_id));
         })
+    }
+}
+
+struct SignalGc {
+    signal_id: SignalId,
+    signal_tx: futures::channel::mpsc::UnboundedSender<SignalId>,
+}
+
+impl Drop for SignalGc {
+    fn drop(&mut self) {
+        let signal_id = self.signal_id;
+        REGISTRY.with_borrow_mut(|registry| {
+            registry.subscriptions.retain(|entry| entry.0 != signal_id);
+        });
     }
 }
 
@@ -151,7 +176,7 @@ impl Drop for SubscriberGc {
 }
 
 thread_local! {
-    static ACTIVE_SUBSCRIBER: RefCell<Option<SubscriberId>> = RefCell::new(None);
+    static CURRENT_REACTIVE_SUBSCRIBER: RefCell<Option<SubscriberId>> = RefCell::new(None);
 
     static REGISTRY: RefCell<Registry> = RefCell::new(Registry::default());
 }
@@ -162,13 +187,13 @@ static SUBSCRIBER_ID: AtomicU64 = AtomicU64::new(0);
 
 #[derive(Default)]
 struct Registry {
-    notifiers: HashMap<SubscriberId, Arc<dyn Notify>>,
+    notifiers: HashMap<SubscriberId, Arc<dyn OnSignal>>,
     subscriptions: BTreeSet<(SignalId, SubscriberId)>,
     signal_sender: Option<futures::channel::mpsc::UnboundedSender<SignalId>>,
 }
 
 pub fn on_signal(signal_id: SignalId) {
-    let notifiers: Vec<(Arc<dyn Notify>, SubscriberId)> = REGISTRY.with_borrow_mut(|registry| {
+    let notifiers: Vec<(Arc<dyn OnSignal>, SubscriberId)> = REGISTRY.with_borrow_mut(|registry| {
         // FIXME: More optimal traversal of subscription
         registry
             .subscriptions
@@ -189,6 +214,6 @@ pub fn on_signal(signal_id: SignalId) {
     });
 
     for (notifier, subscriber_id) in notifiers {
-        notifier.notify(signal_id, subscriber_id);
+        notifier.on_signal(signal_id, subscriber_id);
     }
 }
