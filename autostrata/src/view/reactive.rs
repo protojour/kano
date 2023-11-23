@@ -1,12 +1,11 @@
 use std::{
     any::Any,
     sync::{Arc, Mutex, Weak},
-    time::Duration,
 };
 
 use crate::{
     platform::Platform,
-    pubsub::{OnSignal, Signal, SignalId, Subscriber, SubscriberId},
+    pubsub::{OnSignal, SignalId, Subscriber, SubscriberId},
     Attr, Diff, ViewState,
 };
 
@@ -16,7 +15,7 @@ impl<T: Diff + 'static, F: (Fn() -> T) + 'static> Diff for Reactive<F> {
     type State = ReactiveState<T>;
 
     fn init<P: Platform>(self, cursor: &mut P::Cursor) -> Self::State {
-        let reactive_state = ReactiveState::new(
+        ReactiveState::new(
             move |prev_state, cursor| {
                 let cursor = cursor.downcast_mut::<P::Cursor>().unwrap();
 
@@ -32,27 +31,7 @@ impl<T: Diff + 'static, F: (Fn() -> T) + 'static> Diff for Reactive<F> {
             },
             cursor,
             &|cursor| Box::new(cursor.downcast_mut::<P::Cursor>().unwrap().clone()),
-        );
-
-        // Test: Update it at an interval as long as it's alive
-        {
-            let handler = SignalHandler {
-                weak_handle: Arc::downgrade(&reactive_state.shared_state),
-            };
-            let subscriber_id = reactive_state.subscriber_keepalive.id();
-
-            P::spawn_task(async move {
-                let signal = Signal::new();
-                loop {
-                    gloo_timers::future::sleep(Duration::from_secs(1)).await;
-                    if !handler.on_signal(signal.id(), subscriber_id) {
-                        return;
-                    }
-                }
-            });
-        }
-
-        reactive_state
+        )
     }
 
     fn diff<P: Platform>(self, state: &mut Self::State, cursor: &mut P::Cursor) {
