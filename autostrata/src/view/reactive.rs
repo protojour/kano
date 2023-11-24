@@ -6,8 +6,8 @@ use std::{
 
 use crate::{
     platform::Platform,
-    pubsub::{OnSignal, SignalId, Subscriber},
-    registry::ReactiveId,
+    pubsub::{OnSignal, SignalId},
+    registry::{ViewId, REGISTRY},
     Attr, Diff, ViewState,
 };
 
@@ -48,17 +48,8 @@ impl<T: Diff> ViewState for ReactiveState<T> where T::State: ViewState {}
 type RefMutDynCursor<'a> = &'a mut dyn Any;
 
 pub struct ReactiveState<T: Diff> {
-    shared_state: Rc<RefCell<Option<SharedState<T>>>>,
-    subscriber_keepalive: Subscriber,
-}
-
-impl<T: Diff> Clone for ReactiveState<T> {
-    fn clone(&self) -> Self {
-        Self {
-            shared_state: self.shared_state.clone(),
-            subscriber_keepalive: self.subscriber_keepalive.clone(),
-        }
-    }
+    view_id: ViewId,
+    _data_cell: Rc<RefCell<Option<Data<T>>>>,
 }
 
 impl<T: Diff + 'static> ReactiveState<T> {
@@ -67,59 +58,73 @@ impl<T: Diff + 'static> ReactiveState<T> {
         cursor: &mut dyn Any,
         box_cursor: &dyn Fn(&mut dyn Any) -> Box<dyn Any>,
     ) -> Self {
-        let reactive_id = ReactiveId::alloc();
-        let shared_state: Rc<RefCell<Option<SharedState<T>>>> = Rc::new(RefCell::new(None));
-        let subscriber = Subscriber::new(
-            reactive_id,
-            Rc::new(SignalHandler {
-                weak_handle: Rc::downgrade(&shared_state),
-            }),
-        );
+        let view_id = ViewId::alloc();
+
+        // Initialize this to None..
+        let data_cell: Rc<RefCell<Option<Data<T>>>> = Rc::new(RefCell::new(None));
+
+        // ..so we can make a weak reference to the cell
+        // for the reactive callback (it should not own the view).
+        REGISTRY.with_borrow_mut(|registry| {
+            registry.reactive_callbacks.insert(
+                view_id,
+                Rc::new(SignalHandler {
+                    weak_data_cell: Rc::downgrade(&data_cell),
+                }),
+            );
+        });
 
         {
-            let state = subscriber
-                .id()
-                .invoke_as_current(|| update_view(None, cursor));
+            let actual_state = view_id.invoke_as_current_reactive(|| update_view(None, cursor));
 
-            // let mut lock = subscriber_state.shared_state.lock().unwrap();
-            *shared_state.borrow_mut() = Some(SharedState {
-                current_state: Some(state),
+            // Now all information is ready to store the data, including the cursor.
+            *data_cell.borrow_mut() = Some(Data {
+                actual_state: Some(actual_state),
                 update_view: Box::new(update_view),
                 cursor: box_cursor(cursor),
             });
         }
 
         Self {
-            shared_state,
-            subscriber_keepalive: subscriber,
+            view_id,
+            _data_cell: data_cell,
         }
     }
 }
 
-struct SharedState<T: Diff> {
-    current_state: Option<T::State>,
+impl<T: Diff> Drop for ReactiveState<T> {
+    fn drop(&mut self) {
+        REGISTRY.with_borrow_mut(|registry| {
+            registry.remove_subscriber(self.view_id);
+        });
+    }
+}
+
+/// All information needed to reactively update the view is stored here
+struct Data<T: Diff> {
+    actual_state: Option<T::State>,
     update_view: Box<dyn Fn(Option<T::State>, RefMutDynCursor) -> T::State>,
     cursor: Box<dyn Any>,
 }
 
-impl<T: Diff> SharedState<T> {
+impl<T: Diff> Data<T> {
     fn update_view(&mut self) {
-        let old_state = self.current_state.take();
+        let old_state = self.actual_state.take();
         let new_state = (self.update_view)(old_state, self.cursor.as_mut());
-        self.current_state = Some(new_state);
+        self.actual_state = Some(new_state);
     }
 }
 
 struct SignalHandler<T: Diff> {
-    weak_handle: Weak<RefCell<Option<SharedState<T>>>>,
+    weak_data_cell: Weak<RefCell<Option<Data<T>>>>,
 }
 
 impl<T: Diff + 'static> OnSignal for SignalHandler<T> {
-    fn on_signal(&self, _signal_id: SignalId, reactive_id: ReactiveId) -> bool {
-        if let Some(strong_handle) = self.weak_handle.upgrade() {
-            reactive_id.invoke_as_current(|| {
-                if let Some(shared_state) = &mut *strong_handle.borrow_mut() {
-                    shared_state.update_view();
+    fn on_signal(&self, _signal_id: SignalId, view_id: ViewId) -> bool {
+        if let Some(strong_handle) = self.weak_data_cell.upgrade() {
+            view_id.invoke_as_current_reactive(|| {
+                if let Some(data) = &mut *strong_handle.borrow_mut() {
+                    data.update_view();
                 }
                 true
             })

@@ -1,10 +1,9 @@
 use std::rc::Rc;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::Arc;
 
 use futures::{SinkExt, StreamExt};
 
-use crate::registry::{ReactiveId, CURRENT_REACTIVE_SUBSCRIBER, REGISTRY};
+use crate::registry::{ViewId, CURRENT_REACTIVE_VIEW, REGISTRY};
 
 static NEXT_SIGNAL_ID: AtomicU64 = AtomicU64::new(0);
 
@@ -21,7 +20,7 @@ impl SignalId {
     ///
     /// This will register a subscription between the current active subscriber (if any) and the signal.
     pub(crate) fn register_dependency(self) {
-        let active = CURRENT_REACTIVE_SUBSCRIBER.with_borrow_mut(|active| active.clone());
+        let active = CURRENT_REACTIVE_VIEW.with_borrow_mut(|active| active.clone());
 
         if let Some(reactive_id) = active {
             REGISTRY.with_borrow_mut(|registry| {
@@ -33,7 +32,7 @@ impl SignalId {
 
 #[derive(Clone)]
 pub struct Signal {
-    signal_gc: Arc<SignalGc>,
+    signal_gc: Rc<SignalGc>,
 }
 
 impl Signal {
@@ -67,7 +66,7 @@ impl Signal {
         });
 
         Signal {
-            signal_gc: Arc::new(SignalGc {
+            signal_gc: Rc::new(SignalGc {
                 signal_id: SignalId::alloc(),
                 signal_tx: notification_sender.clone(),
             }),
@@ -97,35 +96,7 @@ impl Signal {
 
 /// A signal handler
 pub trait OnSignal {
-    fn on_signal(&self, id: SignalId, target: ReactiveId) -> bool;
-}
-
-/// A subscriber associates a SubscriberId with an actual notification callback.
-#[derive(Clone)]
-pub struct Subscriber {
-    subscriber_gc: Arc<SubscriberGc>,
-}
-
-impl Subscriber {
-    /// Create a new subscriber that wraps the given OnSignal callback.
-    ///
-    /// The subscriber can be associated with any signal after creation.
-    ///
-    /// The relationship between the subscriber's ID and the OnSignal handler
-    /// is retained while the returned Subscriber is in scope.
-    pub fn new(reactive_id: ReactiveId, notify: Rc<dyn OnSignal>) -> Self {
-        REGISTRY.with_borrow_mut(|registry| {
-            registry.callbacks.insert(reactive_id, notify);
-        });
-
-        Subscriber {
-            subscriber_gc: Arc::new(SubscriberGc { reactive_id }),
-        }
-    }
-
-    pub fn id(&self) -> ReactiveId {
-        self.subscriber_gc.reactive_id
-    }
+    fn on_signal(&self, id: SignalId, target: ViewId) -> bool;
 }
 
 struct SignalGc {
@@ -141,32 +112,20 @@ impl Drop for SignalGc {
     }
 }
 
-struct SubscriberGc {
-    reactive_id: ReactiveId,
-}
-
-impl Drop for SubscriberGc {
-    fn drop(&mut self) {
-        REGISTRY.with_borrow_mut(|registry| {
-            registry.remove_subscriber(self.reactive_id);
-        });
-    }
-}
-
 /// Send the given signal to all subscribers
 fn broadcast_signal(signal_id: SignalId) {
     // Don't invoke callbacks while holding the registry lock.
     // Collect into a vector first.
-    let callbacks: Vec<(Rc<dyn OnSignal>, ReactiveId)> = REGISTRY.with_borrow_mut(|registry| {
+    let callbacks: Vec<(Rc<dyn OnSignal>, ViewId)> = REGISTRY.with_borrow_mut(|registry| {
         registry
             .subscriptions_by_signal
             .get(&signal_id)
             .into_iter()
             .flat_map(|subscribers| {
-                subscribers.iter().map(|reactive_id| {
+                subscribers.iter().map(|view_id| {
                     (
-                        registry.callbacks.get(reactive_id).unwrap().clone(),
-                        *reactive_id,
+                        registry.reactive_callbacks.get(view_id).unwrap().clone(),
+                        *view_id,
                     )
                 })
             })
