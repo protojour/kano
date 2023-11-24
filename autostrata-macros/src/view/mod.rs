@@ -24,7 +24,12 @@ pub fn view(node: Node) -> TokenStream {
         Node::Fragment(_frag) => {
             quote!(())
         }
-        Node::Text(text) => text.0.into_token_stream(),
+        Node::Text(text) => {
+            let literal = text.0.into_token_stream();
+            quote! {
+                autostrata::view::Text(#literal)
+            }
+        }
         Node::TextExpr(_expr) => {
             quote!(())
         }

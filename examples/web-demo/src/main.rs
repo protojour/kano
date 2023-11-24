@@ -61,7 +61,7 @@ fn poc() -> impl AppView {
     div(
         (),
         (
-            "Hello!",
+            Text("Hello!"),
             Func(list),
             div(
                 (),
@@ -76,7 +76,7 @@ fn poc() -> impl AppView {
                                 log("mouseover!");
                             }),
                         ),
-                        ("hide/show",),
+                        (Text("hide/show"),),
                     ),
                     button(
                         (
@@ -88,15 +88,20 @@ fn poc() -> impl AppView {
                                 log("mouseover!");
                             }),
                         ),
-                        ("yes/no",),
+                        (Text("yes/no"),),
                     ),
                 ),
             ),
             div(
                 (),
-                (Reactive(move || {
-                    span((), (format!("Clicked {} times", clicks.get()),))
-                }),),
+                (span(
+                    (),
+                    (
+                        Text("clicked "),
+                        Reactive(move || Format(clicks)),
+                        Text(" times"),
+                    ),
+                ),),
             ),
             div(
                 (),
@@ -104,7 +109,7 @@ fn poc() -> impl AppView {
                     span(
                         (),
                         (if show.get() {
-                            Either::Left(strong((), ("PRESENT",)))
+                            Either::Left(strong((), (Text("PRESENT"),)))
                         } else {
                             Either::Right(())
                         },),
@@ -117,9 +122,9 @@ fn poc() -> impl AppView {
                     span(
                         (),
                         (if yes.get() {
-                            Either::Left(strong((), ("yes",)))
+                            Either::Left(strong((), (Text("yes"),)))
                         } else {
-                            Either::Right("no")
+                            Either::Right(Text("no"))
                         },),
                     )
                 }),),

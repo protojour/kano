@@ -1,4 +1,4 @@
-use std::{marker::PhantomData, rc::Rc};
+use std::{fmt::Display, marker::PhantomData, rc::Rc};
 
 use crate::{pubsub::SignalId, registry::REGISTRY};
 
@@ -56,6 +56,24 @@ impl<T: 'static> State<T> {
                 .unwrap()
                 .downcast_ref::<T>()
                 .unwrap())
+        })
+    }
+}
+
+/// For direct use with [crate::view::Format].
+impl<T: Display + 'static> Display for State<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.signal_id.register_reactive_dependency();
+
+        REGISTRY.with_borrow(|registry| {
+            let value = registry
+                .state_values
+                .get(&self.signal_id)
+                .unwrap()
+                .downcast_ref::<T>()
+                .unwrap();
+
+            value.fmt(f)
         })
     }
 }

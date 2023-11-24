@@ -1,36 +1,52 @@
+use std::fmt::Display;
+use std::fmt::Write;
+
 use crate::{platform::Cursor, Diff, ElementHandle, Platform, View};
 
-impl<P: Platform> Diff<P> for &'static str {
-    type State = (ElementHandle, Self);
+/// Literal text.
+pub struct Text(pub &'static str);
 
-    fn init(self, cursor: &mut P::Cursor) -> (ElementHandle, Self) {
-        (cursor.text(self), self)
+impl<P: Platform> Diff<P> for Text {
+    type State = (ElementHandle, &'static str);
+
+    fn init(self, cursor: &mut P::Cursor) -> Self::State {
+        (cursor.text(self.0), self.0)
     }
 
     fn diff(self, (handle, old): &mut Self::State, _cursor: &mut P::Cursor) {
-        if self != *old {
+        if self.0 != *old {
             let mut cursor = P::Cursor::from_element_handle(&handle);
-            cursor.update_text(&self);
-            *old = self;
+            cursor.update_text(self.0);
+            *old = self.0;
         }
     }
 }
 
-impl<P: Platform> Diff<P> for String {
-    type State = (ElementHandle, Self);
+impl<P: Platform> View<P> for Text {}
 
-    fn init(self, cursor: &mut P::Cursor) -> (ElementHandle, Self) {
-        (cursor.text(self.as_str()), self)
+/// Things that can be formatted _into_ text.
+pub struct Format<T>(pub T);
+
+impl<P: Platform, T: Display + 'static> Diff<P> for Format<T> {
+    type State = (ElementHandle, String);
+
+    fn init(self, cursor: &mut P::Cursor) -> Self::State {
+        let mut string = String::new();
+        write!(&mut string, "{}", self.0).unwrap();
+
+        (cursor.text(&string), string)
     }
 
     fn diff(self, (handle, old): &mut Self::State, _cursor: &mut P::Cursor) {
-        if self != *old {
+        let mut string = String::new();
+        write!(&mut string, "{}", self.0).unwrap();
+
+        if string != *old {
             let mut cursor = P::Cursor::from_element_handle(&handle);
-            cursor.update_text(&self);
-            *old = self;
+            cursor.update_text(&string);
+            *old = string;
         }
     }
 }
 
-impl<P: Platform> View<P> for &'static str {}
-impl<P: Platform> View<P> for String {}
+impl<P: Platform, T: Display + 'static> View<P> for Format<T> {}
