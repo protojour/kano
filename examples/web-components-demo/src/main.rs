@@ -2,14 +2,18 @@ use autostrata::{view, View};
 use autostrata_web::web_component::{ComponentConfig, Shadow, WebComponent};
 
 fn test_comp() -> impl View {
-    view!(
+    let hello = true;
+
+    view! {
         <section>
-            <h1>"This is AutoStrata Web Component!"</h1>
+            if hello {
+                <h1>"This is AutoStrata Web Component!"</h1>
+            }
             <button>
                 <slot />
             </button>
         </section>
-    )
+    }
 }
 
 fn main() {

@@ -16,6 +16,7 @@ impl Parser {}
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum Node {
+    None,
     Element(Element),
     Fragment(Vec<Node>),
     Text(Text),
@@ -376,7 +377,7 @@ impl Parser {
         let else_branch = if input.peek(syn::token::Else) {
             self.parse_else(input)?
         } else {
-            Node::Fragment(vec![])
+            Node::None
         };
 
         match expr {

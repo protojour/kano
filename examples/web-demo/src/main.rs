@@ -1,8 +1,6 @@
 use autostrata::{reactive::*, view::*, *};
 
 fn poc() -> impl View {
-    let alt: Either<&'static str, ()> = Either::Left("Two");
-
     let (clicks, clicks_mut) = use_state(0);
     let (show, show_mut) = use_state(true);
     let (yes, yes_mut) = use_state(false);
@@ -12,15 +10,13 @@ fn poc() -> impl View {
         (),
         (
             "Hello!",
-            Element::new(
-                "ul",
-                (),
-                (
-                    Element::new("li", (), ("One",)),
-                    Element::new("li", (), (alt,)),
-                    Element::new("li", (), ("Three",)),
-                ),
-            ),
+            view! {
+                <ul>
+                    <li>"One"</li>
+                    <li>"Two"</li>
+                    <li>"Three"</li>
+                </ul>
+            },
             Element::new(
                 "div",
                 (),
