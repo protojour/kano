@@ -1,4 +1,4 @@
-use std::{any::Any, fmt::Debug};
+use std::fmt::Debug;
 
 use crate::On;
 
@@ -6,11 +6,9 @@ pub trait Platform: 'static {
     type Cursor: Cursor;
 
     fn spawn_task(task: impl std::future::Future<Output = ()> + 'static);
-
-    fn debug_start_reactive_update(cursor: &mut Self::Cursor);
 }
 
-pub trait Cursor: Any + Clone + Debug {
+pub trait Cursor: Clone + Debug {
     fn from_element_handle(handle: &ElementHandle) -> Self;
 
     fn empty(&mut self);

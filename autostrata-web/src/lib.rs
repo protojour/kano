@@ -49,10 +49,6 @@ impl Platform for Web {
     fn spawn_task(task: impl std::future::Future<Output = ()> + 'static) {
         wasm_bindgen_futures::spawn_local(task);
     }
-
-    fn debug_start_reactive_update(cursor: &mut Self::Cursor) {
-        log(&format!("start reactive update for {cursor:?}"));
-    }
 }
 
 #[derive(Clone, Debug)]
