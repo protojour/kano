@@ -1,5 +1,4 @@
 use autostrata::{reactive::*, view::*, *};
-use autostrata_web::html::*;
 
 mod platform {
     use autostrata::View;
@@ -13,9 +12,11 @@ mod platform {
     pub trait AppView: View<Web> {}
 
     impl<V: View<Web>> AppView for V {}
+
+    pub use autostrata_web::html::*;
 }
 
-use platform::AppView;
+use platform::*;
 
 fn poc() -> impl AppView {
     let (clicks, clicks_mut) = use_state(0);

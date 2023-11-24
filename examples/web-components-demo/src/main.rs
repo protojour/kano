@@ -1,5 +1,6 @@
 use autostrata::{view, View};
 use autostrata_web::{
+    html::*,
     web_component::{ComponentConfig, Shadow, WebComponent},
     Web,
 };

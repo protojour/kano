@@ -3,9 +3,19 @@ use autostrata::{platform::Cursor, AttrSet, Children, Diff, View};
 use crate::{Web, WebCursor};
 
 pub struct Element<A, C> {
-    pub(crate) name: &'static str,
-    pub(crate) attrs: A,
-    pub(crate) children: C,
+    name: &'static str,
+    attrs: A,
+    children: C,
+}
+
+impl<A, C> Element<A, C> {
+    pub const fn new(name: &'static str, attrs: A, children: C) -> Self {
+        Self {
+            name,
+            attrs,
+            children,
+        }
+    }
 }
 
 impl<A: AttrSet<Web>, C: Children<Web>> Diff<Web> for Element<A, C> {

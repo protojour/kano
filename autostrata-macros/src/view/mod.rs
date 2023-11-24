@@ -1,5 +1,5 @@
 use proc_macro2::TokenStream;
-use quote::{quote, quote_spanned, ToTokens};
+use quote::{quote, ToTokens};
 
 use self::ast::{Element, Match, Node};
 
@@ -13,16 +13,10 @@ pub fn view(node: Node) -> TokenStream {
             attrs: _,
             children,
         }) => {
-            let tag_name_span = tag_name.span();
-            let tag_name = syn::LitStr::new(&tag_name.to_string(), tag_name.span());
             let children = children.into_iter().map(view);
 
-            let element_new = quote_spanned! {tag_name_span=>
-                autostrata::view::Element::new
-            };
-
             quote! {
-                #element_new(#tag_name, (), (
+                #tag_name((), (
                     #(#children,)*
                 ))
             }
