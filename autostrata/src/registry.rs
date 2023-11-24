@@ -8,7 +8,9 @@ use crate::pubsub::{OnSignal, SignalId};
 
 static NEXT_VIEW_ID: AtomicU64 = AtomicU64::new(0);
 
-/// The Id of a reactive view.
+/// A ViewId is assigned to views that do "smart things",
+///
+/// This includes Reactive views and other views that involves user-defined functions.
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 pub struct ViewId(u64);
 

@@ -1,4 +1,4 @@
-use crate::{platform::Cursor, Diff, ElementHandle, Platform, ViewState};
+use crate::{platform::Cursor, Diff, ElementHandle, Platform, View};
 
 impl Diff for &'static str {
     type State = (ElementHandle, Self);
@@ -16,8 +16,6 @@ impl Diff for &'static str {
     }
 }
 
-impl ViewState for (ElementHandle, &'static str) {}
-
 impl Diff for String {
     type State = (ElementHandle, Self);
 
@@ -34,4 +32,5 @@ impl Diff for String {
     }
 }
 
-impl ViewState for (ElementHandle, String) {}
+impl View for &'static str {}
+impl View for String {}

@@ -8,7 +8,7 @@ use crate::{
     platform::Platform,
     pubsub::{OnSignal, SignalId},
     registry::{ViewId, REGISTRY},
-    Attr, Diff, ViewState,
+    Attr, Diff, View,
 };
 
 pub struct Reactive<F>(pub F);
@@ -41,9 +41,8 @@ impl<T: Diff + 'static, F: (Fn() -> T) + 'static> Diff for Reactive<F> {
     }
 }
 
+impl<T: Diff + 'static, F: (Fn() -> T) + 'static> View for Reactive<F> {}
 impl<T: Attr + 'static, F: (Fn() -> T) + 'static> Attr for Reactive<F> {}
-
-impl<T: Diff> ViewState for ReactiveState<T> where T::State: ViewState {}
 
 type RefMutDynCursor<'a> = &'a mut dyn Any;
 

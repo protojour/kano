@@ -10,13 +10,7 @@ fn poc() -> impl View {
         (),
         (
             "Hello!",
-            view! {
-                <ul>
-                    <li>"One"</li>
-                    <li>"Two"</li>
-                    <li>"Three"</li>
-                </ul>
-            },
+            Func(list),
             Element::new(
                 "div",
                 (),
@@ -94,6 +88,16 @@ fn poc() -> impl View {
             ),
         ),
     )
+}
+
+fn list() -> impl View {
+    view! {
+        <ul>
+            <li>"One"</li>
+            <li>"Two"</li>
+            <li>"Three"</li>
+        </ul>
+    }
 }
 
 fn main() {

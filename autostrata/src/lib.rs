@@ -23,10 +23,6 @@ pub trait Diff {
 
 pub trait View: Diff {}
 
-pub trait ViewState {}
-
-impl<T: Diff> View for T where T::State: ViewState {}
-
 pub trait Children: Diff {}
 
 pub trait AttrSet: Diff {}

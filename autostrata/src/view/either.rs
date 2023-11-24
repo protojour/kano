@@ -2,7 +2,7 @@
 
 use crate::{
     platform::{Cursor, Platform},
-    Attr, Diff, View, ViewState,
+    Attr, Diff, View,
 };
 
 #[derive(Clone, Copy)]
@@ -47,5 +47,5 @@ pub struct State<L: Diff, R: Diff> {
     state: Either<L::State, R::State>,
 }
 
-impl<L: View, R: View> ViewState for State<L, R> {}
+impl<L: View, R: View> View for Either<L, R> {}
 impl<L: Attr, R: Attr> Attr for Either<L, R> {}

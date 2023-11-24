@@ -1,6 +1,6 @@
 use crate::{
     platform::{Cursor, Platform},
-    AttrSet, Children, Diff, ViewState,
+    AttrSet, Children, Diff, View,
 };
 
 pub struct Element<A, C> {
@@ -43,9 +43,9 @@ impl<A: AttrSet, C: Children> Diff for Element<A, C> {
     }
 }
 
+impl<A: AttrSet, C: Children> View for Element<A, C> {}
+
 pub struct State<A: AttrSet, C: Children> {
     attrs: A::State,
     children: C::State,
 }
-
-impl<A: AttrSet, C: Children> ViewState for State<A, C> {}
