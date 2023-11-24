@@ -4,7 +4,7 @@ use std::collections::{BTreeSet, HashMap};
 use std::rc::Rc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use crate::pubsub::{OnSignal, SignalId};
+use crate::pubsub::{OnSignal, SignalId, Signaller};
 
 static NEXT_VIEW_ID: AtomicU64 = AtomicU64::new(0);
 
@@ -26,6 +26,12 @@ impl ViewId {
     /// automatic subscription creation when a signal dependency is registered.
     pub(crate) fn invoke_as_current_reactive_view<T>(self, func: impl FnOnce() -> T) -> T {
         let (prev_reactive, prev_func) = REGISTRY.with_borrow_mut(|registry| {
+            // FIXME(?): Not backing up the signal position tracker.
+            // The hypothesis is that the view should not continue to create signals
+            // after it has drawn its children.
+            // FIXME: Make runtime assertion for this invariant
+            registry.current_func_view_signal_tracker = 0;
+
             (
                 registry.current_reactive_view.replace(self),
                 registry.current_func_view.replace(self),
@@ -43,8 +49,12 @@ impl ViewId {
     }
 
     pub(crate) fn invoke_as_current_func_view<T>(self, func: impl FnOnce() -> T) -> T {
-        let prev_func =
-            REGISTRY.with_borrow_mut(|registry| registry.current_func_view.replace(self));
+        let prev_func = REGISTRY.with_borrow_mut(|registry| {
+            // FIXME(?): Not backing up the signal position tracker.
+            registry.current_func_view_signal_tracker = 0;
+
+            registry.current_func_view.replace(self)
+        });
 
         let value = func();
 
@@ -56,25 +66,54 @@ impl ViewId {
     }
 }
 
+#[derive(Default)]
+pub(crate) struct Registry {
+    pub(crate) signaller: Option<Signaller>,
+
+    pub(crate) reactive_callbacks: HashMap<ViewId, Rc<dyn OnSignal>>,
+    pub(crate) subscriptions_by_signal: HashMap<SignalId, BTreeSet<ViewId>>,
+    pub(crate) subscriptions_by_view: HashMap<ViewId, BTreeSet<SignalId>>,
+
+    pub(crate) current_reactive_view: Option<ViewId>,
+    pub(crate) current_func_view: Option<ViewId>,
+    pub(crate) current_func_view_signal_tracker: usize,
+
+    pub(crate) owned_signals_ordered: HashMap<ViewId, Vec<SignalId>>,
+    pub(crate) state_values: HashMap<SignalId, Rc<dyn Any>>,
+}
+
 thread_local! {
     pub(crate) static REGISTRY: RefCell<Registry> = RefCell::new(Registry::default());
 }
 
-#[derive(Default)]
-pub(crate) struct Registry {
-    pub(crate) reactive_callbacks: HashMap<ViewId, Rc<dyn OnSignal>>,
-    pub(crate) subscriptions_by_signal: HashMap<SignalId, BTreeSet<ViewId>>,
-    pub(crate) subscriptions_by_view: HashMap<ViewId, BTreeSet<SignalId>>,
-    pub(crate) signal_sender: Option<futures::channel::mpsc::UnboundedSender<SignalId>>,
-
-    pub(crate) current_reactive_view: Option<ViewId>,
-    pub(crate) current_func_view: Option<ViewId>,
-
-    pub(crate) owned_signals: HashMap<ViewId, Vec<SignalId>>,
-    pub(crate) state_values: HashMap<SignalId, Rc<dyn Any>>,
-}
-
 impl Registry {
+    /// Returns true if reused
+    pub(crate) fn alloc_or_reuse_func_view_signal(&mut self) -> (SignalId, bool) {
+        let view_id = self
+            .current_func_view
+            .expect("There must be a Func view in scope");
+
+        let owned_signals_ordered = self.owned_signals_ordered.entry(view_id).or_default();
+
+        let ret = if self.current_func_view_signal_tracker < owned_signals_ordered.len() {
+            crate::log("Reusing signal");
+
+            (
+                owned_signals_ordered[self.current_func_view_signal_tracker],
+                true,
+            )
+        } else {
+            let signal_id = SignalId::alloc();
+            owned_signals_ordered.push(signal_id);
+            (signal_id, false)
+        };
+
+        // Track the position
+        self.current_func_view_signal_tracker += 1;
+
+        ret
+    }
+
     pub(crate) fn put_subscription(&mut self, signal_id: SignalId, view_id: ViewId) {
         self.subscriptions_by_signal
             .entry(signal_id)
@@ -87,7 +126,7 @@ impl Registry {
     }
 
     pub(crate) fn on_view_dropped(&mut self, view_id: ViewId) {
-        if let Some(owned_signals) = self.owned_signals.remove(&view_id) {
+        if let Some(owned_signals) = self.owned_signals_ordered.remove(&view_id) {
             for signal_id in owned_signals {
                 self.on_signal_dropped(signal_id);
             }

@@ -78,12 +78,8 @@ fn broadcast_signal(signal_id: SignalId) {
 
 impl Registry {
     pub(crate) fn get_signaller(&mut self) -> Signaller {
-        Signaller(self.get_notification_sender())
-    }
-
-    pub(crate) fn get_notification_sender(&mut self) -> UnboundedSender<SignalId> {
-        if let Some(signal_sender) = &self.signal_sender {
-            signal_sender.clone()
+        if let Some(signaller) = &self.signaller {
+            signaller.clone()
         } else {
             let (sender, mut receiver) = futures::channel::mpsc::unbounded::<SignalId>();
 
@@ -101,8 +97,8 @@ impl Registry {
                 });
             }
 
-            self.signal_sender = Some(sender.clone());
-            sender
+            self.signaller = Some(Signaller(sender.clone()));
+            Signaller(sender)
         }
     }
 }

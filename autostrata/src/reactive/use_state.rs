@@ -3,20 +3,16 @@ use std::{marker::PhantomData, rc::Rc};
 use crate::{pubsub::SignalId, registry::REGISTRY};
 
 pub fn use_state<T: 'static>(value: T) -> (State<T>, StateMut<T>) {
-    let signal_id = SignalId::alloc();
+    let signal_id = REGISTRY.with_borrow_mut(|registry| {
+        let (signal_id, reused) = registry.alloc_or_reuse_func_view_signal();
 
-    REGISTRY.with_borrow_mut(|registry| {
-        let view_id = registry
-            .current_func_view
-            .expect("There must be a Func view in scope");
+        // If the signal is reused, the value should already be in the registry,
+        // and we should not reset the state.
+        if !reused {
+            registry.state_values.insert(signal_id, Rc::new(value));
+        }
 
-        registry
-            .owned_signals
-            .entry(view_id)
-            .or_default()
-            .push(signal_id);
-
-        registry.state_values.insert(signal_id, Rc::new(value));
+        signal_id
     });
 
     (
@@ -50,8 +46,9 @@ impl<T: 'static> State<T> {
         value_ref.clone()
     }
 
-    pub fn read<U>(&self, f: impl FnOnce(&T) -> U) -> U {
+    pub fn map<U>(&self, f: impl FnOnce(&T) -> U) -> U {
         self.signal_id.register_reactive_dependency();
+
         REGISTRY.with_borrow(|registry| {
             f(registry
                 .state_values

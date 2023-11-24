@@ -5,6 +5,41 @@ fn poc() -> impl View {
     let (show, show_mut) = use_state(true);
     let (yes, yes_mut) = use_state(false);
 
+    let todo = view! {
+        <div>
+            "Hello!"
+            <div>
+                <button>
+                    "hide/show"
+                </button>
+            </div>
+            <div>
+                <button>
+                    "yes/no"
+                </button>
+            </div>
+            <div>
+                <span>"clicked " {clicks.get()} " times"</span>
+            </div>
+            <div>
+                <span>
+                    if show.get() {
+                        <strong>"Present"</strong>
+                    }
+                </span>
+            </div>
+            <div>
+                <span>
+                    if yes.get() {
+                        <strong>"Yes"</strong>
+                    } else {
+                        "No"
+                    }
+                </span>
+            </div>
+        </div>
+    };
+
     Element::new(
         "div",
         (),
