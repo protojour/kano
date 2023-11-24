@@ -1,4 +1,3 @@
-use std::borrow::BorrowMut;
 use std::cell::RefCell;
 use std::collections::{BTreeSet, HashMap};
 use std::rc::Rc;
@@ -24,13 +23,32 @@ impl ViewId {
     ///
     /// Setting a reactive to the current one, enables
     /// automatic subscription creation when a signal dependency is registered.
-    pub(crate) fn invoke_as_current_reactive<T>(self, func: impl FnOnce() -> T) -> T {
-        let prev_id = CURRENT_REACTIVE_VIEW.with_borrow_mut(|current| current.replace(self));
+    pub(crate) fn invoke_as_current_reactive_view<T>(self, func: impl FnOnce() -> T) -> T {
+        let (prev_reactive, prev_func) = REGISTRY.with_borrow_mut(|registry| {
+            (
+                registry.current_reactive_view.replace(self),
+                registry.current_func_view.replace(self),
+            )
+        });
 
         let value = func();
 
-        CURRENT_REACTIVE_VIEW.with_borrow_mut(|current| {
-            *current.borrow_mut() = prev_id;
+        REGISTRY.with_borrow_mut(|registry| {
+            registry.current_reactive_view = prev_reactive;
+            registry.current_func_view = prev_func;
+        });
+
+        value
+    }
+
+    pub(crate) fn invoke_as_current_func_view<T>(self, func: impl FnOnce() -> T) -> T {
+        let prev_func =
+            REGISTRY.with_borrow_mut(|registry| registry.current_func_view.replace(self));
+
+        let value = func();
+
+        REGISTRY.with_borrow_mut(|registry| {
+            registry.current_func_view = prev_func;
         });
 
         value
@@ -39,8 +57,6 @@ impl ViewId {
 
 thread_local! {
     pub(crate) static REGISTRY: RefCell<Registry> = RefCell::new(Registry::default());
-
-    pub(crate) static CURRENT_REACTIVE_VIEW: RefCell<Option<ViewId>> = RefCell::new(None);
 }
 
 #[derive(Default)]
@@ -49,6 +65,9 @@ pub(crate) struct Registry {
     pub(crate) subscriptions_by_signal: HashMap<SignalId, BTreeSet<ViewId>>,
     pub(crate) subscriptions_by_view: HashMap<ViewId, BTreeSet<SignalId>>,
     pub(crate) signal_sender: Option<futures::channel::mpsc::UnboundedSender<SignalId>>,
+
+    pub(crate) current_reactive_view: Option<ViewId>,
+    pub(crate) current_func_view: Option<ViewId>,
 }
 
 impl Registry {

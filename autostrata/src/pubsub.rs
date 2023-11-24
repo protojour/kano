@@ -3,7 +3,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 use futures::{SinkExt, StreamExt};
 
-use crate::registry::{ViewId, CURRENT_REACTIVE_VIEW, REGISTRY};
+use crate::registry::{ViewId, REGISTRY};
 
 static NEXT_SIGNAL_ID: AtomicU64 = AtomicU64::new(0);
 
@@ -20,13 +20,11 @@ impl SignalId {
     ///
     /// This will register a subscription between the current active subscriber (if any) and the signal.
     pub(crate) fn register_dependency(self) {
-        let active = CURRENT_REACTIVE_VIEW.with_borrow_mut(|active| active.clone());
-
-        if let Some(reactive_id) = active {
-            REGISTRY.with_borrow_mut(|registry| {
-                registry.put_subscription(self, reactive_id);
-            })
-        }
+        REGISTRY.with_borrow_mut(|registry| {
+            if let Some(view_id) = registry.current_reactive_view {
+                registry.put_subscription(self, view_id);
+            }
+        });
     }
 }
 

@@ -67,14 +67,15 @@ impl<T: Diff + 'static> ReactiveState<T> {
         REGISTRY.with_borrow_mut(|registry| {
             registry.reactive_callbacks.insert(
                 view_id,
-                Rc::new(SignalHandler {
+                Rc::new(UpdateCallback {
                     weak_data_cell: Rc::downgrade(&data_cell),
                 }),
             );
         });
 
         {
-            let actual_state = view_id.invoke_as_current_reactive(|| update_view(None, cursor));
+            let actual_state =
+                view_id.invoke_as_current_reactive_view(|| update_view(None, cursor));
 
             // Now all information is ready to store the data, including the cursor.
             *data_cell.borrow_mut() = Some(Data {
@@ -107,26 +108,28 @@ struct Data<T: Diff> {
 }
 
 impl<T: Diff> Data<T> {
-    fn update_view(&mut self) {
+    fn update_view(&mut self, view_id: ViewId) {
         let old_state = self.actual_state.take();
-        let new_state = (self.update_view)(old_state, self.cursor.as_mut());
+
+        let new_state = view_id.invoke_as_current_reactive_view(|| {
+            (self.update_view)(old_state, self.cursor.as_mut())
+        });
+
         self.actual_state = Some(new_state);
     }
 }
 
-struct SignalHandler<T: Diff> {
+struct UpdateCallback<T: Diff> {
     weak_data_cell: Weak<RefCell<Option<Data<T>>>>,
 }
 
-impl<T: Diff + 'static> OnSignal for SignalHandler<T> {
+impl<T: Diff + 'static> OnSignal for UpdateCallback<T> {
     fn on_signal(&self, _signal_id: SignalId, view_id: ViewId) -> bool {
-        if let Some(strong_handle) = self.weak_data_cell.upgrade() {
-            view_id.invoke_as_current_reactive(|| {
-                if let Some(data) = &mut *strong_handle.borrow_mut() {
-                    data.update_view();
-                }
-                true
-            })
+        if let Some(strong_data_cell) = self.weak_data_cell.upgrade() {
+            let mut data_borrow = strong_data_cell.borrow_mut();
+            data_borrow.as_mut().unwrap().update_view(view_id);
+
+            true
         } else {
             false
         }
