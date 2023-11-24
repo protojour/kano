@@ -1,4 +1,5 @@
 use autostrata::{reactive::*, view::*, *};
+use autostrata_web::html::*;
 
 mod platform {
     use autostrata::View;
@@ -56,18 +57,15 @@ fn poc() -> impl AppView {
     //     </div>
     // };
 
-    Element::new(
-        "div",
+    div(
         (),
         (
             "Hello!",
             Func(list),
-            Element::new(
-                "div",
+            div(
                 (),
                 (
-                    Element::new(
-                        "button",
+                    button(
                         (
                             On::click(move || {
                                 clicks_mut.update(|clicks| clicks + 1);
@@ -79,8 +77,7 @@ fn poc() -> impl AppView {
                         ),
                         ("hide/show",),
                     ),
-                    Element::new(
-                        "button",
+                    button(
                         (
                             On::click(move || {
                                 clicks_mut.update(|clicks| clicks + 1);
@@ -94,37 +91,32 @@ fn poc() -> impl AppView {
                     ),
                 ),
             ),
-            Element::new(
-                "div",
+            div(
                 (),
                 (Reactive(move || {
-                    Element::new("span", (), (format!("Clicked {} times", clicks.get()),))
+                    span((), (format!("Clicked {} times", clicks.get()),))
                 }),),
             ),
-            Element::new(
-                "div",
+            div(
                 (),
                 (Reactive(move || {
-                    Element::new(
-                        "span",
+                    span(
                         (),
                         (if show.get() {
-                            Either::Left(Element::new("strong", (), ("PRESENT",)))
+                            Either::Left(strong((), ("PRESENT",)))
                         } else {
                             Either::Right(())
                         },),
                     )
                 }),),
             ),
-            Element::new(
-                "div",
+            div(
                 (),
                 (Reactive(move || {
-                    Element::new(
-                        "span",
+                    span(
                         (),
                         (if yes.get() {
-                            Either::Left(Element::new("strong", (), ("yes",)))
+                            Either::Left(strong((), ("yes",)))
                         } else {
                             Either::Right("no")
                         },),

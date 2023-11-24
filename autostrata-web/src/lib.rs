@@ -9,6 +9,10 @@ use web_sys::{window, Document};
 
 use autostrata::{Diff, Event, On, View};
 
+pub mod html;
+
+mod element;
+
 #[cfg(feature = "web-component")]
 pub mod web_component;
 
@@ -25,10 +29,10 @@ pub struct Web {}
 impl Web {
     pub fn hydrate<V: View<Web>, F: (FnOnce() -> V) + 'static>(func: F) {
         // let mut cursor = Cursor::EmptyChildrenOf(document().body().unwrap().into());
-        let mut cursor = Cursor::Detached;
+        let mut cursor = WebCursor::Detached;
         let state = autostrata::view::Func(func).init(&mut cursor);
 
-        let Cursor::Node(node) = cursor else {
+        let WebCursor::Node(node) = cursor else {
             panic!("No node rendered");
         };
 
@@ -40,7 +44,7 @@ impl Web {
 }
 
 impl Platform for Web {
-    type Cursor = Cursor;
+    type Cursor = WebCursor;
 
     fn spawn_task(task: impl std::future::Future<Output = ()> + 'static) {
         wasm_bindgen_futures::spawn_local(task);
@@ -52,14 +56,14 @@ impl Platform for Web {
 }
 
 #[derive(Clone, Debug)]
-pub enum Cursor {
+pub enum WebCursor {
     Detached,
     Node(web_sys::Node),
     EmptyChildrenOf(web_sys::Element),
     AttrsOf(web_sys::Element),
 }
 
-impl autostrata::platform::Cursor for Cursor {
+impl autostrata::platform::Cursor for WebCursor {
     fn from_element_handle(handle: &ElementHandle) -> Self {
         match handle {
             ElementHandle::DomNode(node) => Self::Node(node.clone()),
@@ -68,7 +72,7 @@ impl autostrata::platform::Cursor for Cursor {
 
     fn empty(&mut self) {
         match &self {
-            Cursor::AttrsOf(_) => {}
+            WebCursor::AttrsOf(_) => {}
             _ => {
                 let comment = document().create_comment("");
                 self.append_node(&comment);
@@ -105,7 +109,7 @@ impl autostrata::platform::Cursor for Cursor {
 
     fn on_event(&mut self, on_event: On) -> AttrHandle {
         match self {
-            Cursor::AttrsOf(element) => {
+            WebCursor::AttrsOf(element) => {
                 let event_target: &EventTarget = element.dyn_ref().unwrap();
                 let event_type = match on_event.event() {
                     Event::Click => "click",
@@ -116,93 +120,93 @@ impl autostrata::platform::Cursor for Cursor {
                     on_event.invoke();
                 }))
             }
-            Cursor::Node(_) => panic!(),
-            Cursor::Detached => panic!(),
-            Cursor::EmptyChildrenOf(_) => panic!(),
+            WebCursor::Node(_) => panic!(),
+            WebCursor::Detached => panic!(),
+            WebCursor::EmptyChildrenOf(_) => panic!(),
         }
     }
 
     fn enter_children(&mut self) {
         match self {
-            Cursor::Node(node) => {
+            WebCursor::Node(node) => {
                 if let Some(child) = node.first_child() {
                     // log(&format!("enter child: had child {child:?}"));
-                    *self = Cursor::Node(child);
+                    *self = WebCursor::Node(child);
                 } else if let Some(element) = node.dyn_ref::<web_sys::Element>() {
                     // log(&format!("enter child: had no children"));
-                    *self = Cursor::EmptyChildrenOf(element.clone());
+                    *self = WebCursor::EmptyChildrenOf(element.clone());
                 } else {
                     panic!("No children");
                 }
             }
-            Cursor::EmptyChildrenOf(_) | Cursor::Detached => {
+            WebCursor::EmptyChildrenOf(_) | WebCursor::Detached => {
                 panic!("Enter empty children");
             }
-            Cursor::AttrsOf(_) => {}
+            WebCursor::AttrsOf(_) => {}
         }
     }
 
     fn exit_children(&mut self) {
         // log("exit child");
         match self {
-            Cursor::Node(node) => {
+            WebCursor::Node(node) => {
                 let parent = node.parent_element().unwrap();
-                *self = Cursor::Node(parent.dyn_into().unwrap());
+                *self = WebCursor::Node(parent.dyn_into().unwrap());
             }
-            Cursor::EmptyChildrenOf(element) => {
-                *self = Cursor::Node(element.dyn_ref::<web_sys::Node>().unwrap().clone());
+            WebCursor::EmptyChildrenOf(element) => {
+                *self = WebCursor::Node(element.dyn_ref::<web_sys::Node>().unwrap().clone());
             }
-            Cursor::AttrsOf(_) => {}
-            Cursor::Detached => panic!("no children"),
+            WebCursor::AttrsOf(_) => {}
+            WebCursor::Detached => panic!("no children"),
         }
     }
 
     fn enter_attrs(&mut self) {
         match self {
-            Cursor::Node(node) => {
+            WebCursor::Node(node) => {
                 if let Some(element) = node.dyn_ref::<web_sys::Element>() {
-                    *self = Cursor::AttrsOf(element.clone());
+                    *self = WebCursor::AttrsOf(element.clone());
                 } else {
                     panic!("Non-element attributes");
                 }
             }
-            Cursor::EmptyChildrenOf(_) => {
+            WebCursor::EmptyChildrenOf(_) => {
                 panic!("Entering attrs of empty children");
             }
-            Cursor::AttrsOf(_) | Cursor::Detached => panic!(),
+            WebCursor::AttrsOf(_) | WebCursor::Detached => panic!(),
         }
     }
 
     fn exit_attrs(&mut self) {
         match self {
-            Cursor::AttrsOf(element) => {
-                *self = Cursor::Node(element.dyn_ref::<web_sys::Node>().unwrap().clone());
+            WebCursor::AttrsOf(element) => {
+                *self = WebCursor::Node(element.dyn_ref::<web_sys::Node>().unwrap().clone());
             }
-            Cursor::EmptyChildrenOf(_) => panic!(),
-            Cursor::Node(_) => panic!(),
-            Cursor::Detached => panic!(),
+            WebCursor::EmptyChildrenOf(_) => panic!(),
+            WebCursor::Node(_) => panic!(),
+            WebCursor::Detached => panic!(),
         }
     }
 
     fn replace(&mut self, func: impl FnOnce(&mut Self)) {
-        let mut replacement_cursor = Cursor::Detached;
+        let mut replacement_cursor = WebCursor::Detached;
         func(&mut replacement_cursor);
 
         match (&self, replacement_cursor) {
-            (Cursor::Detached, _) => {}
-            (Cursor::Node(node), Cursor::Node(replacement)) => {
+            (WebCursor::Detached, _) => {}
+            (WebCursor::Node(node), WebCursor::Node(replacement)) => {
                 let parent = node.parent_element().unwrap();
                 parent.replace_child(&replacement, node).unwrap();
 
-                *self = Cursor::Node(replacement);
+                *self = WebCursor::Node(replacement);
             }
-            (Cursor::Node(_node), Cursor::Detached) => {
+            (WebCursor::Node(_node), WebCursor::Detached) => {
                 panic!();
             }
-            (Cursor::AttrsOf(_el), _) => {
+            (WebCursor::AttrsOf(_el), _) => {
                 panic!()
             }
-            (Cursor::EmptyChildrenOf(_), _) => {
+            (WebCursor::EmptyChildrenOf(_), _) => {
                 panic!();
             }
             _ => panic!(),
@@ -210,7 +214,7 @@ impl autostrata::platform::Cursor for Cursor {
     }
 }
 
-impl Cursor {
+impl WebCursor {
     fn append_node(&mut self, appendee: &web_sys::Node) {
         // log(&format!("append at Cursor: {self:?}"));
         match self {
