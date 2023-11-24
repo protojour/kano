@@ -1,6 +1,7 @@
 use std::{
     any::Any,
-    sync::{Arc, Mutex, Weak},
+    cell::RefCell,
+    rc::{Rc, Weak},
 };
 
 use crate::{
@@ -47,7 +48,7 @@ impl<T: Diff> ViewState for ReactiveState<T> where T::State: ViewState {}
 type RefMutDynCursor<'a> = &'a mut dyn Any;
 
 pub struct ReactiveState<T: Diff> {
-    shared_state: Arc<Mutex<Option<SharedState<T>>>>,
+    shared_state: Rc<RefCell<Option<SharedState<T>>>>,
     subscriber_keepalive: Subscriber,
 }
 
@@ -67,11 +68,11 @@ impl<T: Diff + 'static> ReactiveState<T> {
         box_cursor: &dyn Fn(&mut dyn Any) -> Box<dyn Any>,
     ) -> Self {
         let reactive_id = ReactiveId::alloc();
-        let shared_state: Arc<Mutex<Option<SharedState<T>>>> = Arc::new(Mutex::new(None));
+        let shared_state: Rc<RefCell<Option<SharedState<T>>>> = Rc::new(RefCell::new(None));
         let subscriber = Subscriber::new(
             reactive_id,
-            Arc::new(SignalHandler {
-                weak_handle: Arc::downgrade(&shared_state),
+            Rc::new(SignalHandler {
+                weak_handle: Rc::downgrade(&shared_state),
             }),
         );
 
@@ -81,8 +82,7 @@ impl<T: Diff + 'static> ReactiveState<T> {
                 .invoke_as_current(|| update_view(None, cursor));
 
             // let mut lock = subscriber_state.shared_state.lock().unwrap();
-            let mut lock = shared_state.lock().unwrap();
-            *lock = Some(SharedState {
+            *shared_state.borrow_mut() = Some(SharedState {
                 current_state: Some(state),
                 update_view: Box::new(update_view),
                 cursor: box_cursor(cursor),
@@ -111,15 +111,14 @@ impl<T: Diff> SharedState<T> {
 }
 
 struct SignalHandler<T: Diff> {
-    weak_handle: Weak<Mutex<Option<SharedState<T>>>>,
+    weak_handle: Weak<RefCell<Option<SharedState<T>>>>,
 }
 
 impl<T: Diff + 'static> OnSignal for SignalHandler<T> {
     fn on_signal(&self, _signal_id: SignalId, reactive_id: ReactiveId) -> bool {
         if let Some(strong_handle) = self.weak_handle.upgrade() {
             reactive_id.invoke_as_current(|| {
-                let mut shared_state_lock = strong_handle.lock().unwrap();
-                if let Some(shared_state) = &mut *shared_state_lock {
+                if let Some(shared_state) = &mut *strong_handle.borrow_mut() {
                     shared_state.update_view();
                 }
                 true

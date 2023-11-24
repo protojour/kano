@@ -1,3 +1,4 @@
+use std::rc::Rc;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
@@ -112,7 +113,7 @@ impl Subscriber {
     ///
     /// The relationship between the subscriber's ID and the OnSignal handler
     /// is retained while the returned Subscriber is in scope.
-    pub fn new(reactive_id: ReactiveId, notify: Arc<dyn OnSignal>) -> Self {
+    pub fn new(reactive_id: ReactiveId, notify: Rc<dyn OnSignal>) -> Self {
         REGISTRY.with_borrow_mut(|registry| {
             registry.callbacks.insert(reactive_id, notify);
         });
@@ -156,7 +157,7 @@ impl Drop for SubscriberGc {
 fn broadcast_signal(signal_id: SignalId) {
     // Don't invoke callbacks while holding the registry lock.
     // Collect into a vector first.
-    let callbacks: Vec<(Arc<dyn OnSignal>, ReactiveId)> = REGISTRY.with_borrow_mut(|registry| {
+    let callbacks: Vec<(Rc<dyn OnSignal>, ReactiveId)> = REGISTRY.with_borrow_mut(|registry| {
         registry
             .subscriptions_by_signal
             .get(&signal_id)

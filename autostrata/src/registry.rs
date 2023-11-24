@@ -1,8 +1,8 @@
 use std::borrow::BorrowMut;
 use std::cell::RefCell;
 use std::collections::{BTreeSet, HashMap};
+use std::rc::Rc;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::Arc;
 
 use crate::pubsub::{OnSignal, SignalId};
 
@@ -22,7 +22,6 @@ impl ReactiveId {
     ///
     /// Setting a reactive to the current one, enables
     /// automatic subscription creation when a signal dependency is registered.
-    /// It can also be the owner of new registry values.
     pub(crate) fn invoke_as_current<T>(self, func: impl FnOnce() -> T) -> T {
         let prev_id = CURRENT_REACTIVE_SUBSCRIBER.with_borrow_mut(|current| current.replace(self));
 
@@ -44,7 +43,7 @@ thread_local! {
 
 #[derive(Default)]
 pub(crate) struct Registry {
-    pub(crate) callbacks: HashMap<ReactiveId, Arc<dyn OnSignal>>,
+    pub(crate) callbacks: HashMap<ReactiveId, Rc<dyn OnSignal>>,
     pub(crate) subscriptions_by_signal: HashMap<SignalId, BTreeSet<ReactiveId>>,
     pub(crate) subscriptions_by_subscriber: HashMap<ReactiveId, BTreeSet<SignalId>>,
     pub(crate) signal_sender: Option<futures::channel::mpsc::UnboundedSender<SignalId>>,

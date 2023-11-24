@@ -1,62 +1,62 @@
-use std::sync::{Arc, Mutex};
+use std::{cell::RefCell, rc::Rc};
 
 use crate::pubsub::{Signal, SignalId};
 
 pub fn use_state<T: 'static>(value: T) -> (State<T>, StateMut<T>) {
     let signal = Signal::new();
-    let mutex = Arc::new(Mutex::new(Arc::new(value)));
+    let value = Rc::new(RefCell::new(Rc::new(value)));
 
     (
         State {
             signal_id: signal.id(),
-            mutex: mutex.clone(),
+            value: value.clone(),
         },
-        StateMut { mutex, signal },
+        StateMut { value, signal },
     )
 }
 
 pub struct State<T> {
-    mutex: Arc<Mutex<Arc<T>>>,
+    value: Rc<RefCell<Rc<T>>>,
     signal_id: SignalId,
 }
 
 impl<T: 'static> State<T> {
-    pub fn get(&self) -> Arc<T> {
+    pub fn get(&self) -> Rc<T> {
         self.signal_id.register_dependency();
 
-        let lock = self.mutex.lock().unwrap();
-        (*lock).clone()
+        self.value.borrow().clone()
     }
 }
 
 impl<T> Clone for State<T> {
     fn clone(&self) -> Self {
         Self {
-            mutex: self.mutex.clone(),
+            value: self.value.clone(),
             signal_id: self.signal_id,
         }
     }
 }
 
 pub struct StateMut<T> {
-    mutex: Arc<Mutex<Arc<T>>>,
+    value: Rc<RefCell<Rc<T>>>,
     signal: Signal,
 }
 
 impl<T: 'static> StateMut<T> {
     pub fn set(&self, value: T) {
         {
-            let mut lock = self.mutex.lock().unwrap();
-            *lock = Arc::new(value);
+            *self.value.borrow_mut() = Rc::new(value);
         }
         self.signal.send();
     }
 
     pub fn update(&self, func: impl Fn(&T) -> T) {
         {
-            let mut lock = self.mutex.lock().unwrap();
-            let new_value = func(&*lock);
-            *lock = Arc::new(new_value);
+            let old = self.value.borrow();
+            let new_value = func(&*old);
+            drop(old);
+
+            *self.value.borrow_mut() = Rc::new(new_value);
         }
         self.signal.send();
     }
@@ -65,7 +65,7 @@ impl<T: 'static> StateMut<T> {
 impl<T> Clone for StateMut<T> {
     fn clone(&self) -> Self {
         Self {
-            mutex: self.mutex.clone(),
+            value: self.value.clone(),
             signal: self.signal.clone(),
         }
     }
