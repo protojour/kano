@@ -11,41 +11,41 @@ pub enum Either<L, R> {
     Right(R),
 }
 
-impl<L: Diff, R: Diff> Diff for Either<L, R> {
-    type State = State<L, R>;
+impl<P: Platform, L: Diff<P>, R: Diff<P>> Diff<P> for Either<L, R> {
+    type State = State<P, L, R>;
 
-    fn init<P: Platform>(self, cursor: &mut P::Cursor) -> Self::State {
+    fn init(self, cursor: &mut P::Cursor) -> Self::State {
         match self {
             Self::Left(left) => State {
-                state: Either::Left(left.init::<P>(cursor)),
+                state: Either::Left(left.init(cursor)),
             },
             Self::Right(right) => State {
-                state: Either::Right(right.init::<P>(cursor)),
+                state: Either::Right(right.init(cursor)),
             },
         }
     }
 
-    fn diff<P: Platform>(self, state: &mut Self::State, cursor: &mut P::Cursor) {
+    fn diff(self, state: &mut Self::State, cursor: &mut P::Cursor) {
         match (&mut state.state, self) {
             (Either::Left(left_state), Either::Left(left)) => {
-                left.diff::<P>(left_state, cursor);
+                left.diff(left_state, cursor);
             }
             (Either::Right(right_state), Either::Right(right)) => {
-                right.diff::<P>(right_state, cursor);
+                right.diff(right_state, cursor);
             }
             (Either::Left(_), Either::Right(right)) => cursor.replace(|cursor| {
-                state.state = Either::Right(right.init::<P>(cursor));
+                state.state = Either::Right(right.init(cursor));
             }),
             (Either::Right(_), Either::Left(left)) => cursor.replace(|cursor| {
-                state.state = Either::Left(left.init::<P>(cursor));
+                state.state = Either::Left(left.init(cursor));
             }),
         }
     }
 }
 
-pub struct State<L: Diff, R: Diff> {
+pub struct State<P: Platform, L: Diff<P>, R: Diff<P>> {
     state: Either<L::State, R::State>,
 }
 
-impl<L: View, R: View> View for Either<L, R> {}
-impl<L: Attr, R: Attr> Attr for Either<L, R> {}
+impl<P: Platform, L: View<P>, R: View<P>> View<P> for Either<L, R> {}
+impl<P: Platform, L: Attr<P>, R: Attr<P>> Attr<P> for Either<L, R> {}

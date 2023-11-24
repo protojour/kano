@@ -1,44 +1,60 @@
 use autostrata::{reactive::*, view::*, *};
 
-fn poc() -> impl View {
+mod platform {
+    use autostrata::View;
+    use autostrata_web::Web;
+
+    /// These are typically under conditional compilation:
+    ///
+    /// `#[cfg(feature = "web")]`
+    ///
+    /// Which specifies that the whole app is compiled for the web.
+    pub trait AppView: View<Web> {}
+
+    impl<V: View<Web>> AppView for V {}
+}
+
+use platform::AppView;
+
+fn poc() -> impl AppView {
     let (clicks, clicks_mut) = use_state(0);
     let (show, show_mut) = use_state(true);
     let (yes, yes_mut) = use_state(false);
 
-    let todo = view! {
-        <div>
-            "Hello!"
-            <div>
-                <button>
-                    "hide/show"
-                </button>
-            </div>
-            <div>
-                <button>
-                    "yes/no"
-                </button>
-            </div>
-            <div>
-                <span>"clicked " {clicks.get()} " times"</span>
-            </div>
-            <div>
-                <span>
-                    if show.get() {
-                        <strong>"Present"</strong>
-                    }
-                </span>
-            </div>
-            <div>
-                <span>
-                    if yes.get() {
-                        <strong>"Yes"</strong>
-                    } else {
-                        "No"
-                    }
-                </span>
-            </div>
-        </div>
-    };
+    // let todo = view! {
+    //     <div>
+    //         "Hello!"
+    //         <div>
+    //             <button>
+    //                 "hide/show"
+    //             </button>
+    //         </div>
+    //         <div>
+    //             <button>
+    //                 "yes/no"
+    //             </button>
+    //         </div>
+    //         <div>
+    //             <span>"clicked " {clicks.get()} " times"</span>
+    //         </div>
+    //         <div>
+    //             <span>
+    //                 if show.get() {
+    //                     <strong>"Present"</strong>
+    //                 }
+    //             </span>
+    //         </div>
+    //         <div>
+    //             <span>
+    //                 if yes.get() {
+    //                     <strong>"Yes"</strong>
+    //                 } else {
+    //                     "No"
+    //                 }
+    //             </span>
+    //         </div>
+    //     </div>
+    // };
 
     Element::new(
         "div",
@@ -119,7 +135,7 @@ fn poc() -> impl View {
     )
 }
 
-fn list() -> impl View {
+fn list() -> impl AppView {
     view! {
         <ul>
             <li>"One"</li>

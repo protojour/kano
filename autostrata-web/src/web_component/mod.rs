@@ -47,8 +47,8 @@ pub trait WebComponent {
 
 impl<V, F> WebComponent for F
 where
-    V: View,
-    <V as Diff>::State: std::any::Any,
+    V: View<Web>,
+    <V as Diff<Web>>::State: std::any::Any,
     F: (Fn() -> V) + 'static,
 {
     fn register(&'static self, config: ComponentConfig) {
@@ -60,7 +60,7 @@ where
 
     fn hydrate(&self, _this: &HtmlElement, anchor: &HtmlElement) -> ComponentHandle {
         let mut cursor = Cursor::Detached;
-        let state = self().init::<Web>(&mut cursor);
+        let state = self().init(&mut cursor);
 
         let Cursor::Node(node) = cursor else {
             panic!("No node rendered");

@@ -23,10 +23,10 @@ extern "C" {
 pub struct Web {}
 
 impl Web {
-    pub fn hydrate<V: View, F: (FnOnce() -> V) + 'static>(func: F) {
+    pub fn hydrate<V: View<Web>, F: (FnOnce() -> V) + 'static>(func: F) {
         // let mut cursor = Cursor::EmptyChildrenOf(document().body().unwrap().into());
         let mut cursor = Cursor::Detached;
-        let state = autostrata::view::Func(func).init::<Self>(&mut cursor);
+        let state = autostrata::view::Func(func).init(&mut cursor);
 
         let Cursor::Node(node) = cursor else {
             panic!("No node rendered");

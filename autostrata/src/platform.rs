@@ -2,7 +2,7 @@ use std::{any::Any, fmt::Debug};
 
 use crate::On;
 
-pub trait Platform {
+pub trait Platform: 'static {
     type Cursor: Cursor;
 
     fn spawn_task(task: impl std::future::Future<Output = ()> + 'static);

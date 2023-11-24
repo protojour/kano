@@ -1,7 +1,10 @@
 use autostrata::{view, View};
-use autostrata_web::web_component::{ComponentConfig, Shadow, WebComponent};
+use autostrata_web::{
+    web_component::{ComponentConfig, Shadow, WebComponent},
+    Web,
+};
 
-fn test_comp() -> impl View {
+fn test_comp() -> impl View<Web> {
     let hello = true;
 
     view! {

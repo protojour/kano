@@ -1,14 +1,14 @@
 use crate::{platform::Cursor, AttrSet, Children, Diff, Platform, View};
 
-impl Diff for () {
+impl<P: Platform> Diff<P> for () {
     type State = ();
 
-    fn init<P: Platform>(self, cursor: &mut P::Cursor) -> () {
+    fn init(self, cursor: &mut P::Cursor) -> () {
         cursor.empty();
     }
-    fn diff<P: Platform>(self, _: &mut Self::State, _cursor: &mut P::Cursor) {}
+    fn diff(self, _: &mut Self::State, _cursor: &mut P::Cursor) {}
 }
 
-impl Children for () {}
-impl AttrSet for () {}
-impl View for () {}
+impl<P: Platform> Children<P> for () {}
+impl<P: Platform> AttrSet<P> for () {}
+impl<P: Platform> View<P> for () {}

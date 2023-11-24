@@ -2,27 +2,27 @@ use crate::{Attr, AttrSet, Children, Cursor, Diff, Platform, View};
 
 macro_rules! tuples {
     ($(($t:ident, $i:tt)),+) => {
-        impl<$($t: Diff),+> Diff for ($($t),+,) {
+        impl<P: Platform, $($t: Diff<P>),+> Diff<P> for ($($t),+,) {
             type State = ($($t::State),+,);
 
-            fn init<P: Platform>(self, cursor: &mut P::Cursor) -> Self::State {
+            fn init(self, cursor: &mut P::Cursor) -> Self::State {
                 cursor.enter_children();
-                let ret = ($(self.$i.init::<P>(cursor)),+,);
+                let ret = ($(self.$i.init(cursor)),+,);
                 cursor.exit_children();
                 ret
             }
 
-            fn diff<P: Platform>(self, state: &mut Self::State, cursor: &mut P::Cursor) {
+            fn diff(self, state: &mut Self::State, cursor: &mut P::Cursor) {
                 cursor.enter_children();
-                $(self.$i.diff::<P>(&mut state.$i, cursor));+;
+                $(self.$i.diff(&mut state.$i, cursor));+;
                 cursor.exit_children();
             }
         }
 
-        impl<$($t: View),+> Children for ($($t),+,) {
+        impl<P: Platform, $($t: View<P>),+> Children<P> for ($($t),+,) {
         }
 
-        impl<$($t: Attr),+> AttrSet for ($($t),+,) {
+        impl<P: Platform, $($t: Attr<P>),+> AttrSet<P> for ($($t),+,) {
         }
     }
 }

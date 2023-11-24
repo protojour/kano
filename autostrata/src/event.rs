@@ -39,19 +39,19 @@ impl On {
     }
 }
 
-impl Diff for On {
+impl<P: Platform> Diff<P> for On {
     type State = OnState;
 
-    fn init<P: Platform>(self, cursor: &mut P::Cursor) -> Self::State {
+    fn init(self, cursor: &mut P::Cursor) -> Self::State {
         OnState {
             handle: cursor.on_event(self),
         }
     }
 
-    fn diff<P: Platform>(self, _state: &mut Self::State, _cursor: &mut P::Cursor) {}
+    fn diff(self, _state: &mut Self::State, _cursor: &mut P::Cursor) {}
 }
 
-impl Attr for On {}
+impl<P: Platform> Attr<P> for On {}
 
 pub struct OnState {
     /// This is used to keep listeners alive

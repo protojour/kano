@@ -13,21 +13,21 @@ pub use style::*;
 
 pub use autostrata_macros::view;
 
-pub trait Diff {
+pub trait Diff<P: Platform> {
     type State;
 
     // TODO: Should take renderer instance?
-    fn init<P: Platform>(self, cursor: &mut P::Cursor) -> Self::State;
-    fn diff<P: Platform>(self, state: &mut Self::State, cursor: &mut P::Cursor);
+    fn init(self, cursor: &mut P::Cursor) -> Self::State;
+    fn diff(self, state: &mut Self::State, cursor: &mut P::Cursor);
 }
 
-pub trait View: Diff {}
+pub trait View<P: Platform>: Diff<P> {}
 
-pub trait Children: Diff {}
+pub trait Children<P: Platform>: Diff<P> {}
 
-pub trait AttrSet: Diff {}
+pub trait AttrSet<P: Platform>: Diff<P> {}
 
-pub trait Attr: Diff {}
+pub trait Attr<P: Platform>: Diff<P> {}
 
 pub fn log(s: &str) {
     #[cfg(feature = "web")]
