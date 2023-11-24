@@ -5,7 +5,8 @@ use std::{
 
 use crate::{
     platform::Platform,
-    pubsub::{OnSignal, SignalId, Subscriber, SubscriberId},
+    pubsub::{OnSignal, SignalId, Subscriber},
+    registry::ReactiveId,
     Attr, Diff, ViewState,
 };
 
@@ -65,15 +66,19 @@ impl<T: Diff + 'static> ReactiveState<T> {
         cursor: &mut dyn Any,
         box_cursor: &dyn Fn(&mut dyn Any) -> Box<dyn Any>,
     ) -> Self {
+        let reactive_id = ReactiveId::alloc();
         let shared_state: Arc<Mutex<Option<SharedState<T>>>> = Arc::new(Mutex::new(None));
-        let subscriber = Subscriber::new(Arc::new(SignalHandler {
-            weak_handle: Arc::downgrade(&shared_state),
-        }));
+        let subscriber = Subscriber::new(
+            reactive_id,
+            Arc::new(SignalHandler {
+                weak_handle: Arc::downgrade(&shared_state),
+            }),
+        );
 
         {
             let state = subscriber
                 .id()
-                .invoke_as_current_reactive(|| update_view(None, cursor));
+                .invoke_as_current(|| update_view(None, cursor));
 
             // let mut lock = subscriber_state.shared_state.lock().unwrap();
             let mut lock = shared_state.lock().unwrap();
@@ -110,9 +115,9 @@ struct SignalHandler<T: Diff> {
 }
 
 impl<T: Diff + 'static> OnSignal for SignalHandler<T> {
-    fn on_signal(&self, _signal_id: SignalId, subscriber_id: SubscriberId) -> bool {
+    fn on_signal(&self, _signal_id: SignalId, reactive_id: ReactiveId) -> bool {
         if let Some(strong_handle) = self.weak_handle.upgrade() {
-            subscriber_id.invoke_as_current_reactive(|| {
+            reactive_id.invoke_as_current(|| {
                 let mut shared_state_lock = strong_handle.lock().unwrap();
                 if let Some(shared_state) = &mut *shared_state_lock {
                     shared_state.update_view();

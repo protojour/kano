@@ -4,6 +4,7 @@ pub mod view;
 
 mod event;
 mod pubsub;
+mod registry;
 mod style;
 
 pub use event::*;
