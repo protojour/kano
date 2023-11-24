@@ -7,7 +7,7 @@ use wasm_bindgen::prelude::*;
 use web_sys::EventTarget;
 use web_sys::{window, Document};
 
-use autostrata::{Event, On, View};
+use autostrata::{Diff, Event, On, View};
 
 #[cfg(feature = "web-component")]
 pub mod web_component;
@@ -23,10 +23,10 @@ extern "C" {
 pub struct Web {}
 
 impl Web {
-    pub fn hydrate<V: View>(view: V) {
+    pub fn hydrate<V: View, F: (FnOnce() -> V) + 'static>(func: F) {
         // let mut cursor = Cursor::EmptyChildrenOf(document().body().unwrap().into());
         let mut cursor = Cursor::Detached;
-        let state = view.init::<Self>(&mut cursor);
+        let state = autostrata::view::Func(func).init::<Self>(&mut cursor);
 
         let Cursor::Node(node) = cursor else {
             panic!("No node rendered");

@@ -1,3 +1,4 @@
+use std::any::Any;
 use std::cell::RefCell;
 use std::collections::{BTreeSet, HashMap};
 use std::rc::Rc;
@@ -68,6 +69,9 @@ pub(crate) struct Registry {
 
     pub(crate) current_reactive_view: Option<ViewId>,
     pub(crate) current_func_view: Option<ViewId>,
+
+    pub(crate) owned_signals: HashMap<ViewId, Vec<SignalId>>,
+    pub(crate) state_values: HashMap<SignalId, Rc<dyn Any>>,
 }
 
 impl Registry {
@@ -82,7 +86,15 @@ impl Registry {
             .insert(signal_id);
     }
 
-    pub(crate) fn remove_subscriber(&mut self, view_id: ViewId) {
+    pub(crate) fn on_view_dropped(&mut self, view_id: ViewId) {
+        if let Some(owned_signals) = self.owned_signals.remove(&view_id) {
+            for signal_id in owned_signals {
+                self.on_signal_dropped(signal_id);
+            }
+        }
+    }
+
+    pub(crate) fn on_reactive_dropped(&mut self, view_id: ViewId) {
         self.reactive_callbacks.remove(&view_id);
 
         if let Some(signals) = self.subscriptions_by_view.remove(&view_id) {
@@ -92,7 +104,9 @@ impl Registry {
         }
     }
 
-    pub(crate) fn remove_signal(&mut self, signal_id: SignalId) {
+    pub(crate) fn on_signal_dropped(&mut self, signal_id: SignalId) {
+        self.state_values.remove(&signal_id);
+
         if let Some(subscribers) = self.subscriptions_by_signal.remove(&signal_id) {
             for view_id in subscribers {
                 remove_set_entry(&mut self.subscriptions_by_view, &view_id, &signal_id);

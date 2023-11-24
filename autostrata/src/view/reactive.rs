@@ -95,7 +95,8 @@ impl<T: Diff + 'static> ReactiveState<T> {
 impl<T: Diff> Drop for ReactiveState<T> {
     fn drop(&mut self) {
         REGISTRY.with_borrow_mut(|registry| {
-            registry.remove_subscriber(self.view_id);
+            registry.on_reactive_dropped(self.view_id);
+            registry.on_view_dropped(self.view_id);
         });
     }
 }

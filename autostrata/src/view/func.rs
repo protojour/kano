@@ -1,8 +1,11 @@
-use crate::{registry::ViewId, Diff, View};
+use crate::{
+    registry::{ViewId, REGISTRY},
+    Diff, View,
+};
 
 pub struct Func<F>(pub F);
 
-impl<T: Diff, F: (Fn() -> T) + 'static> Diff for Func<F> {
+impl<T: Diff, F: (FnOnce() -> T) + 'static> Diff for Func<F> {
     type State = FuncState<T>;
 
     fn init<P: crate::platform::Platform>(self, cursor: &mut P::Cursor) -> Self::State {
@@ -18,7 +21,7 @@ impl<T: Diff, F: (Fn() -> T) + 'static> Diff for Func<F> {
     }
 }
 
-impl<T: View, F: (Fn() -> T) + 'static> View for Func<F> {}
+impl<T: View, F: (FnOnce() -> T) + 'static> View for Func<F> {}
 
 pub struct FuncState<T: Diff> {
     view_id: ViewId,
@@ -27,6 +30,8 @@ pub struct FuncState<T: Diff> {
 
 impl<T: Diff> Drop for FuncState<T> {
     fn drop(&mut self) {
-        // Deregister view
+        REGISTRY.with_borrow_mut(|registry| {
+            registry.on_view_dropped(self.view_id);
+        });
     }
 }
