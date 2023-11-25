@@ -30,8 +30,12 @@ mod js {
 
 pub struct Web {}
 
-impl Web {
-    pub fn hydrate<V: View<Web>, F: (FnOnce() -> V) + 'static>(func: F) {
+impl Platform for Web {
+    type Cursor = WebCursor;
+
+    fn run_app<V: View<Self>, F: (FnOnce() -> V) + 'static>(func: F) {
+        console_error_panic_hook::set_once();
+
         // let mut cursor = Cursor::EmptyChildrenOf(document().body().unwrap().into());
         let mut cursor = WebCursor::Detached;
         let state = autostrata::view::Func(func).init(&mut cursor);
@@ -45,10 +49,6 @@ impl Web {
         // Need to keep the initial state around, it keeps EventListeners alive
         std::mem::forget(state);
     }
-}
-
-impl Platform for Web {
-    type Cursor = WebCursor;
 
     fn log(s: &str) {
         js::log(s);

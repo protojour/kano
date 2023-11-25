@@ -1,11 +1,13 @@
 #![allow(non_snake_case)]
 
-use autostrata::{reactive::*, view::*, *};
+use autostrata::{platform::Platform, reactive::*, view::*, *};
 use strata_uxr::*;
 
 mod platform {
     use autostrata::View;
     use autostrata_web::Web;
+
+    pub type Platform = autostrata_web::Web;
 
     /// These are typically under conditional compilation:
     ///
@@ -20,8 +22,7 @@ mod platform {
 use platform::*;
 
 fn main() {
-    console_error_panic_hook::set_once();
-    autostrata_web::Web::hydrate(Poc);
+    platform::Platform::run_app(Poc);
 }
 
 fn Poc() -> impl AppView {

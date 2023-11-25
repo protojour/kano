@@ -1,9 +1,13 @@
 use std::fmt::Debug;
 
-use crate::On;
+use crate::{On, View};
 
-pub trait Platform: 'static {
+pub trait Platform: Sized + 'static {
     type Cursor: Cursor;
+
+    /// Run an application on the platform.
+    /// This function _may_ block indefinitely, depending on the platform.
+    fn run_app<V: View<Self>, F: (FnOnce() -> V) + 'static>(func: F);
 
     fn log(s: &str);
 

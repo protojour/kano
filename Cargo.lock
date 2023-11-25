@@ -36,6 +36,7 @@ name = "autostrata-web"
 version = "0.1.0"
 dependencies = [
  "autostrata",
+ "console_error_panic_hook",
  "gloo",
  "js-sys",
  "wasm-bindgen",
