@@ -30,8 +30,10 @@ pub fn view(node: Node) -> TokenStream {
                 autostrata::view::Text(#literal)
             }
         }
-        Node::TextExpr(_expr) => {
-            quote!(())
+        Node::TextExpr(expr) => {
+            quote!(
+                autostrata::view::Reactive(move || #expr)
+            )
         }
         Node::Component(_component) => {
             quote!(())

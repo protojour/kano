@@ -609,6 +609,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "strata-uxr"
+version = "0.1.0"
+dependencies = [
+ "autostrata",
+ "autostrata-web",
+]
+
+[[package]]
 name = "syn"
 version = "2.0.39"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -753,6 +761,7 @@ dependencies = [
  "autostrata-web",
  "console_error_panic_hook",
  "js-sys",
+ "strata-uxr",
  "wasm-bindgen",
 ]
 

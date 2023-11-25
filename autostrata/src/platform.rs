@@ -5,6 +5,8 @@ use crate::On;
 pub trait Platform: 'static {
     type Cursor: Cursor;
 
+    fn log(s: &str);
+
     fn spawn_task(task: impl std::future::Future<Output = ()> + 'static);
 }
 

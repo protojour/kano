@@ -3,6 +3,7 @@ members = [
     "autostrata",
     "autostrata-macros",
     "autostrata-web",
+    "strata-uxr",
     "examples/web-components-demo",
     "examples/web-demo",
 ]

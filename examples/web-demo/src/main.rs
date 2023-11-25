@@ -1,4 +1,5 @@
 use autostrata::{reactive::*, view::*, *};
+use strata_uxr::*;
 
 mod platform {
     use autostrata::View;
@@ -12,8 +13,6 @@ mod platform {
     pub trait AppView: View<Web> {}
 
     impl<V: View<Web>> AppView for V {}
-
-    pub use autostrata_web::html::*;
 }
 
 use platform::*;
@@ -23,47 +22,12 @@ fn poc() -> impl AppView {
     let (show, show_mut) = use_state(true);
     let (yes, yes_mut) = use_state(false);
 
-    // let todo = view! {
-    //     <div>
-    //         "Hello!"
-    //         <div>
-    //             <button>
-    //                 "hide/show"
-    //             </button>
-    //         </div>
-    //         <div>
-    //             <button>
-    //                 "yes/no"
-    //             </button>
-    //         </div>
-    //         <div>
-    //             <span>"clicked " {clicks.get()} " times"</span>
-    //         </div>
-    //         <div>
-    //             <span>
-    //                 if show.get() {
-    //                     <strong>"Present"</strong>
-    //                 }
-    //             </span>
-    //         </div>
-    //         <div>
-    //             <span>
-    //                 if yes.get() {
-    //                     <strong>"Yes"</strong>
-    //                 } else {
-    //                     "No"
-    //                 }
-    //             </span>
-    //         </div>
-    //     </div>
-    // };
-
-    div(
+    layout(
         (),
         (
-            Text("Hello!"),
+            view! { <paragraph>"Hello!"</paragraph> },
             Func(list),
-            div(
+            paragraph(
                 (),
                 (
                     button(
@@ -92,54 +56,36 @@ fn poc() -> impl AppView {
                     ),
                 ),
             ),
-            div(
-                (),
-                (span(
-                    (),
-                    (
-                        Text("clicked "),
-                        Reactive(move || Format(clicks)),
-                        Text(" times"),
-                    ),
-                ),),
-            ),
-            div(
-                (),
-                (Reactive(move || {
-                    span(
-                        (),
-                        (if show.get() {
-                            Either::Left(strong((), (Text("PRESENT"),)))
-                        } else {
-                            Either::Right(())
-                        },),
-                    )
-                }),),
-            ),
-            div(
-                (),
-                (Reactive(move || {
-                    span(
-                        (),
-                        (if yes.get() {
-                            Either::Left(strong((), (Text("yes"),)))
-                        } else {
-                            Either::Right(Text("no"))
-                        },),
-                    )
-                }),),
-            ),
+            view! {
+                <paragraph>"clicked " {Format(clicks)} " times"</paragraph>
+            },
+            view! {
+                <paragraph>
+                    if show.get() {
+                        <strong>"PRESENT"</strong>
+                    }
+                </paragraph>
+            },
+            view! {
+                <paragraph>
+                    if yes.get() {
+                        <strong>"yes"</strong>
+                    } else {
+                        "no"
+                    }
+                </paragraph>
+            },
         ),
     )
 }
 
 fn list() -> impl AppView {
     view! {
-        <ul>
-            <li>"One"</li>
-            <li>"Two"</li>
-            <li>"Three"</li>
-        </ul>
+        <unordered_list>
+            <list_item>"One"</list_item>
+            <list_item>"Two"</list_item>
+            <list_item>"Three"</list_item>
+        </unordered_list>
     }
 }
 

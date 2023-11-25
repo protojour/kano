@@ -16,12 +16,16 @@ mod element;
 #[cfg(feature = "web-component")]
 pub mod web_component;
 
-#[wasm_bindgen]
-extern "C" {
-    // Use `js_namespace` here to bind `console.log(..)` instead of just
-    // `log(..)`
-    #[wasm_bindgen(js_namespace = console)]
-    fn log(s: &str);
+mod js {
+    use super::*;
+
+    #[wasm_bindgen]
+    extern "C" {
+        // Use `js_namespace` here to bind `console.log(..)` instead of just
+        // `log(..)`
+        #[wasm_bindgen(js_namespace = console)]
+        pub fn log(s: &str);
+    }
 }
 
 pub struct Web {}
@@ -45,6 +49,10 @@ impl Web {
 
 impl Platform for Web {
     type Cursor = WebCursor;
+
+    fn log(s: &str) {
+        js::log(s);
+    }
 
     fn spawn_task(task: impl std::future::Future<Output = ()> + 'static) {
         wasm_bindgen_futures::spawn_local(task);
@@ -79,7 +87,7 @@ impl autostrata::platform::Cursor for WebCursor {
     fn text(&mut self, text: &str) -> ElementHandle {
         let text_node = document().create_text_node(text);
         self.append_node(&text_node);
-        log(&format!("new text node cursor: {self:?}"));
+        js::log(&format!("new text node cursor: {self:?}"));
         ElementHandle::DomNode(text_node.into())
     }
 

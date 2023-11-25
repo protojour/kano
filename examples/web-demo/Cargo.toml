@@ -9,6 +9,7 @@ publish = false
 [dependencies]
 autostrata.path = "../../autostrata"
 autostrata-web.path = "../../autostrata-web"
+strata-uxr = { path = "../../strata-uxr", features = ["web"] }
 wasm-bindgen = "0.2"
 console_error_panic_hook = "0.1"
 js-sys = "0.3"

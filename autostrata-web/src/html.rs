@@ -35,3 +35,7 @@ pub const fn section<A, C>(attrs: A, children: C) -> Element<A, C> {
 pub const fn h1<A, C>(attrs: A, children: C) -> Element<A, C> {
     Element::new("h1", attrs, children)
 }
+
+pub const fn p<A, C>(attrs: A, children: C) -> Element<A, C> {
+    Element::new("p", attrs, children)
+}
