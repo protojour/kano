@@ -50,12 +50,16 @@ mod web_util {
 
 #[macro_export]
 macro_rules! define_platform {
-    ($platform:ident, $app_view:ident) => {
+    ($platform:ident, $view:ident) => {
+        /// Type alias for the current platform.
         #[cfg(feature = "web")]
         pub type $platform = autostrata_web::Web;
+
+        /// The concrete view trait for this application.
         #[cfg(feature = "web")]
-        pub trait $app_view: autostrata::View<autostrata_web::Web> {}
+        pub trait $view: autostrata::View<autostrata_web::Web> {}
+
         #[cfg(feature = "web")]
-        impl<V: autostrata::View<autostrata_web::Web>> $app_view for V {}
+        impl<V: autostrata::View<autostrata_web::Web>> $view for V {}
     };
 }

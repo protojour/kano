@@ -3,13 +3,13 @@
 use autostrata::prelude::*;
 use strata_uxr::*;
 
-autostrata::define_platform!(AppPlatform, AppView);
+autostrata::define_platform!(AppPlatform, View);
 
 fn main() {
     AppPlatform::run_app(App);
 }
 
-fn App() -> impl AppView {
+fn App() -> impl View {
     let (clicks, clicks_mut) = use_state(0);
     let (show, show_mut) = use_state(true);
     let (yes, yes_mut) = use_state(false);
@@ -53,7 +53,7 @@ fn App() -> impl AppView {
     }
 }
 
-fn MyList() -> impl AppView {
+fn MyList() -> impl View {
     view! {
         <unordered_list>
             <list_item>"One"</list_item>

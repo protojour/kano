@@ -12,14 +12,14 @@ use autostrata::prelude::*;
 
 /// Two important definitions are generated here:
 /// `AppPlatform` is a type alias for the current platform.
-/// `AppView` is a trait that all views must implement.
-autostrata::define_platform!(AppPlatform, AppView);
+/// `View` is a trait that all views of this application must implement.
+autostrata::define_platform!(AppPlatform, View);
 
 fn main() {
     AppPlatform::run_app(HelloWorld);
 }
 
-fn HelloWorld() -> impl AppView {
+fn HelloWorld() -> impl View {
     "Hello world!"
 }
 ```
