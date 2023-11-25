@@ -8,12 +8,12 @@ It has a `Platform` abstraction, and is designed to work on lots of platforms.
 
 ## Hello world!
 ```rust
-use autostrata::{platform::Platform, reactive::*, view::*, *};
+use autostrata::prelude::*;
 
 /// Two important definitions are generated here:
 /// `AppPlatform` is a type alias for the current platform.
 /// `AppView` is a trait that all views must implement.
-autostrata_platform!(AppPlatform, AppView);
+autostrata::define_platform!(AppPlatform, AppView);
 
 fn main() {
     AppPlatform::run_app(HelloWorld);

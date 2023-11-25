@@ -1,4 +1,5 @@
 pub mod platform;
+pub mod prelude;
 pub mod reactive;
 pub mod view;
 
@@ -48,13 +49,13 @@ mod web_util {
 }
 
 #[macro_export]
-macro_rules! autostrata_platform {
+macro_rules! define_platform {
     ($platform:ident, $app_view:ident) => {
         #[cfg(feature = "web")]
         pub type $platform = autostrata_web::Web;
         #[cfg(feature = "web")]
         pub trait $app_view: autostrata::View<autostrata_web::Web> {}
         #[cfg(feature = "web")]
-        impl<V: View<autostrata_web::Web>> $app_view for V {}
+        impl<V: autostrata::View<autostrata_web::Web>> $app_view for V {}
     };
 }

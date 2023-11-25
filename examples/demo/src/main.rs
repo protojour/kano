@@ -1,9 +1,9 @@
 #![allow(non_snake_case)]
 
-use autostrata::{platform::Platform, reactive::*, view::*, *};
+use autostrata::prelude::*;
 use strata_uxr::*;
 
-autostrata_platform!(AppPlatform, AppView);
+autostrata::define_platform!(AppPlatform, AppView);
 
 fn main() {
     AppPlatform::run_app(App);
