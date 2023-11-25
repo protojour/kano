@@ -5,6 +5,6 @@ members = [
     "autostrata-web",
     "strata-uxr",
     "examples/web-components-demo",
-    "examples/web-demo",
+    "examples/demo",
 ]
 resolver = "2"

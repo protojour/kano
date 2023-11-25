@@ -46,3 +46,15 @@ mod web_util {
         pub fn log(s: &str);
     }
 }
+
+#[macro_export]
+macro_rules! autostrata_platform {
+    ($platform:ident, $app_view:ident) => {
+        #[cfg(feature = "web")]
+        pub type $platform = autostrata_web::Web;
+        #[cfg(feature = "web")]
+        pub trait $app_view: autostrata::View<autostrata_web::Web> {}
+        #[cfg(feature = "web")]
+        impl<V: View<autostrata_web::Web>> $app_view for V {}
+    };
+}

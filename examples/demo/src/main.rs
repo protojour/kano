@@ -3,29 +3,13 @@
 use autostrata::{platform::Platform, reactive::*, view::*, *};
 use strata_uxr::*;
 
-mod platform {
-    use autostrata::View;
-    use autostrata_web::Web;
-
-    pub type Platform = autostrata_web::Web;
-
-    /// These are typically under conditional compilation:
-    ///
-    /// `#[cfg(feature = "web")]`
-    ///
-    /// Which specifies that the whole app is compiled for the web.
-    pub trait AppView: View<Web> {}
-
-    impl<V: View<Web>> AppView for V {}
-}
-
-use platform::*;
+autostrata_platform!(AppPlatform, AppView);
 
 fn main() {
-    platform::Platform::run_app(Poc);
+    AppPlatform::run_app(App);
 }
 
-fn Poc() -> impl AppView {
+fn App() -> impl AppView {
     let (clicks, clicks_mut) = use_state(0);
     let (show, show_mut) = use_state(true);
     let (yes, yes_mut) = use_state(false);

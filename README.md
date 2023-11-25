@@ -6,15 +6,34 @@ It's a fine-grained reactivity architecture inspired by https://github.com/gbj/t
 
 It has a `Platform` abstraction, and is designed to work on lots of platforms.
 
-The platform API has been designed to not leak types into business logic.
+## Hello world!
+```rust
+use autostrata::{platform::Platform, reactive::*, view::*, *};
+
+/// Two important definitions are generated here:
+/// `AppPlatform` is a type alias for the current platform.
+/// `AppView` is a trait that all views must implement.
+autostrata_platform!(AppPlatform, AppView);
+
+fn main() {
+    AppPlatform::run_app(HelloWorld);
+}
+
+fn HelloWorld() -> impl AppView {
+    "Hello world!"
+}
+```
 
 ## Trying out the Web platform
 
 ```sh
 cargo install trunk
 
-(cd examples/web-demo/; trunk serve -w ../..)
+(cd examples/demo/; trunk serve --watch ../.. --features web)
 ```
+
+## strata-uxr
+Strata-UXR is a platform-agnostic UI component library.
 
 ## Reactivity
 AutoStrata will use a reactivity architecture inspired by https://docs.rs/leptos_reactive/latest/leptos_reactive/.
