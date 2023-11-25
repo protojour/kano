@@ -49,8 +49,14 @@ impl Display for TagName {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Attr {
-    pub name: syn::Ident,
+    pub key: AttrKey,
     pub value: AttrValue,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum AttrKey {
+    Text(syn::Ident),
+    On(syn::Ident),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -237,7 +243,7 @@ impl Parser {
                     .into_iter()
                     .map(|attr| {
                         Ok(Attr {
-                            name: attr.name,
+                            key: attr.key,
                             value: attr.value,
                         })
                     })
@@ -263,6 +269,21 @@ impl Parser {
             }
 
             let name = input.parse()?;
+            let key = if input.peek(syn::token::Colon) {
+                if name == "on" {
+                    let _ = input.parse::<syn::token::Colon>()?;
+                    let event = input.parse()?;
+
+                    AttrKey::On(event)
+                } else {
+                    return Err(syn::Error::new(
+                        input.span(),
+                        format!("Invalid attribute prefix"),
+                    ));
+                }
+            } else {
+                AttrKey::Text(name)
+            };
 
             let value = if input.peek(syn::token::Eq) {
                 input.parse::<syn::token::Eq>()?;
@@ -271,7 +292,7 @@ impl Parser {
                 AttrValue::ImplicitTrue
             };
 
-            attrs.push(Attr { name, value });
+            attrs.push(Attr { key, value });
         }
 
         Ok(attrs)
@@ -524,7 +545,7 @@ mod tests {
     #[allow(unused)]
     fn attr(name: &str, value: AttrValue) -> Attr {
         Attr {
-            name: quote::format_ident!("{}", name),
+            key: AttrKey::Text(quote::format_ident!("{}", name)),
             value,
         }
     }
@@ -532,7 +553,7 @@ mod tests {
     #[allow(unused)]
     fn html_attr(tag: &str, name: &str, value: AttrValue) -> Attr {
         Attr {
-            name: quote::format_ident!("{name}"),
+            key: AttrKey::Text(quote::format_ident!("{name}")),
             value,
         }
     }

@@ -1,6 +1,8 @@
 use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
 
+use crate::view::ast::{AttrKey, AttrValue};
+
 use self::ast::{Element, Match, Node};
 
 pub mod ast;
@@ -10,13 +12,38 @@ pub fn view(node: Node) -> TokenStream {
         Node::None => quote!(()),
         Node::Element(Element {
             tag_name,
-            attrs: _,
+            attrs,
             children,
         }) => {
+            let attrs: Vec<_> = attrs
+                .into_iter()
+                .map(|attr| {
+                    let value = match attr.value {
+                        AttrValue::ImplicitTrue => quote! { true },
+                        AttrValue::Expr(expr) => quote! { #expr },
+                        _ => todo!(),
+                    };
+
+                    match attr.key {
+                        AttrKey::On(event) => {
+                            quote! {
+                                autostrata::On::#event(#value)
+                            }
+                        }
+                        AttrKey::Text(_) => todo!(),
+                    }
+                })
+                .collect();
+            let attrs = if attrs.is_empty() {
+                quote! { () }
+            } else {
+                quote! { (#(#attrs),*,) }
+            };
+
             let children = children.into_iter().map(view);
 
             quote! {
-                #tag_name((), (
+                #tag_name(#attrs, (
                     #(#children,)*
                 ))
             }

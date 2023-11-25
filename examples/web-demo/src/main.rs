@@ -27,35 +27,26 @@ fn poc() -> impl AppView {
         (
             view! { <paragraph>"Hello!"</paragraph> },
             Func(list),
-            paragraph(
-                (),
-                (
-                    button(
-                        (
-                            On::click(move || {
-                                clicks_mut.update(|clicks| clicks + 1);
-                                show_mut.update(|show| !show);
-                            }),
-                            On::mouseover(|| {
-                                log("mouseover!");
-                            }),
-                        ),
-                        (Text("hide/show"),),
-                    ),
-                    button(
-                        (
-                            On::click(move || {
-                                clicks_mut.update(|clicks| clicks + 1);
-                                yes_mut.update(|yes| !yes);
-                            }),
-                            On::mouseover(|| {
-                                log("mouseover!");
-                            }),
-                        ),
-                        (Text("yes/no"),),
-                    ),
-                ),
-            ),
+            view! {
+                <paragraph>
+                    <button
+                        on:click={move || {
+                            clicks_mut.update(|clicks| clicks + 1);
+                            show_mut.update(|show| !show);
+                        }}
+                    >
+                        "hide/show"
+                    </button>
+                    <button
+                        on:click={move || {
+                            clicks_mut.update(|clicks| clicks + 1);
+                            yes_mut.update(|yes| !yes);
+                        }}
+                    >
+                        "yes/no"
+                    </button>
+                </paragraph>
+            },
             view! {
                 <paragraph>"clicked " {Format(clicks)} " times"</paragraph>
             },
@@ -79,6 +70,7 @@ fn poc() -> impl AppView {
     )
 }
 
+// TODO: should have arguments
 fn list() -> impl AppView {
     view! {
         <unordered_list>
