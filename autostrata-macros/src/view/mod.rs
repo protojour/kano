@@ -62,8 +62,12 @@ pub fn view(node: Node) -> TokenStream {
                 autostrata::view::Reactive(move || #expr)
             )
         }
-        Node::Component(_component) => {
-            quote!(())
+        Node::Component(component) => {
+            let type_path = component.type_path;
+
+            quote! {
+                autostrata::view::Func(#type_path)
+            }
         }
         Node::Match(Match { expr, arms }) => {
             let arms = arms.into_iter().enumerate().map(|(index, arm)| {
