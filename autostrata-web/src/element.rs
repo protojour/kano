@@ -1,4 +1,4 @@
-use autostrata::{platform::Cursor, AttrSet, Children, Diff, View};
+use autostrata::{AttrSet, Children, Diff, View};
 
 use crate::{Web, WebCursor};
 

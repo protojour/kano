@@ -1,13 +1,18 @@
 use crossterm::{
-    event::{self, KeyCode, KeyEventKind},
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+    event::{self, DisableMouseCapture, KeyCode, KeyEventKind},
+    terminal::{self, EnterAlternateScreen, LeaveAlternateScreen},
     ExecutableCommand,
 };
 use ratatui::{
     prelude::{CrosstermBackend, Stylize, Terminal},
     widgets::Paragraph,
 };
-use std::io::stdout;
+use std::{
+    io::{self, stdout},
+    panic,
+};
+
+pub mod node;
 
 pub struct Tui;
 
@@ -20,7 +25,14 @@ impl autostrata::platform::Platform for Tui {
         _func: F,
     ) -> anyhow::Result<()> {
         stdout().execute(EnterAlternateScreen)?;
-        enable_raw_mode()?;
+        terminal::enable_raw_mode()?;
+
+        let panic_hook = panic::take_hook();
+        panic::set_hook(Box::new(move |panic| {
+            reset_terminal().expect("failed to reset the terminal");
+            panic_hook(panic);
+        }));
+
         let mut terminal = Terminal::new(CrosstermBackend::new(stdout()))?;
         terminal.clear()?;
 
@@ -45,7 +57,7 @@ impl autostrata::platform::Platform for Tui {
         }
 
         stdout().execute(LeaveAlternateScreen)?;
-        disable_raw_mode()?;
+        reset_terminal()?;
         Ok(())
     }
 
@@ -54,12 +66,16 @@ impl autostrata::platform::Platform for Tui {
     }
 }
 
+fn reset_terminal() -> anyhow::Result<()> {
+    terminal::disable_raw_mode()?;
+    crossterm::execute!(io::stderr(), LeaveAlternateScreen, DisableMouseCapture)?;
+    Ok(())
+}
+
 #[derive(Clone, Debug)]
 pub struct TuiCursor {}
 
 impl autostrata::platform::Cursor for TuiCursor {
-    type Element<'a> = ();
-
     fn from_element_handle(_handle: &autostrata::platform::ElementHandle) -> Self {
         todo!()
     }
@@ -73,10 +89,6 @@ impl autostrata::platform::Cursor for TuiCursor {
     }
 
     fn update_text(&mut self, _text: &str) {
-        todo!()
-    }
-
-    fn element(&mut self, _element: ()) -> autostrata::platform::ElementHandle {
         todo!()
     }
 
@@ -97,14 +109,6 @@ impl autostrata::platform::Cursor for TuiCursor {
     }
 
     fn remove(&mut self) {
-        todo!()
-    }
-
-    fn enter_attrs(&mut self) {
-        todo!()
-    }
-
-    fn exit_attrs(&mut self) {
         todo!()
     }
 

@@ -16,11 +16,6 @@ pub trait Platform: Sized + 'static {
 
 /// A cursor used to traverse the UI tree on a given platform.
 pub trait Cursor: Clone + Debug {
-    /// The element type of this cursor.
-    ///
-    /// Elements are UI components that provide functionality beyond pure text.
-    type Element<'a>;
-
     fn from_element_handle(handle: &ElementHandle) -> Self;
 
     fn empty(&mut self);
@@ -28,17 +23,12 @@ pub trait Cursor: Clone + Debug {
     fn text(&mut self, text: &str) -> ElementHandle;
     fn update_text(&mut self, text: &str);
 
-    fn element<'a>(&mut self, element: Self::Element<'a>) -> ElementHandle;
-
     fn on_event(&mut self, event: On) -> AttrHandle;
 
     fn enter_children(&mut self);
     fn exit_children(&mut self);
     fn next_sibling(&mut self);
     fn remove(&mut self);
-
-    fn enter_attrs(&mut self);
-    fn exit_attrs(&mut self);
 
     fn enter_diff(&mut self);
     fn exit_diff(&mut self);

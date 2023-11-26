@@ -89,9 +89,51 @@ impl WebCursor {
     }
 }
 
-impl autostrata::platform::Cursor for WebCursor {
-    type Element<'a> = &'a str;
+impl WebCursor {
+    fn element(&mut self, tag: &str) -> ElementHandle {
+        match self.mode() {
+            Mode::Append => {
+                let element = document().create_element(tag).unwrap();
+                self.append_node(&element);
+                // log(&format!("new element cursor: {cursor:?}"));
+                ElementHandle::DomNode(element.into())
+            }
+            Mode::Diff => match self {
+                Self::Node(..) => self.element_handle(),
+                _ => panic!(),
+            },
+        }
+    }
 
+    fn enter_attrs(&mut self) {
+        match self {
+            WebCursor::Node(node, mode) => {
+                if let Some(element) = node.dyn_ref::<web_sys::Element>() {
+                    *self = WebCursor::AttrsOf(element.clone(), *mode);
+                } else {
+                    panic!("Non-element attributes");
+                }
+            }
+            WebCursor::AfterLastChild(..) => {
+                panic!("Entering attrs of empty children");
+            }
+            WebCursor::AttrsOf(..) | WebCursor::Detached => panic!(),
+        }
+    }
+
+    fn exit_attrs(&mut self) {
+        match self {
+            WebCursor::AttrsOf(element, mode) => {
+                *self = WebCursor::Node(element.dyn_ref::<web_sys::Node>().unwrap().clone(), *mode);
+            }
+            WebCursor::AfterLastChild(..) => panic!(),
+            WebCursor::Node(..) => panic!(),
+            WebCursor::Detached => panic!(),
+        }
+    }
+}
+
+impl autostrata::platform::Cursor for WebCursor {
     fn from_element_handle(handle: &ElementHandle) -> Self {
         match handle {
             ElementHandle::DomNode(node) => Self::Node(node.clone(), Mode::Append),
@@ -128,21 +170,6 @@ impl autostrata::platform::Cursor for WebCursor {
                 node.set_node_value(Some(text));
             }
             _ => panic!(),
-        }
-    }
-
-    fn element(&mut self, tag: &str) -> ElementHandle {
-        match self.mode() {
-            Mode::Append => {
-                let element = document().create_element(tag).unwrap();
-                self.append_node(&element);
-                // log(&format!("new element cursor: {cursor:?}"));
-                ElementHandle::DomNode(element.into())
-            }
-            Mode::Diff => match self {
-                Self::Node(..) => self.element_handle(),
-                _ => panic!(),
-            },
         }
     }
 
@@ -243,33 +270,6 @@ impl autostrata::platform::Cursor for WebCursor {
 
                 *self = next;
             }
-        }
-    }
-
-    fn enter_attrs(&mut self) {
-        match self {
-            WebCursor::Node(node, mode) => {
-                if let Some(element) = node.dyn_ref::<web_sys::Element>() {
-                    *self = WebCursor::AttrsOf(element.clone(), *mode);
-                } else {
-                    panic!("Non-element attributes");
-                }
-            }
-            WebCursor::AfterLastChild(..) => {
-                panic!("Entering attrs of empty children");
-            }
-            WebCursor::AttrsOf(..) | WebCursor::Detached => panic!(),
-        }
-    }
-
-    fn exit_attrs(&mut self) {
-        match self {
-            WebCursor::AttrsOf(element, mode) => {
-                *self = WebCursor::Node(element.dyn_ref::<web_sys::Node>().unwrap().clone(), *mode);
-            }
-            WebCursor::AfterLastChild(..) => panic!(),
-            WebCursor::Node(..) => panic!(),
-            WebCursor::Detached => panic!(),
         }
     }
 
