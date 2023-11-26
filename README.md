@@ -32,8 +32,8 @@ cargo install trunk
 (cd examples/demo/; trunk serve --watch ../.. --features web)
 ```
 
-## strata-uxr
-Strata-UXR is a platform-agnostic UI component library.
+## autostrata-basic-components
+This is a very basic platform-agnostic UI component library.
 
 ## Reactivity
 AutoStrata will use a reactivity architecture inspired by https://docs.rs/leptos_reactive/latest/leptos_reactive/.

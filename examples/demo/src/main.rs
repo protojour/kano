@@ -1,7 +1,7 @@
 #![allow(non_snake_case)]
 
 use autostrata::prelude::*;
-use strata_uxr::*;
+use autostrata_basic_components::*;
 use todo::{add_todo, delete_todo, Todo};
 
 mod todo;
