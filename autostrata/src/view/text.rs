@@ -3,33 +3,47 @@ use std::fmt::Write;
 
 use crate::{platform::Cursor, Diff, ElementHandle, Platform, View};
 
-/// Literal text.
-#[derive(Clone, Copy)]
-pub struct Text(pub &'static str);
-
-impl<P: Platform> Diff<P> for Text {
+impl<P: Platform> Diff<P> for &'static str {
     type State = (ElementHandle, &'static str);
 
     fn init(self, cursor: &mut P::Cursor) -> Self::State {
-        (cursor.text(self.0), self.0)
+        (cursor.text(self), self)
     }
 
     fn diff(self, (handle, old): &mut Self::State, _cursor: &mut P::Cursor) {
-        if self.0 != *old {
+        if self != *old {
             let mut cursor = P::Cursor::from_element_handle(&handle);
-            cursor.update_text(self.0);
-            *old = self.0;
+            cursor.update_text(self);
+            *old = self;
         }
     }
 }
 
-impl<P: Platform> View<P> for Text {}
+impl<P: Platform> View<P> for &'static str {}
+
+impl<P: Platform> Diff<P> for String {
+    type State = (ElementHandle, String);
+
+    fn init(self, cursor: &mut P::Cursor) -> Self::State {
+        (cursor.text(self.as_str()), self)
+    }
+
+    fn diff(self, (handle, old): &mut Self::State, _cursor: &mut P::Cursor) {
+        if self != *old {
+            let mut cursor = P::Cursor::from_element_handle(&handle);
+            cursor.update_text(self.as_str());
+            *old = self;
+        }
+    }
+}
+
+impl<P: Platform> View<P> for String {}
 
 /// Things that can be formatted _into_ text.
 #[derive(Clone, Copy)]
-pub struct Format<T>(pub T);
+pub struct Fmt<T>(pub T);
 
-impl<P: Platform, T: Display + 'static> Diff<P> for Format<T> {
+impl<P: Platform, T: Display + 'static> Diff<P> for Fmt<T> {
     type State = (ElementHandle, String);
 
     fn init(self, cursor: &mut P::Cursor) -> Self::State {
@@ -53,4 +67,4 @@ impl<P: Platform, T: Display + 'static> Diff<P> for Format<T> {
     }
 }
 
-impl<P: Platform, T: Display + 'static> View<P> for Format<T> {}
+impl<P: Platform, T: Display + 'static> View<P> for Fmt<T> {}

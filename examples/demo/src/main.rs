@@ -58,7 +58,7 @@ fn App() -> impl View {
                     "yes/no"
                 </button>
             </paragraph>
-            <paragraph>"clicked " {Format(clicks)} " times"</paragraph>
+            <paragraph>"clicked " {Fmt(clicks)} " times"</paragraph>
             <paragraph>
                 if show.get() {
                     <strong>"PRESENT"</strong>
@@ -86,7 +86,7 @@ fn TodoList(todos: State<Vec<Todo>>) -> impl View {
         <unordered_list>
         for Todo { id, text } in todos.get_ref() {
             <list_item>
-                {Format(text.clone())}
+                {text.clone()}
 
                 " ("<button on:click={move || delete(id)}>"x"</button>")"
             </list_item>

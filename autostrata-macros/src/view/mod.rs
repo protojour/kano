@@ -63,7 +63,7 @@ pub fn view(node: Node) -> TokenStream {
             let span = text.0.span();
             let literal = text.0.into_token_stream();
             quote_spanned! {span=>
-                autostrata::view::Text(#literal)
+                #literal
             }
         }
         Node::TextExpr(expr) => {

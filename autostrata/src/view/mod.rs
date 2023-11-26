@@ -12,5 +12,4 @@ pub use reactive::Reactive;
 pub use seq::seq_map;
 pub use seq::Map;
 pub use seq::SeqMap;
-pub use text::Format;
-pub use text::Text;
+pub use text::Fmt;
