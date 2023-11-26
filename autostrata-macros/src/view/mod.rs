@@ -1,7 +1,7 @@
 use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
 
-use crate::view::ast::{AttrKey, AttrValue};
+use crate::view::ast::{AttrKey, AttrValue, ComponentAttrs};
 
 use self::ast::{Element, Match, Node};
 
@@ -64,9 +64,19 @@ pub fn view(node: Node) -> TokenStream {
         }
         Node::Component(component) => {
             let type_path = component.type_path;
-
-            quote! {
-                autostrata::view::Func(#type_path)
+            match component.attrs {
+                ComponentAttrs::Positional(positional) => {
+                    quote! {
+                        autostrata::view::Reactive(move ||
+                            autostrata::view::Func(#type_path, (#(#positional),*,))
+                        )
+                    }
+                }
+                ComponentAttrs::KeyValue(_) => {
+                    quote! {
+                        autostrata::view::Func(#type_path, ())
+                    }
+                }
             }
         }
         Node::Match(Match { expr, arms }) => {

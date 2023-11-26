@@ -32,17 +32,11 @@ pub enum TagName {
     Component(syn::TypePath),
 }
 
-impl Display for TagName {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl TagName {
+    fn borrow(&self) -> TagNameBorrow<'_> {
         match self {
-            Self::Element(ident) => write!(f, "{ident}"),
-            Self::Component(path) => {
-                let tokens = quote::quote! {
-                    #path
-                };
-
-                tokens.fmt(f)
-            }
+            Self::Element(ident) => TagNameBorrow::Element(ident),
+            Self::Component(type_path) => TagNameBorrow::Component(type_path),
         }
     }
 }
@@ -87,7 +81,13 @@ pub struct Element {
 #[derive(Debug, Eq, PartialEq)]
 pub struct Component {
     pub type_path: syn::TypePath,
-    pub attrs: Vec<Attr>,
+    pub attrs: ComponentAttrs,
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub enum ComponentAttrs {
+    KeyValue(Vec<Attr>),
+    Positional(Vec<syn::Expr>),
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -128,6 +128,41 @@ pub fn parse_tag_name(input: ParseStream) -> Result<TagName, syn::Error> {
     } else {
         TagName::Component(type_path)
     })
+}
+
+enum TagWithAttrs {
+    Element(syn::Ident, Vec<Attr>),
+    Component(syn::TypePath, ComponentAttrs),
+}
+
+impl TagWithAttrs {
+    fn tag_name(&self) -> TagNameBorrow<'_> {
+        match self {
+            Self::Element(tag_name, _) => TagNameBorrow::Element(tag_name),
+            Self::Component(type_path, _) => TagNameBorrow::Component(type_path),
+        }
+    }
+}
+
+#[derive(Debug, Eq, PartialEq)]
+enum TagNameBorrow<'a> {
+    Element(&'a syn::Ident),
+    Component(&'a syn::TypePath),
+}
+
+impl<'a> Display for TagNameBorrow<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Element(ident) => write!(f, "{ident}"),
+            Self::Component(path) => {
+                let tokens = quote::quote! {
+                    #path
+                };
+
+                tokens.fmt(f)
+            }
+        }
+    }
 }
 
 impl Parse for Node {
@@ -197,15 +232,13 @@ impl Parser {
             return Ok(Node::Fragment(nodes));
         }
 
-        let tag_name = parse_tag_name(input)?;
-
-        let attrs = self.parse_attrs(input)?;
+        let tag_with_attrs = self.parse_tag_then_attrs(input)?;
 
         if input.peek(syn::token::Slash) {
             input.parse::<syn::token::Slash>()?;
             input.parse::<syn::token::Gt>()?;
 
-            return Ok(self.element_or_component(tag_name, attrs, vec![])?);
+            return Ok(self.element_or_component(tag_with_attrs, vec![])?);
         }
 
         input.parse::<syn::token::Gt>()?;
@@ -217,28 +250,28 @@ impl Parser {
         input.parse::<syn::token::Slash>()?;
 
         let end_name = parse_tag_name(input)?;
-        if end_name != tag_name {
+        if end_name.borrow() != tag_with_attrs.tag_name() {
             return Err(syn::Error::new(
                 input.span(),
                 format!(
                     "Unexpected closing name `{}`. Expected `{}`.",
-                    end_name, tag_name
+                    end_name.borrow(),
+                    tag_with_attrs.tag_name(),
                 ),
             ));
         }
         input.parse::<syn::token::Gt>()?;
 
-        Ok(self.element_or_component(tag_name, attrs, children)?)
+        Ok(self.element_or_component(tag_with_attrs, children)?)
     }
 
     fn element_or_component(
         &self,
-        tag_name: TagName,
-        attrs: Vec<Attr>,
+        tag_with_attrs: TagWithAttrs,
         children: Vec<Node>,
     ) -> syn::Result<Node> {
-        match tag_name {
-            TagName::Element(tag_name) => {
+        match tag_with_attrs {
+            TagWithAttrs::Element(tag_name, attrs) => {
                 let attrs = attrs
                     .into_iter()
                     .map(|attr| {
@@ -255,12 +288,42 @@ impl Parser {
                     children,
                 }))
             }
-            TagName::Component(type_path) => Ok(Node::Component(Component { type_path, attrs })),
+            TagWithAttrs::Component(type_path, attrs) => {
+                Ok(Node::Component(Component { type_path, attrs }))
+            }
+        }
+    }
+
+    fn parse_tag_then_attrs(&self, input: ParseStream) -> Result<TagWithAttrs, syn::Error> {
+        let tag_name = parse_tag_name(input)?;
+        match tag_name {
+            TagName::Element(ident) => {
+                let attrs = self.parse_key_value_attrs(input)?;
+
+                Ok(TagWithAttrs::Element(ident, attrs))
+            }
+            TagName::Component(type_path) => {
+                let component_attrs = if input.peek(syn::token::Brace) {
+                    let mut expressions = vec![];
+                    while input.peek(syn::token::Brace) {
+                        let content;
+                        let _brace_token = syn::braced!(content in input);
+
+                        expressions.push(content.parse()?);
+                    }
+
+                    ComponentAttrs::Positional(expressions)
+                } else {
+                    ComponentAttrs::KeyValue(self.parse_key_value_attrs(input)?)
+                };
+
+                Ok(TagWithAttrs::Component(type_path, component_attrs))
+            }
         }
     }
 
     /// Parse the attributes to an element or component
-    fn parse_attrs(&self, input: ParseStream) -> syn::Result<Vec<Attr>> {
+    fn parse_key_value_attrs(&self, input: ParseStream) -> syn::Result<Vec<Attr>> {
         let mut attrs = vec![];
 
         loop {
@@ -538,7 +601,7 @@ mod tests {
         Node::TextExpr(syn::parse_quote! { #ident })
     }
 
-    fn component(type_path: syn::TypePath, attrs: Vec<Attr>) -> Node {
+    fn component(type_path: syn::TypePath, attrs: ComponentAttrs) -> Node {
         Node::Component(Component { type_path, attrs })
     }
 
@@ -597,7 +660,7 @@ mod tests {
                 syn::parse_quote! {
                     P
                 },
-                vec![]
+                ComponentAttrs::KeyValue(vec![]),
             )
         );
     }
@@ -614,7 +677,7 @@ mod tests {
                 syn::parse_quote! {
                     module::P
                 },
-                vec![]
+                ComponentAttrs::KeyValue(vec![])
             )
         );
     }

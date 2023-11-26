@@ -38,7 +38,7 @@ impl Platform for Web {
 
         // let mut cursor = Cursor::EmptyChildrenOf(document().body().unwrap().into());
         let mut cursor = WebCursor::Detached;
-        let state = autostrata::view::Func(func).init(&mut cursor);
+        let state = autostrata::view::Func(func, ()).init(&mut cursor);
 
         let WebCursor::Node(node) = cursor else {
             panic!("No node rendered");

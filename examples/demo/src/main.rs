@@ -14,13 +14,13 @@ fn App() -> impl View {
     let (show, show_mut) = use_state(|| true);
     let (yes, yes_mut) = use_state(|| false);
 
-    let (_items, items_mut) =
+    let (items, items_mut) =
         use_state(|| vec!["One".to_string(), "Two".to_string(), "Three".to_string()]);
 
     view! {
         <layout>
             <paragraph>"Hello!"</paragraph>
-            <MyList />
+            <StringList {items.get_ref()} />
             <paragraph>
                 <button
                     on:click={move || {
@@ -60,22 +60,7 @@ fn App() -> impl View {
     }
 }
 
-fn MyList() -> impl View {
-    let items = vec!["One".to_string(), "Two".to_string(), "Three".to_string()];
-
-    unordered_list(
-        (),
-        (autostrata::view::Seq(items).seq_map(|item| {
-            view! {
-                <list_item>
-                    {Format(item.clone())}
-                </list_item>
-            }
-        }),),
-    )
-}
-
-fn _DynamicList(items: Ref<Vec<String>>) -> impl View {
+fn StringList(items: Ref<Vec<String>>) -> impl View {
     unordered_list(
         (),
         (autostrata::view::Seq(items).seq_map(|item| {
