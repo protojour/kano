@@ -2,7 +2,7 @@ use std::{cell::RefCell, fmt::Display, marker::PhantomData, ops::Deref, rc::Rc};
 
 use crate::{pubsub::SignalId, registry::REGISTRY};
 
-pub fn use_state<T: 'static>(value: T) -> (State<T>, StateMut<T>) {
+pub fn use_state<T: 'static>(init_func: impl FnOnce() -> T) -> (State<T>, StateMut<T>) {
     let signal_id = REGISTRY.with_borrow_mut(|registry| {
         let (signal_id, reused) = registry.alloc_or_reuse_func_view_signal();
 
@@ -11,7 +11,7 @@ pub fn use_state<T: 'static>(value: T) -> (State<T>, StateMut<T>) {
         if !reused {
             registry
                 .state_values
-                .insert(signal_id, Rc::new(RefCell::new(value)));
+                .insert(signal_id, Rc::new(RefCell::new(init_func())));
         }
 
         signal_id

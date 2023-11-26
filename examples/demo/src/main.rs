@@ -10,15 +10,13 @@ fn main() {
 }
 
 fn App() -> impl View {
-    let (clicks, clicks_mut) = use_state(0);
-    let (show, show_mut) = use_state(true);
-    let (yes, yes_mut) = use_state(false);
+    let (clicks, clicks_mut) = use_state(|| 0);
+    let (show, show_mut) = use_state(|| true);
+    let (yes, yes_mut) = use_state(|| false);
 
-    let (_items, items_mut) = use_state::<Vec<String>>(vec![
-        "One".to_string(),
-        "Two".to_string(),
-        "Three".to_string(),
-    ]);
+    let (_items, items_mut) = use_state::<Vec<String>>(|| {
+        vec!["One".to_string(), "Two".to_string(), "Three".to_string()]
+    });
 
     view! {
         <layout>
