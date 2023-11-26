@@ -2,6 +2,7 @@ use autostrata::{platform::Cursor, AttrSet, Children, Diff, View};
 
 use crate::{Web, WebCursor};
 
+#[derive(Clone, Copy)]
 pub struct Element<A, C> {
     name: &'static str,
     attrs: A,

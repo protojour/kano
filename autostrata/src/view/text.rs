@@ -4,6 +4,7 @@ use std::fmt::Write;
 use crate::{platform::Cursor, Diff, ElementHandle, Platform, View};
 
 /// Literal text.
+#[derive(Clone, Copy)]
 pub struct Text(pub &'static str);
 
 impl<P: Platform> Diff<P> for Text {
@@ -25,6 +26,7 @@ impl<P: Platform> Diff<P> for Text {
 impl<P: Platform> View<P> for Text {}
 
 /// Things that can be formatted _into_ text.
+#[derive(Clone, Copy)]
 pub struct Format<T>(pub T);
 
 impl<P: Platform, T: Display + 'static> Diff<P> for Format<T> {

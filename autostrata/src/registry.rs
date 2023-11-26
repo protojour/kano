@@ -79,7 +79,7 @@ pub(crate) struct Registry {
     pub(crate) current_func_view_signal_tracker: usize,
 
     pub(crate) owned_signals_ordered: HashMap<ViewId, Vec<SignalId>>,
-    pub(crate) state_values: HashMap<SignalId, Rc<dyn Any>>,
+    pub(crate) state_values: HashMap<SignalId, Rc<RefCell<dyn Any>>>,
 }
 
 thread_local! {

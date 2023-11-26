@@ -1,4 +1,4 @@
-use std::{fmt::Display, marker::PhantomData, rc::Rc};
+use std::{cell::RefCell, fmt::Display, marker::PhantomData, ops::Deref, rc::Rc};
 
 use crate::{pubsub::SignalId, registry::REGISTRY};
 
@@ -9,7 +9,9 @@ pub fn use_state<T: 'static>(value: T) -> (State<T>, StateMut<T>) {
         // If the signal is reused, the value should already be in the registry,
         // and we should not reset the state.
         if !reused {
-            registry.state_values.insert(signal_id, Rc::new(value));
+            registry
+                .state_values
+                .insert(signal_id, Rc::new(RefCell::new(value)));
         }
 
         signal_id
@@ -39,11 +41,21 @@ impl<T: 'static> State<T> {
     {
         self.signal_id.register_reactive_dependency();
 
-        let rc_value = REGISTRY
+        let ref_cell = REGISTRY
             .with_borrow(|registry| registry.state_values.get(&self.signal_id).unwrap().clone());
-        let value_ref = rc_value.downcast_ref::<T>().unwrap();
+        let borrow = ref_cell.borrow();
+        let value_ref = borrow.downcast_ref::<T>().unwrap();
 
         value_ref.clone()
+    }
+
+    pub fn get_ref(&self) -> Ref<T> {
+        let ref_cell = REGISTRY
+            .with_borrow(|registry| registry.state_values.get(&self.signal_id).unwrap().clone());
+        Ref {
+            ref_cell,
+            phantom: PhantomData,
+        }
     }
 
     pub fn map<U>(&self, f: impl FnOnce(&T) -> U) -> U {
@@ -54,9 +66,37 @@ impl<T: 'static> State<T> {
                 .state_values
                 .get(&self.signal_id)
                 .unwrap()
+                .borrow()
                 .downcast_ref::<T>()
                 .unwrap())
         })
+    }
+}
+
+pub struct Ref<T> {
+    ref_cell: Rc<RefCell<dyn std::any::Any>>,
+    phantom: PhantomData<T>,
+}
+
+impl<T: 'static> Ref<T> {
+    pub fn borrow(&self) -> RefBorrow<'_, T> {
+        RefBorrow {
+            cell_ref: self.ref_cell.borrow(),
+            phantom: PhantomData,
+        }
+    }
+}
+
+pub struct RefBorrow<'a, T> {
+    cell_ref: std::cell::Ref<'a, dyn std::any::Any>,
+    phantom: PhantomData<T>,
+}
+
+impl<'a, T: 'static> Deref for RefBorrow<'a, T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        self.cell_ref.downcast_ref::<T>().unwrap()
     }
 }
 
@@ -66,14 +106,9 @@ impl<T: Display + 'static> Display for State<T> {
         self.signal_id.register_reactive_dependency();
 
         REGISTRY.with_borrow(|registry| {
-            let value = registry
-                .state_values
-                .get(&self.signal_id)
-                .unwrap()
-                .downcast_ref::<T>()
-                .unwrap();
-
-            value.fmt(f)
+            let ref_cell = registry.state_values.get(&self.signal_id).unwrap();
+            let borrow = ref_cell.borrow();
+            borrow.downcast_ref::<T>().unwrap().fmt(f)
         })
     }
 }
@@ -97,28 +132,20 @@ pub struct StateMut<T> {
 impl<T: 'static> StateMut<T> {
     pub fn set(&self, value: T) {
         REGISTRY.with_borrow_mut(|registry| {
-            registry.state_values.insert(self.signal_id, Rc::new(value));
+            registry
+                .state_values
+                .insert(self.signal_id, Rc::new(RefCell::new(value)));
         });
 
         self.send();
     }
 
-    pub fn update(&self, func: impl Fn(&T) -> T) {
-        let new_value = REGISTRY.with_borrow(|registry| {
-            let reference = registry
-                .state_values
-                .get(&self.signal_id)
-                .unwrap()
-                .downcast_ref::<T>()
-                .unwrap();
+    pub fn update(&self, func: impl Fn(&mut T)) {
+        REGISTRY.with_borrow(|registry| {
+            let ref_cell = registry.state_values.get(&self.signal_id).unwrap();
+            let mut borrow = ref_cell.borrow_mut();
 
-            func(reference)
-        });
-
-        REGISTRY.with_borrow_mut(|registry| {
-            registry
-                .state_values
-                .insert(self.signal_id, Rc::new(new_value));
+            func(borrow.downcast_mut::<T>().unwrap());
         });
 
         self.send();
