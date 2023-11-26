@@ -7,15 +7,12 @@ edition = "2021"
 
 [features]
 tui = []
-web = ["js-sys", "web-sys", "gloo", "wasm-bindgen", "wasm-bindgen-futures"]
+web = ["wasm-bindgen", "wasm-bindgen-futures"]
 
 [dependencies]
 autostrata-macros.path = "../autostrata-macros"
 anyhow = "1"
 lazy_static = "1"
 futures = "0.3"
-web-sys = { version = "0.3", optional = true, features = ["Node"] }
-js-sys = { version = "0.3", optional = true }
-gloo = { version = "0.10", optional = true, features = ["events"] }
 wasm-bindgen = { version = "0.2", optional = true }
 wasm-bindgen-futures = { version = "0.4", optional = true }

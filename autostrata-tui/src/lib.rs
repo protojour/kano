@@ -3,16 +3,20 @@ use crossterm::{
     terminal::{self, EnterAlternateScreen, LeaveAlternateScreen},
     ExecutableCommand,
 };
+use node::{Node, NodeKind, NodeRef};
 use ratatui::{
     prelude::{CrosstermBackend, Stylize, Terminal},
     widgets::Paragraph,
 };
 use std::{
+    cell::RefCell,
     io::{self, stdout},
     panic,
+    rc::Rc,
 };
 
 pub mod node;
+pub mod widget;
 
 pub struct Tui;
 
@@ -73,28 +77,42 @@ fn reset_terminal() -> anyhow::Result<()> {
 }
 
 #[derive(Clone, Debug)]
-pub struct TuiCursor {}
+pub struct TuiCursor {
+    location: Location,
+}
+
+#[derive(Clone, Debug)]
+enum Location {
+    Detached,
+    Node(Rc<RefCell<Node>>),
+}
+
+impl TuiCursor {
+    fn set_node(&mut self, kind: NodeKind) {}
+}
 
 impl autostrata::platform::Cursor for TuiCursor {
-    fn from_element_handle(_handle: &autostrata::platform::ElementHandle) -> Self {
+    type TextHandle = NodeRef;
+    type EventHandle = ();
+
+    fn from_text_handle(handle: &Self::TextHandle) -> Self {
         todo!()
     }
 
     fn empty(&mut self) {
-        todo!()
+        self.set_node(NodeKind::Empty);
     }
 
-    fn text(&mut self, _text: &str) -> autostrata::platform::ElementHandle {
-        todo!()
+    fn text(&mut self, text: &str) -> Self::TextHandle {
+        self.set_node(NodeKind::Text(text.into()));
+        todo!();
     }
 
     fn update_text(&mut self, _text: &str) {
         todo!()
     }
 
-    fn on_event(&mut self, _event: autostrata::On) -> autostrata::platform::AttrHandle {
-        todo!()
-    }
+    fn on_event(&mut self, _event: autostrata::On) -> () {}
 
     fn enter_children(&mut self) {
         todo!()

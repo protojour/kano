@@ -16,14 +16,17 @@ pub trait Platform: Sized + 'static {
 
 /// A cursor used to traverse the UI tree on a given platform.
 pub trait Cursor: Clone + Debug {
-    fn from_element_handle(handle: &ElementHandle) -> Self;
+    type TextHandle: 'static;
+    type EventHandle: 'static;
+
+    fn from_text_handle(handle: &Self::TextHandle) -> Self;
 
     fn empty(&mut self);
 
-    fn text(&mut self, text: &str) -> ElementHandle;
+    fn text(&mut self, text: &str) -> Self::TextHandle;
     fn update_text(&mut self, text: &str);
 
-    fn on_event(&mut self, event: On) -> AttrHandle;
+    fn on_event(&mut self, event: On) -> Self::EventHandle;
 
     fn enter_children(&mut self);
     fn exit_children(&mut self);
@@ -34,16 +37,4 @@ pub trait Cursor: Clone + Debug {
     fn exit_diff(&mut self);
 
     fn replace(&mut self, func: impl FnOnce(&mut Self));
-}
-
-pub enum ElementHandle {
-    #[cfg(feature = "web")]
-    DomNode(web_sys::Node),
-}
-
-pub enum AttrHandle {
-    #[cfg(feature = "web")]
-    DomAttr(&'static str),
-    #[cfg(feature = "web")]
-    DomEvent(gloo::events::EventListener),
 }

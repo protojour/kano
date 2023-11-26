@@ -39,12 +39,9 @@ dependencies = [
  "anyhow",
  "autostrata-macros",
  "futures",
- "gloo",
- "js-sys",
  "lazy_static",
  "wasm-bindgen",
  "wasm-bindgen-futures",
- "web-sys",
 ]
 
 [[package]]

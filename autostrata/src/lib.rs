@@ -9,7 +9,7 @@ mod signal;
 mod style;
 
 pub use event::*;
-use platform::{Cursor, ElementHandle, Platform};
+use platform::{Cursor, Platform};
 pub use style::*;
 
 pub use autostrata_macros::view;

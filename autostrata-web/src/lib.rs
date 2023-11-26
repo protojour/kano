@@ -1,7 +1,7 @@
 #![allow(non_snake_case, non_upper_case_globals)]
 
 use anyhow::anyhow;
-use autostrata::platform::{AttrHandle, ElementHandle, Platform};
+use autostrata::platform::Platform;
 use gloo::events::EventListener;
 use js_sys::wasm_bindgen::*;
 use wasm_bindgen::prelude::*;
@@ -90,16 +90,16 @@ impl WebCursor {
 }
 
 impl WebCursor {
-    fn element(&mut self, tag: &str) -> ElementHandle {
+    fn element(&mut self, tag: &str) -> web_sys::Node {
         match self.mode() {
             Mode::Append => {
                 let element = document().create_element(tag).unwrap();
                 self.append_node(&element);
                 // log(&format!("new element cursor: {cursor:?}"));
-                ElementHandle::DomNode(element.into())
+                element.into()
             }
             Mode::Diff => match self {
-                Self::Node(..) => self.element_handle(),
+                Self::Node(..) => self.handle(),
                 _ => panic!(),
             },
         }
@@ -134,10 +134,11 @@ impl WebCursor {
 }
 
 impl autostrata::platform::Cursor for WebCursor {
-    fn from_element_handle(handle: &ElementHandle) -> Self {
-        match handle {
-            ElementHandle::DomNode(node) => Self::Node(node.clone(), Mode::Append),
-        }
+    type TextHandle = web_sys::Node;
+    type EventHandle = gloo::events::EventListener;
+
+    fn from_text_handle(handle: &web_sys::Node) -> Self {
+        Self::Node(handle.clone(), Mode::Append)
     }
 
     fn empty(&mut self) {
@@ -150,16 +151,16 @@ impl autostrata::platform::Cursor for WebCursor {
         }
     }
 
-    fn text(&mut self, text: &str) -> ElementHandle {
+    fn text(&mut self, text: &str) -> web_sys::Node {
         match self.mode() {
             Mode::Append => {
                 let text_node = document().create_text_node(text);
                 self.append_node(&text_node);
-                ElementHandle::DomNode(text_node.into())
+                text_node.into()
             }
             Mode::Diff => {
                 self.update_text(text);
-                self.element_handle()
+                self.handle()
             }
         }
     }
@@ -173,7 +174,7 @@ impl autostrata::platform::Cursor for WebCursor {
         }
     }
 
-    fn on_event(&mut self, on_event: On) -> AttrHandle {
+    fn on_event(&mut self, on_event: On) -> EventListener {
         match self {
             WebCursor::AttrsOf(element, _mode) => {
                 Web::log("on_event");
@@ -183,9 +184,9 @@ impl autostrata::platform::Cursor for WebCursor {
                     Event::MouseOver => "mouseover",
                 };
 
-                AttrHandle::DomEvent(EventListener::new(&event_target, event_type, move |_| {
+                EventListener::new(&event_target, event_type, move |_| {
                     on_event.invoke();
-                }))
+                })
             }
             WebCursor::Node(..) => panic!(),
             WebCursor::Detached => panic!(),
@@ -353,10 +354,10 @@ impl WebCursor {
         }
     }
 
-    fn element_handle(&self) -> ElementHandle {
+    fn handle(&self) -> web_sys::Node {
         match self {
             Self::Detached => panic!(),
-            Self::Node(node, _) => ElementHandle::DomNode(node.clone()),
+            Self::Node(node, _) => node.clone(),
             Self::AfterLastChild(..) => panic!(),
             Self::AttrsOf(..) => panic!(),
         }

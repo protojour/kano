@@ -1,10 +1,14 @@
 use std::{
     cell::RefCell,
+    fmt::Debug,
     rc::{Rc, Weak},
 };
 
 use ratatui::widgets::Paragraph;
 
+use crate::widget::Widget;
+
+#[derive(Debug)]
 pub struct Node {
     pub kind: NodeKind,
     parent: Weak<RefCell<Node>>,
@@ -12,20 +16,11 @@ pub struct Node {
     next_sibling: Rc<RefCell<Option<Node>>>,
 }
 
-pub trait TuiElement {
-    fn render(
-        &self,
-        node: &Node,
-        area: ratatui::prelude::Rect,
-        buf: &mut ratatui::prelude::Buffer,
-    ) {
-    }
-}
-
+#[derive(Debug)]
 pub enum NodeKind {
     Empty,
     Text(String),
-    Element(Box<dyn TuiElement>),
+    Widget(Widget),
 }
 
 pub struct NodeRef(Rc<RefCell<Node>>);
@@ -38,7 +33,7 @@ impl ratatui::widgets::Widget for NodeRef {
             NodeKind::Text(text) => {
                 Paragraph::new(text.as_str()).render(area, buf);
             }
-            NodeKind::Element(tui_element) => {
+            NodeKind::Widget(tui_element) => {
                 tui_element.render(&node, area, buf);
             }
         }
