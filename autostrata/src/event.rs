@@ -44,11 +44,14 @@ impl<P: Platform> Diff<P> for On {
 
     fn init(self, cursor: &mut P::Cursor) -> Self::State {
         OnState {
-            handle: cursor.on_event(self),
+            handle: Some(cursor.on_event(self)),
         }
     }
 
-    fn diff(self, _state: &mut Self::State, _cursor: &mut P::Cursor) {}
+    fn diff(self, state: &mut Self::State, cursor: &mut P::Cursor) {
+        drop(state.handle.take());
+        state.handle = Some(cursor.on_event(self));
+    }
 }
 
 impl<P: Platform> Attr<P> for On {}
@@ -56,5 +59,5 @@ impl<P: Platform> Attr<P> for On {}
 pub struct OnState {
     /// This is used to keep listeners alive
     #[allow(unused)]
-    handle: AttrHandle,
+    handle: Option<AttrHandle>,
 }

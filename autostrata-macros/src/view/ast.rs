@@ -8,7 +8,6 @@
 use std::fmt::Display;
 
 use syn::parse::{Parse, ParseStream};
-use syn::spanned::Spanned;
 
 pub struct Parser;
 
@@ -57,8 +56,7 @@ pub enum AttrKey {
 pub enum AttrValue {
     ImplicitTrue,
     Literal(syn::Lit),
-    Expr(syn::Expr),
-    SelfMethod(syn::Ident),
+    Block(syn::ExprBlock),
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -105,7 +103,7 @@ pub struct MatchArm {
 #[derive(Debug, Eq, PartialEq)]
 pub struct For {
     pub for_token: syn::token::For,
-    pub binding: syn::Ident,
+    pub pat: syn::Pat,
     pub in_token: syn::token::In,
     pub expression: syn::Expr,
     pub repeating_node: Box<Node>,
@@ -362,62 +360,14 @@ impl Parser {
     }
 
     fn parse_attr_value(&self, input: ParseStream) -> syn::Result<AttrValue> {
-        fn parse_expr(expr: syn::Expr) -> syn::Result<AttrValue> {
-            match expr {
-                syn::Expr::Path(expr_path) => parse_expr_path(expr_path),
-                expr => Ok(AttrValue::Expr(expr)),
-            }
-        }
-
-        fn parse_expr_path(expr_path: syn::ExprPath) -> syn::Result<AttrValue> {
-            if let Some(_qself) = &expr_path.qself {
-                return Err(syn::Error::new(
-                    expr_path.span(),
-                    "No \"qself\" in path allowed",
-                ));
-            }
-
-            if let Some(_colon) = &expr_path.path.leading_colon {
-                return Err(syn::Error::new(
-                    expr_path.span(),
-                    "No leading colon allowed",
-                ));
-            }
-
-            let path = expr_path.path;
-
-            let span = path.span();
-            let mut iterator = path.segments.into_iter();
-
-            let first = iterator.next().ok_or_else(|| {
-                syn::Error::new(span, "Expected a path with at least one segment")
-            })?;
-
-            if first.ident == "Self" {
-                let method = iterator
-                    .next()
-                    .ok_or_else(|| syn::Error::new(span, "Expected method name"))?;
-
-                if let Some(_) = iterator.next() {
-                    return Err(syn::Error::new(span, "Expected only two segments in path"));
-                }
-
-                Ok(AttrValue::SelfMethod(method.ident))
-            } else {
-                let ident = first.ident;
-                Ok(AttrValue::Expr(syn::parse_quote! { #ident }))
-            }
-        }
-
         if input.peek(syn::Lit) {
             Ok(AttrValue::Literal(input.parse()?))
         } else {
-            let content;
-            let _brace_token = syn::braced!(content in input);
+            // let content;
+            // let _brace_token = syn::braced!(content in input);
 
-            let expr: syn::Expr = content.parse()?;
-
-            parse_expr(expr)
+            let expr: syn::ExprBlock = input.parse()?;
+            Ok(AttrValue::Block(expr))
         }
     }
 
@@ -545,14 +495,14 @@ impl Parser {
 
     fn parse_for(&self, input: ParseStream) -> syn::Result<For> {
         let for_token = input.parse()?;
-        let binding = input.parse()?;
+        let pat = syn::Pat::parse_single(input)?;
         let in_token = input.parse()?;
         let expression = syn::Expr::parse_without_eager_brace(input)?;
         let repeating_node = Box::new(self.parse_braced_fragment(input)?);
 
         Ok(For {
             for_token,
-            binding,
+            pat,
             in_token,
             expression,
             repeating_node,
@@ -750,7 +700,7 @@ mod tests {
                     html_attr(tag, "controls", AttrValue::ImplicitTrue),
                     html_attr(tag, "class", AttrValue::Literal(syn::parse_quote! { "b" })),
                     html_attr(tag, "dir", AttrValue::Literal(syn::parse_quote! { 42 })),
-                    html_attr(tag, "id", AttrValue::Expr(syn::parse_quote! { foo })),
+                    html_attr(tag, "id", AttrValue::Block(syn::parse_quote! { foo })),
                 ],
                 vec![]
             )
@@ -842,7 +792,7 @@ mod tests {
                 |_| vec![],
                 vec![Node::For(For {
                     for_token: syn::parse_quote! { for },
-                    binding: syn::parse_quote! { item },
+                    pat: syn::parse_quote! { item },
                     in_token: syn::parse_quote! { in },
                     expression: syn::parse_quote! { items },
                     repeating_node: Box::new(html_element(

@@ -29,6 +29,13 @@ impl<P: Platform> View<P> for Text {}
 #[derive(Clone, Copy)]
 pub struct Format<T>(pub T);
 
+impl<T: Display> Format<T> {
+    pub fn new(model: T) -> Self {
+        crate::log(&format!("Format(\"{model}\")"));
+        Self(model)
+    }
+}
+
 impl<P: Platform, T: Display + 'static> Diff<P> for Format<T> {
     type State = (ElementHandle, String);
 
@@ -42,6 +49,8 @@ impl<P: Platform, T: Display + 'static> Diff<P> for Format<T> {
     fn diff(self, (handle, old): &mut Self::State, _cursor: &mut P::Cursor) {
         let mut string = String::new();
         write!(&mut string, "{}", self.0).unwrap();
+
+        P::log(&format!("Format diff new=`{string}` old=`{old}`"));
 
         if string != *old {
             let mut cursor = P::Cursor::from_element_handle(&handle);

@@ -1,9 +1,10 @@
 use proc_macro2::TokenStream;
-use quote::{quote, ToTokens};
+use quote::{quote, quote_spanned, ToTokens};
+use syn::spanned::Spanned;
 
 use crate::view::ast::{AttrKey, AttrValue, ComponentAttrs};
 
-use self::ast::{Element, Match, Node};
+use self::ast::{Element, For, Match, Node};
 
 pub mod ast;
 
@@ -15,19 +16,26 @@ pub fn view(node: Node) -> TokenStream {
             attrs,
             children,
         }) => {
+            let span = tag_name.span();
             let attrs: Vec<_> = attrs
                 .into_iter()
                 .map(|attr| {
                     let value = match attr.value {
                         AttrValue::ImplicitTrue => quote! { true },
-                        AttrValue::Expr(expr) => quote! { #expr },
+                        AttrValue::Block(block) => {
+                            let span = block.span();
+                            quote_spanned! {span=>
+                                #[allow(unused_braces)]
+                                #block
+                            }
+                        }
                         _ => todo!(),
                     };
 
                     match attr.key {
                         AttrKey::On(event) => {
                             quote! {
-                                autostrata::On::#event(#value)
+                                autostrata::On::#event({#value})
                             }
                         }
                         AttrKey::Text(_) => todo!(),
@@ -42,7 +50,7 @@ pub fn view(node: Node) -> TokenStream {
 
             let children = children.into_iter().map(view);
 
-            quote! {
+            quote_spanned! {span=>
                 #tag_name(#attrs, (
                     #(#children,)*
                 ))
@@ -52,58 +60,76 @@ pub fn view(node: Node) -> TokenStream {
             quote!(())
         }
         Node::Text(text) => {
+            let span = text.0.span();
             let literal = text.0.into_token_stream();
-            quote! {
+            quote_spanned! {span=>
                 autostrata::view::Text(#literal)
             }
         }
         Node::TextExpr(expr) => {
-            quote!(
+            let span = expr.span();
+            quote_spanned! {span=>
                 autostrata::view::Reactive(move || #expr)
-            )
+            }
         }
         Node::Component(component) => {
             let type_path = component.type_path;
+            let span = type_path.span();
             match component.attrs {
                 ComponentAttrs::Positional(positional) => {
-                    quote! {
+                    quote_spanned! {span=>
                         autostrata::view::Reactive(move ||
                             autostrata::view::Func(#type_path, (#(#positional),*,))
                         )
                     }
                 }
                 ComponentAttrs::KeyValue(_) => {
-                    quote! {
+                    quote_spanned! {span=>
                         autostrata::view::Func(#type_path, ())
                     }
                 }
             }
         }
         Node::Match(Match { expr, arms }) => {
+            let span = expr.span();
             let arms = arms.into_iter().enumerate().map(|(index, arm)| {
                 let pat = arm.pat;
+                let span = pat.span();
                 let view = view(arm.node);
                 if index == 0 {
-                    quote!(
+                    quote_spanned! {span=>
                         #pat => autostrata::view::Either::Left(#view),
-                    )
+                    }
                 } else {
-                    quote!(
+                    quote_spanned! {span=>
                         #pat => autostrata::view::Either::Right(#view),
-                    )
+                    }
                 }
             });
 
-            quote!(
+            quote_spanned! {span=>
                 autostrata::view::Reactive(move || {
                     match #expr {
                         #(#arms)*
                     }
                 })
-            )
+            }
         }
-        Node::For(_for) => {
-            quote!(())
+        Node::For(For {
+            for_token,
+            pat,
+            in_token: _,
+            expression,
+            repeating_node,
+        }) => {
+            let span = for_token.span;
+            let child = view(*repeating_node);
+
+            quote_spanned! {span=>
+                autostrata::view::seq_map(#expression, move |#pat| {
+                    #child
+                })
+            }
         }
     }
 }

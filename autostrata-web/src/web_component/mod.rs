@@ -62,7 +62,7 @@ where
         let mut cursor = WebCursor::Detached;
         let state = self().init(&mut cursor);
 
-        let WebCursor::Node(node) = cursor else {
+        let WebCursor::Node(node, _) = cursor else {
             panic!("No node rendered");
         };
 

@@ -4,7 +4,7 @@ use std::{
 };
 
 use crate::{
-    platform::Platform,
+    platform::{Cursor, Platform},
     pubsub::{OnSignal, SignalId},
     registry::{ViewId, REGISTRY},
     Attr, Diff, View,
@@ -32,7 +32,17 @@ impl<P: Platform, T: Diff<P> + 'static, F: (Fn() -> T) + 'static> Diff<P> for Re
     }
 
     fn diff(self, state: &mut Self::State, cursor: &mut P::Cursor) {
-        let _old_state = std::mem::replace(state, self.init(cursor));
+        cursor.enter_diff();
+        let new_state = state
+            .view_id
+            .invoke_as_current_reactive_view(|| (self.0)().init(cursor));
+        cursor.exit_diff();
+
+        let mut data_cell = state.data_cell.borrow_mut();
+        if let Some(data) = data_cell.as_mut() {
+            data.cursor = cursor.clone();
+            data.actual_state = Some(new_state);
+        }
     }
 }
 
@@ -41,7 +51,7 @@ impl<P: Platform, T: Attr<P> + 'static, F: (Fn() -> T) + 'static> Attr<P> for Re
 
 pub struct ReactiveState<P: Platform, T: Diff<P>> {
     view_id: ViewId,
-    _data_cell: Rc<RefCell<Option<Data<P, T>>>>,
+    data_cell: Rc<RefCell<Option<Data<P, T>>>>,
 }
 
 impl<P: Platform, T: Diff<P> + 'static> ReactiveState<P, T> {
@@ -75,10 +85,7 @@ impl<P: Platform, T: Diff<P> + 'static> ReactiveState<P, T> {
             cursor: cursor.clone(),
         });
 
-        Self {
-            view_id,
-            _data_cell: data_cell,
-        }
+        Self { view_id, data_cell }
     }
 }
 

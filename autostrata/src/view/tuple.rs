@@ -7,14 +7,24 @@ macro_rules! tuples {
 
             fn init(self, cursor: &mut P::Cursor) -> Self::State {
                 cursor.enter_children();
-                let ret = ($(self.$i.init(cursor)),+,);
+                // let ret = ($(self.$i.init(cursor)),+,);
+                let ret = (
+                    $({
+                        let item = self.$i.init(cursor);
+                        cursor.next_sibling();
+                        item
+                    }),+,
+                );
                 cursor.exit_children();
                 ret
             }
 
             fn diff(self, state: &mut Self::State, cursor: &mut P::Cursor) {
                 cursor.enter_children();
-                $(self.$i.diff(&mut state.$i, cursor));+;
+                $(
+                    self.$i.diff(&mut state.$i, cursor);
+                    cursor.next_sibling();
+                )+
                 cursor.exit_children();
             }
         }
