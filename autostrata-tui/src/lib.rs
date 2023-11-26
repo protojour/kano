@@ -58,6 +58,8 @@ impl autostrata::platform::Platform for Tui {
 pub struct TuiCursor {}
 
 impl autostrata::platform::Cursor for TuiCursor {
+    type Element<'a> = ();
+
     fn from_element_handle(_handle: &autostrata::platform::ElementHandle) -> Self {
         todo!()
     }
@@ -74,7 +76,7 @@ impl autostrata::platform::Cursor for TuiCursor {
         todo!()
     }
 
-    fn element(&mut self, _name: &str) -> autostrata::platform::ElementHandle {
+    fn element(&mut self, _element: ()) -> autostrata::platform::ElementHandle {
         todo!()
     }
 

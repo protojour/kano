@@ -90,6 +90,8 @@ impl WebCursor {
 }
 
 impl autostrata::platform::Cursor for WebCursor {
+    type Element<'a> = &'a str;
+
     fn from_element_handle(handle: &ElementHandle) -> Self {
         match handle {
             ElementHandle::DomNode(node) => Self::Node(node.clone(), Mode::Append),
@@ -129,10 +131,10 @@ impl autostrata::platform::Cursor for WebCursor {
         }
     }
 
-    fn element(&mut self, name: &str) -> ElementHandle {
+    fn element(&mut self, tag: &str) -> ElementHandle {
         match self.mode() {
             Mode::Append => {
-                let element = document().create_element(name).unwrap();
+                let element = document().create_element(tag).unwrap();
                 self.append_node(&element);
                 // log(&format!("new element cursor: {cursor:?}"));
                 ElementHandle::DomNode(element.into())
