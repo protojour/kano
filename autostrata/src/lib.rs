@@ -52,6 +52,17 @@ mod web_util {
 macro_rules! define_platform {
     ($platform:ident, $view:ident) => {
         /// Type alias for the current platform.
+        #[cfg(feature = "tui")]
+        pub type $platform = autostrata_tui::Tui;
+
+        /// The concrete view trait for this application.
+        #[cfg(feature = "tui")]
+        pub trait $view: autostrata::View<autostrata_tui::Tui> {}
+
+        #[cfg(feature = "tui")]
+        impl<V: autostrata::View<autostrata_tui::Tui>> $view for V {}
+
+        /// Type alias for the current platform.
         #[cfg(feature = "web")]
         pub type $platform = autostrata_web::Web;
 

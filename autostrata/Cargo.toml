@@ -6,10 +6,12 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [features]
+tui = []
 web = ["js-sys", "web-sys", "gloo", "wasm-bindgen", "wasm-bindgen-futures"]
 
 [dependencies]
 autostrata-macros.path = "../autostrata-macros"
+anyhow = "1"
 lazy_static = "1"
 futures = "0.3"
 web-sys = { version = "0.3", optional = true, features = ["Node"] }

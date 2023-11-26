@@ -2,6 +2,7 @@
 members = [
     "autostrata",
     "autostrata-macros",
+    "autostrata-tui",
     "autostrata-web",
     "strata-uxr",
     "examples/web-components-demo",

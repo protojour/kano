@@ -9,7 +9,7 @@ mod todo;
 autostrata::define_platform!(AppPlatform, View);
 
 fn main() {
-    AppPlatform::run_app(App);
+    AppPlatform::run_app(App).unwrap();
 }
 
 fn App() -> impl View {

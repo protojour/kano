@@ -7,7 +7,7 @@ pub trait Platform: Sized + 'static {
 
     /// Run an application on the platform.
     /// This function _may_ block indefinitely, depending on the platform.
-    fn run_app<V: View<Self>, F: (FnOnce() -> V) + 'static>(func: F);
+    fn run_app<V: View<Self>, F: (FnOnce() -> V) + 'static>(func: F) -> anyhow::Result<()>;
 
     fn log(s: &str);
 

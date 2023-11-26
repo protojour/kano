@@ -1,5 +1,6 @@
 #![allow(non_snake_case, non_upper_case_globals)]
 
+use anyhow::anyhow;
 use autostrata::platform::{AttrHandle, ElementHandle, Platform};
 use gloo::events::EventListener;
 use js_sys::wasm_bindgen::*;
@@ -33,20 +34,25 @@ pub struct Web {}
 impl Platform for Web {
     type Cursor = WebCursor;
 
-    fn run_app<V: View<Self>, F: (FnOnce() -> V) + 'static>(func: F) {
+    fn run_app<V: View<Self>, F: (FnOnce() -> V) + 'static>(func: F) -> anyhow::Result<()> {
         console_error_panic_hook::set_once();
 
         let mut cursor = WebCursor::Detached;
         let state = autostrata::view::Func(func, ()).init(&mut cursor);
 
         let WebCursor::Node(node, _) = cursor else {
-            panic!("No node rendered");
+            return Err(anyhow!("No node rendered"));
         };
 
-        document().body().unwrap().append_child(&node).unwrap();
+        document()
+            .body()
+            .unwrap()
+            .append_child(&node)
+            .map_err(|e| anyhow!("{e:?}"))?;
 
         // Need to keep the initial state around, it keeps EventListeners alive
         std::mem::forget(state);
+        Ok(())
     }
 
     fn log(s: &str) {
