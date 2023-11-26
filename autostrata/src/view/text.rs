@@ -29,13 +29,6 @@ impl<P: Platform> View<P> for Text {}
 #[derive(Clone, Copy)]
 pub struct Format<T>(pub T);
 
-impl<T: Display> Format<T> {
-    pub fn new(model: T) -> Self {
-        crate::log(&format!("Format(\"{model}\")"));
-        Self(model)
-    }
-}
-
 impl<P: Platform, T: Display + 'static> Diff<P> for Format<T> {
     type State = (ElementHandle, String);
 

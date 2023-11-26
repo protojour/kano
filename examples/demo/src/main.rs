@@ -13,11 +13,11 @@ fn main() {
 }
 
 fn App() -> impl View {
-    let (clicks, clicks_mut) = use_state(|| 0);
-    let (show, show_mut) = use_state(|| true);
-    let (yes, yes_mut) = use_state(|| false);
+    let clicks = use_state(|| 0);
+    let show = use_state(|| true);
+    let yes = use_state(|| false);
 
-    let (todos, todos_mut) = use_state(|| {
+    let todos = use_state(|| {
         let mut todos = vec![];
         add_todo(&mut todos, Some("First".to_string()));
         add_todo(&mut todos, Some("Second".to_string()));
@@ -31,7 +31,7 @@ fn App() -> impl View {
             <paragraph>
                 <button
                     on:click={move || {
-                        todos_mut.update(|todos| {
+                        todos.update(|todos| {
                             add_todo(todos, None);
                         });
                     }}
@@ -39,20 +39,20 @@ fn App() -> impl View {
                     "append item"
                 </button>
             </paragraph>
-            <TodoList {todos.get_ref()} {todos_mut} />
+            <TodoList {todos} />
             <paragraph>
                 <button
                     on:click={move || {
-                        clicks_mut.update(|clicks| *clicks += 1);
-                        show_mut.update(|show| *show = !*show);
+                        clicks.update(|clicks| *clicks += 1);
+                        show.toggle();
                     }}
                 >
                     "hide/show"
                 </button>
                 <button
                     on:click={move || {
-                        clicks_mut.update(|clicks| *clicks += 1);
-                        yes_mut.update(|yes| *yes = !*yes);
+                        clicks.update(|clicks| *clicks += 1);
+                        yes.toggle();
                     }}
                 >
                     "yes/no"
@@ -75,18 +75,18 @@ fn App() -> impl View {
     }
 }
 
-fn TodoList(todos: Ref<Vec<Todo>>, todos_mut: StateMut<Vec<Todo>>) -> impl View {
+fn TodoList(todos: State<Vec<Todo>>) -> impl View {
     let delete = move |id: usize| {
-        todos_mut.update(|todos| {
+        todos.update(|todos| {
             delete_todo(todos, id);
         });
     };
 
     view! {
         <unordered_list>
-        for Todo { id, text } in todos {
+        for Todo { id, text } in todos.get_ref() {
             <list_item>
-                {Format::new(text.clone())}
+                {Format(text.clone())}
 
                 " ("<button on:click={move || delete(id)}>"x"</button>")"
             </list_item>

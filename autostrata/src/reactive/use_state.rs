@@ -2,7 +2,7 @@ use std::{cell::RefCell, fmt::Display, marker::PhantomData, ops::Deref, rc::Rc};
 
 use crate::{pubsub::SignalId, registry::REGISTRY};
 
-pub fn use_state<T: 'static>(init_func: impl FnOnce() -> T) -> (State<T>, StateMut<T>) {
+pub fn use_state<T: 'static>(init_func: impl FnOnce() -> T) -> State<T> {
     let signal_id = REGISTRY.with_borrow_mut(|registry| {
         let (signal_id, reused) = registry.alloc_or_reuse_func_view_signal();
 
@@ -17,16 +17,10 @@ pub fn use_state<T: 'static>(init_func: impl FnOnce() -> T) -> (State<T>, StateM
         signal_id
     });
 
-    (
-        State {
-            signal_id,
-            phantom: PhantomData,
-        },
-        StateMut {
-            signal_id,
-            phantom: PhantomData,
-        },
-    )
+    State {
+        signal_id,
+        phantom: PhantomData,
+    }
 }
 
 pub struct State<T> {
@@ -73,7 +67,50 @@ impl<T: 'static> State<T> {
                 .unwrap())
         })
     }
+
+    pub fn set(&self, value: T) {
+        REGISTRY.with_borrow_mut(|registry| {
+            registry
+                .state_values
+                .insert(self.signal_id, Rc::new(RefCell::new(value)));
+        });
+
+        self.send();
+    }
+
+    pub fn update(&self, func: impl Fn(&mut T)) {
+        REGISTRY.with_borrow(|registry| {
+            let ref_cell = registry.state_values.get(&self.signal_id).unwrap();
+            let mut borrow = ref_cell.borrow_mut();
+
+            func(borrow.downcast_mut::<T>().unwrap());
+        });
+
+        self.send();
+    }
+
+    fn send(&self) {
+        let signaller = REGISTRY.with_borrow_mut(|registry| registry.get_signaller());
+        signaller.send(self.signal_id);
+    }
 }
+
+impl State<bool> {
+    pub fn toggle(&self) {
+        self.update(|value| *value = !*value);
+    }
+}
+
+impl<T> Clone for State<T> {
+    fn clone(&self) -> Self {
+        Self {
+            signal_id: self.signal_id,
+            phantom: PhantomData,
+        }
+    }
+}
+
+impl<T> Copy for State<T> {}
 
 pub struct Ref<T> {
     ref_cell: Rc<RefCell<dyn std::any::Any>>,
@@ -114,58 +151,3 @@ impl<T: Display + 'static> Display for State<T> {
         })
     }
 }
-
-impl<T> Clone for State<T> {
-    fn clone(&self) -> Self {
-        Self {
-            signal_id: self.signal_id,
-            phantom: PhantomData,
-        }
-    }
-}
-
-impl<T> Copy for State<T> {}
-
-pub struct StateMut<T> {
-    signal_id: SignalId,
-    phantom: PhantomData<T>,
-}
-
-impl<T: 'static> StateMut<T> {
-    pub fn set(&self, value: T) {
-        REGISTRY.with_borrow_mut(|registry| {
-            registry
-                .state_values
-                .insert(self.signal_id, Rc::new(RefCell::new(value)));
-        });
-
-        self.send();
-    }
-
-    pub fn update(&self, func: impl Fn(&mut T)) {
-        REGISTRY.with_borrow(|registry| {
-            let ref_cell = registry.state_values.get(&self.signal_id).unwrap();
-            let mut borrow = ref_cell.borrow_mut();
-
-            func(borrow.downcast_mut::<T>().unwrap());
-        });
-
-        self.send();
-    }
-
-    fn send(&self) {
-        let signaller = REGISTRY.with_borrow_mut(|registry| registry.get_signaller());
-        signaller.send(self.signal_id);
-    }
-}
-
-impl<T> Clone for StateMut<T> {
-    fn clone(&self) -> Self {
-        Self {
-            signal_id: self.signal_id,
-            phantom: PhantomData,
-        }
-    }
-}
-
-impl<T> Copy for StateMut<T> {}
