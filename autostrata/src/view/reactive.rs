@@ -5,8 +5,8 @@ use std::{
 
 use crate::{
     platform::{Cursor, Platform},
-    pubsub::{OnSignal, SignalId},
     registry::{ViewId, REGISTRY},
+    signal::{OnSignal, Signal},
     Attr, Diff, View,
 };
 
@@ -121,7 +121,7 @@ struct UpdateCallback<P: Platform, T: Diff<P>> {
 }
 
 impl<P: Platform, T: Diff<P> + 'static> OnSignal for UpdateCallback<P, T> {
-    fn on_signal(&self, _signal_id: SignalId, view_id: ViewId) -> bool {
+    fn on_signal(&self, _signal: Signal, view_id: ViewId) -> bool {
         if let Some(strong_data_cell) = self.weak_data_cell.upgrade() {
             let mut data_borrow = strong_data_cell.borrow_mut();
             data_borrow.as_mut().unwrap().update(view_id);

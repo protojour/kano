@@ -4,8 +4,8 @@ pub mod reactive;
 pub mod view;
 
 mod event;
-mod pubsub;
 mod registry;
+mod signal;
 mod style;
 
 pub use event::*;

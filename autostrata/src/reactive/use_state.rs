@@ -1,30 +1,30 @@
 use std::{cell::RefCell, fmt::Display, marker::PhantomData, ops::Deref, rc::Rc};
 
-use crate::{pubsub::SignalId, registry::REGISTRY};
+use crate::{registry::REGISTRY, signal::Signal};
 
 pub fn use_state<T: 'static>(init_func: impl FnOnce() -> T) -> State<T> {
-    let signal_id = REGISTRY.with_borrow_mut(|registry| {
-        let (signal_id, reused) = registry.alloc_or_reuse_func_view_signal();
+    let signal = REGISTRY.with_borrow_mut(|registry| {
+        let (signal, reused) = registry.alloc_or_reuse_func_view_signal();
 
         // If the signal is reused, the value should already be in the registry,
         // and we should not reset the state.
         if !reused {
             registry
                 .state_values
-                .insert(signal_id, Rc::new(RefCell::new(init_func())));
+                .insert(signal, Rc::new(RefCell::new(init_func())));
         }
 
-        signal_id
+        signal
     });
 
     State {
-        signal_id,
+        signal,
         phantom: PhantomData,
     }
 }
 
 pub struct State<T> {
-    signal_id: SignalId,
+    signal: Signal,
     phantom: PhantomData<T>,
 }
 
@@ -33,10 +33,10 @@ impl<T: 'static> State<T> {
     where
         T: Clone,
     {
-        self.signal_id.register_reactive_dependency();
+        self.signal.register_reactive_dependency();
 
         let ref_cell = REGISTRY
-            .with_borrow(|registry| registry.state_values.get(&self.signal_id).unwrap().clone());
+            .with_borrow(|registry| registry.state_values.get(&self.signal).unwrap().clone());
         let borrow = ref_cell.borrow();
         let value_ref = borrow.downcast_ref::<T>().unwrap();
 
@@ -44,10 +44,10 @@ impl<T: 'static> State<T> {
     }
 
     pub fn get_ref(&self) -> Ref<T> {
-        self.signal_id.register_reactive_dependency();
+        self.signal.register_reactive_dependency();
 
         let ref_cell = REGISTRY
-            .with_borrow(|registry| registry.state_values.get(&self.signal_id).unwrap().clone());
+            .with_borrow(|registry| registry.state_values.get(&self.signal).unwrap().clone());
         Ref {
             ref_cell,
             phantom: PhantomData,
@@ -55,12 +55,12 @@ impl<T: 'static> State<T> {
     }
 
     pub fn map<U>(&self, f: impl FnOnce(&T) -> U) -> U {
-        self.signal_id.register_reactive_dependency();
+        self.signal.register_reactive_dependency();
 
         REGISTRY.with_borrow(|registry| {
             f(registry
                 .state_values
-                .get(&self.signal_id)
+                .get(&self.signal)
                 .unwrap()
                 .borrow()
                 .downcast_ref::<T>()
@@ -72,26 +72,21 @@ impl<T: 'static> State<T> {
         REGISTRY.with_borrow_mut(|registry| {
             registry
                 .state_values
-                .insert(self.signal_id, Rc::new(RefCell::new(value)));
+                .insert(self.signal, Rc::new(RefCell::new(value)));
         });
 
-        self.send();
+        self.signal.send();
     }
 
     pub fn update(&self, func: impl Fn(&mut T)) {
         REGISTRY.with_borrow(|registry| {
-            let ref_cell = registry.state_values.get(&self.signal_id).unwrap();
+            let ref_cell = registry.state_values.get(&self.signal).unwrap();
             let mut borrow = ref_cell.borrow_mut();
 
             func(borrow.downcast_mut::<T>().unwrap());
         });
 
-        self.send();
-    }
-
-    fn send(&self) {
-        let signaller = REGISTRY.with_borrow_mut(|registry| registry.get_signaller());
-        signaller.send(self.signal_id);
+        self.signal.send();
     }
 }
 
@@ -104,7 +99,7 @@ impl State<bool> {
 impl<T> Clone for State<T> {
     fn clone(&self) -> Self {
         Self {
-            signal_id: self.signal_id,
+            signal: self.signal,
             phantom: PhantomData,
         }
     }
@@ -142,10 +137,10 @@ impl<'a, T: 'static> Deref for RefBorrow<'a, T> {
 /// For direct use with [crate::view::Format].
 impl<T: Display + 'static> Display for State<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.signal_id.register_reactive_dependency();
+        self.signal.register_reactive_dependency();
 
         REGISTRY.with_borrow(|registry| {
-            let ref_cell = registry.state_values.get(&self.signal_id).unwrap();
+            let ref_cell = registry.state_values.get(&self.signal).unwrap();
             let borrow = ref_cell.borrow();
             borrow.downcast_ref::<T>().unwrap().fmt(f)
         })

@@ -1,10 +1,10 @@
 use std::any::Any;
 use std::cell::RefCell;
-use std::collections::{BTreeSet, HashMap};
+use std::collections::{BTreeSet, HashMap, HashSet};
 use std::rc::Rc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use crate::pubsub::{OnSignal, SignalId, Signaller};
+use crate::signal::{OnSignal, Signal};
 
 static NEXT_VIEW_ID: AtomicU64 = AtomicU64::new(0);
 
@@ -68,18 +68,19 @@ impl ViewId {
 
 #[derive(Default)]
 pub(crate) struct Registry {
-    pub(crate) signaller: Option<Signaller>,
+    pub(crate) signal_sender: Option<futures::channel::mpsc::Sender<()>>,
+    pub(crate) pending_signals: HashSet<Signal>,
 
     pub(crate) reactive_callbacks: HashMap<ViewId, Rc<dyn OnSignal>>,
-    pub(crate) subscriptions_by_signal: HashMap<SignalId, BTreeSet<ViewId>>,
-    pub(crate) subscriptions_by_view: HashMap<ViewId, BTreeSet<SignalId>>,
+    pub(crate) subscriptions_by_signal: HashMap<Signal, BTreeSet<ViewId>>,
+    pub(crate) subscriptions_by_view: HashMap<ViewId, BTreeSet<Signal>>,
 
     pub(crate) current_reactive_view: Option<ViewId>,
     pub(crate) current_func_view: Option<ViewId>,
     pub(crate) current_func_view_signal_tracker: usize,
 
-    pub(crate) owned_signals_ordered: HashMap<ViewId, Vec<SignalId>>,
-    pub(crate) state_values: HashMap<SignalId, Rc<RefCell<dyn Any>>>,
+    pub(crate) owned_signals_ordered: HashMap<ViewId, Vec<Signal>>,
+    pub(crate) state_values: HashMap<Signal, Rc<RefCell<dyn Any>>>,
 }
 
 thread_local! {
@@ -88,7 +89,7 @@ thread_local! {
 
 impl Registry {
     /// Returns true if reused
-    pub(crate) fn alloc_or_reuse_func_view_signal(&mut self) -> (SignalId, bool) {
+    pub(crate) fn alloc_or_reuse_func_view_signal(&mut self) -> (Signal, bool) {
         let view_id = self
             .current_func_view
             .expect("There must be a Func view in scope");
@@ -103,9 +104,9 @@ impl Registry {
                 true,
             )
         } else {
-            let signal_id = SignalId::alloc();
-            owned_signals_ordered.push(signal_id);
-            (signal_id, false)
+            let signal = Signal::alloc();
+            owned_signals_ordered.push(signal);
+            (signal, false)
         };
 
         // Track the position
@@ -114,21 +115,21 @@ impl Registry {
         ret
     }
 
-    pub(crate) fn put_subscription(&mut self, signal_id: SignalId, view_id: ViewId) {
+    pub(crate) fn put_subscription(&mut self, signal: Signal, view_id: ViewId) {
         self.subscriptions_by_signal
-            .entry(signal_id)
+            .entry(signal)
             .or_default()
             .insert(view_id);
         self.subscriptions_by_view
             .entry(view_id)
             .or_default()
-            .insert(signal_id);
+            .insert(signal);
     }
 
     pub(crate) fn on_view_dropped(&mut self, view_id: ViewId) {
         if let Some(owned_signals) = self.owned_signals_ordered.remove(&view_id) {
-            for signal_id in owned_signals {
-                self.on_signal_dropped(signal_id);
+            for signal in owned_signals {
+                self.on_signal_dropped(signal);
             }
         }
     }
@@ -137,18 +138,18 @@ impl Registry {
         self.reactive_callbacks.remove(&view_id);
 
         if let Some(signals) = self.subscriptions_by_view.remove(&view_id) {
-            for signal_id in signals {
-                remove_set_entry(&mut self.subscriptions_by_signal, &signal_id, &view_id);
+            for signal in signals {
+                remove_set_entry(&mut self.subscriptions_by_signal, &signal, &view_id);
             }
         }
     }
 
-    pub(crate) fn on_signal_dropped(&mut self, signal_id: SignalId) {
-        self.state_values.remove(&signal_id);
+    pub(crate) fn on_signal_dropped(&mut self, signal: Signal) {
+        self.state_values.remove(&signal);
 
-        if let Some(subscribers) = self.subscriptions_by_signal.remove(&signal_id) {
+        if let Some(subscribers) = self.subscriptions_by_signal.remove(&signal) {
             for view_id in subscribers {
-                remove_set_entry(&mut self.subscriptions_by_view, &view_id, &signal_id);
+                remove_set_entry(&mut self.subscriptions_by_view, &view_id, &signal);
             }
         }
     }
