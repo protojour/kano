@@ -1,6 +1,6 @@
 #![allow(non_snake_case)]
 
-use autostrata::prelude::*;
+use autostrata::{prelude::*, view::Map};
 use strata_uxr::*;
 
 autostrata::define_platform!(AppPlatform, View);
@@ -14,15 +14,13 @@ fn App() -> impl View {
     let (show, show_mut) = use_state(|| true);
     let (yes, yes_mut) = use_state(|| false);
 
-    let (_items, items_mut) = use_state::<Vec<String>>(|| {
-        vec!["One".to_string(), "Two".to_string(), "Three".to_string()]
-    });
+    let (_items, items_mut) =
+        use_state(|| vec!["One".to_string(), "Two".to_string(), "Three".to_string()]);
 
     view! {
         <layout>
             <paragraph>"Hello!"</paragraph>
             <MyList />
-            <MyList2 />
             <paragraph>
                 <button
                     on:click={move || {
@@ -63,26 +61,29 @@ fn App() -> impl View {
 }
 
 fn MyList() -> impl View {
-    view! {
-        <unordered_list>
-            <list_item>"One"</list_item>
-            <list_item>"Two"</list_item>
-            <list_item>"Three"</list_item>
-        </unordered_list>
-    }
-}
-
-fn MyList2() -> impl View {
-    let items = vec!["jkl".to_string()];
+    let items = vec!["One".to_string(), "Two".to_string(), "Three".to_string()];
 
     unordered_list(
         (),
-        (autostrata::view::Iter(items.into_iter().map(|item| {
+        (autostrata::view::Seq(items).seq_map(|item| {
             view! {
                 <list_item>
                     {Format(item.clone())}
                 </list_item>
             }
-        })),),
+        }),),
+    )
+}
+
+fn _DynamicList(items: Ref<Vec<String>>) -> impl View {
+    unordered_list(
+        (),
+        (autostrata::view::Seq(items).seq_map(|item| {
+            view! {
+                <list_item>
+                    {Format(item.clone())}
+                </list_item>
+            }
+        }),),
     )
 }

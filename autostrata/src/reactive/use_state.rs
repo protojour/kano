@@ -50,6 +50,8 @@ impl<T: 'static> State<T> {
     }
 
     pub fn get_ref(&self) -> Ref<T> {
+        self.signal_id.register_reactive_dependency();
+
         let ref_cell = REGISTRY
             .with_borrow(|registry| registry.state_values.get(&self.signal_id).unwrap().clone());
         Ref {
