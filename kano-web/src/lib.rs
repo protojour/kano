@@ -1,3 +1,4 @@
+//! Kano is a work-in-progress GUI application framework written for and in Rust.
 #![allow(non_snake_case, non_upper_case_globals)]
 
 use anyhow::anyhow;

@@ -1,3 +1,4 @@
+//! Kano is a work-in-progress GUI application framework written for and in Rust.
 pub mod platform;
 pub mod prelude;
 pub mod reactive;

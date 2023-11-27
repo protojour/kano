@@ -1,3 +1,5 @@
+//! Kano is a work-in-progress GUI application framework written for and in Rust.
+
 mod view;
 
 #[proc_macro]

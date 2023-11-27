@@ -1,3 +1,4 @@
+//! Kano is a work-in-progress GUI application framework written for and in Rust.
 use component::ComponentData;
 use crossterm::{
     event::{self, DisableMouseCapture, KeyCode, KeyEventKind},
