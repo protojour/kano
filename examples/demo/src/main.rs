@@ -1,12 +1,12 @@
 #![allow(non_snake_case)]
 
 use kano::prelude::*;
-use kano_basic_components::*;
 use todo::{add_todo, delete_todo, Todo};
 
-mod todo;
-
 kano::define_platform!(AppPlatform, View);
+kano::platform_use!(kano_basic_components::*);
+
+mod todo;
 
 fn main() {
     AppPlatform::run_app(App).unwrap();

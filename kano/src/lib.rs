@@ -74,3 +74,14 @@ macro_rules! define_platform {
         impl<V: kano::View<kano_web::Web>> $view for V {}
     };
 }
+
+#[macro_export]
+macro_rules! platform_use {
+    ($lib:ident $($path:tt)*) => {
+        #[cfg(feature = "tui")]
+        use $lib::tui$($path)*;
+
+        #[cfg(feature = "web")]
+        use $lib::web$($path)*;
+    };
+}

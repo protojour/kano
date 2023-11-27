@@ -1,11 +1,5 @@
 #[cfg(feature = "tui")]
-mod tui;
-
-#[cfg(feature = "tui")]
-pub use tui::*;
+pub mod tui;
 
 #[cfg(feature = "web")]
-mod web;
-
-#[cfg(feature = "web")]
-pub use web::*;
+pub mod web;
