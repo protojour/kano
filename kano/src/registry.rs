@@ -1,86 +1,37 @@
 use std::any::Any;
 use std::cell::RefCell;
 use std::collections::{BTreeSet, HashMap, HashSet};
+use std::ops::AddAssign;
 use std::rc::Rc;
-use std::sync::atomic::{AtomicU64, Ordering};
 
-use crate::signal::{OnSignal, Signal};
+use crate::signal::Signal;
+use crate::view_id::ViewId;
 
-static NEXT_VIEW_ID: AtomicU64 = AtomicU64::new(0);
-
-/// A ViewId is assigned to views that do "smart things",
-///
-/// This includes Reactive views and other views that involves user-defined functions.
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
-pub struct ViewId(u64);
-
-impl ViewId {
-    pub(crate) fn alloc() -> Self {
-        Self(NEXT_VIEW_ID.fetch_add(1, Ordering::SeqCst))
-    }
-
-    /// Set the reactive id as current in a reactive operation,
-    /// and execute the given function, before resetting state to previous state again.
-    ///
-    /// Setting a reactive to the current one, enables
-    /// automatic subscription creation when a signal dependency is registered.
-    pub(crate) fn invoke_as_current_reactive_view<T>(self, func: impl FnOnce() -> T) -> T {
-        let (prev_reactive, prev_func) = REGISTRY.with_borrow_mut(|registry| {
-            // FIXME(?): Not backing up the signal position tracker.
-            // The hypothesis is that the view should not continue to create signals
-            // after it has drawn its children.
-            // FIXME: Make runtime assertion for this invariant
-            registry.current_func_view_signal_tracker = 0;
-
-            (
-                registry.current_reactive_view.replace(self),
-                registry.current_func_view.replace(self),
-            )
-        });
-
-        let value = func();
-
-        REGISTRY.with_borrow_mut(|registry| {
-            registry.current_reactive_view = prev_reactive;
-            registry.current_func_view = prev_func;
-        });
-
-        value
-    }
-
-    pub(crate) fn invoke_as_current_func_view<T>(self, func: impl FnOnce() -> T) -> T {
-        let prev_func = REGISTRY.with_borrow_mut(|registry| {
-            // FIXME(?): Not backing up the signal position tracker.
-            registry.current_func_view_signal_tracker = 0;
-
-            registry.current_func_view.replace(self)
-        });
-
-        let value = func();
-
-        REGISTRY.with_borrow_mut(|registry| {
-            registry.current_func_view = prev_func;
-        });
-
-        value
-    }
-}
+pub type ViewCallback = Rc<dyn Fn(ViewId) -> bool>;
 
 #[derive(Default)]
 pub(crate) struct Registry {
-    pub(crate) signal_sender: Option<futures::channel::mpsc::Sender<()>>,
-    pub(crate) pending_signals: HashSet<Signal>,
+    next_view_id: u64,
+    next_signal_id: u64,
 
-    pub(crate) reactive_callbacks: HashMap<ViewId, Rc<dyn OnSignal>>,
-    pub(crate) subscriptions_by_signal: HashMap<Signal, BTreeSet<ViewId>>,
-    pub(crate) subscriptions_by_view: HashMap<ViewId, BTreeSet<Signal>>,
+    pub signal_sender: Option<futures::channel::mpsc::Sender<()>>,
+    pub pending_signals: HashSet<Signal>,
 
-    pub(crate) current_reactive_view: Option<ViewId>,
-    pub(crate) current_func_view: Option<ViewId>,
-    pub(crate) current_func_view_signal_tracker: usize,
+    pub subscriptions_by_signal: HashMap<Signal, BTreeSet<ViewId>>,
+    pub subscriptions_by_view: HashMap<ViewId, BTreeSet<Signal>>,
 
-    pub(crate) owned_signals_ordered: HashMap<ViewId, Vec<Signal>>,
-    pub(crate) state_values: HashMap<Signal, Rc<RefCell<dyn Any>>>,
+    pub current_reactive_view: Option<ViewId>,
+    pub current_func_view: Option<ViewId>,
+    pub current_func_view_signal_tracker: usize,
+
+    pub reactive_entries: HashMap<ViewId, ReactiveEntry>,
+    pub owned_signals_ordered: HashMap<ViewId, Vec<Signal>>,
+    pub state_values: HashMap<Signal, Rc<RefCell<dyn Any>>>,
+}
+
+pub(crate) struct ReactiveEntry {
+    pub reactive_parent: Option<ViewId>,
+    pub callback: ViewCallback,
 }
 
 thread_local! {
@@ -88,8 +39,17 @@ thread_local! {
 }
 
 impl Registry {
+    #[cfg(test)]
+    pub fn reset(&mut self) {
+        *self = Self::default();
+    }
+
+    pub fn alloc_view_id(&mut self) -> ViewId {
+        ViewId(fetch_add(&mut self.next_view_id, 1))
+    }
+
     /// Returns true if reused
-    pub(crate) fn alloc_or_reuse_func_view_signal(&mut self) -> (Signal, bool) {
+    pub fn alloc_or_reuse_func_view_signal(&mut self) -> (Signal, bool) {
         let view_id = self
             .current_func_view
             .expect("There must be a Func view in scope");
@@ -104,9 +64,9 @@ impl Registry {
                 true,
             )
         } else {
-            let signal = Signal::alloc();
-            owned_signals_ordered.push(signal);
-            (signal, false)
+            let new_signal = Signal(fetch_add(&mut self.next_signal_id, 1));
+            owned_signals_ordered.push(new_signal);
+            (new_signal, false)
         };
 
         // Track the position
@@ -115,7 +75,7 @@ impl Registry {
         ret
     }
 
-    pub(crate) fn put_subscription(&mut self, signal: Signal, view_id: ViewId) {
+    pub fn put_subscription(&mut self, signal: Signal, view_id: ViewId) {
         self.subscriptions_by_signal
             .entry(signal)
             .or_default()
@@ -126,7 +86,23 @@ impl Registry {
             .insert(signal);
     }
 
-    pub(crate) fn on_view_dropped(&mut self, view_id: ViewId) {
+    pub fn add_reactive_view(&mut self, view_id: ViewId, callback: ViewCallback) {
+        let reactive_parent = self.current_reactive_view;
+
+        if let Some(reactive_parent) = reactive_parent {
+            debug_assert!(view_id > reactive_parent);
+        }
+
+        self.reactive_entries.insert(
+            view_id,
+            ReactiveEntry {
+                reactive_parent,
+                callback,
+            },
+        );
+    }
+
+    pub fn on_view_dropped(&mut self, view_id: ViewId) {
         if let Some(owned_signals) = self.owned_signals_ordered.remove(&view_id) {
             for signal in owned_signals {
                 self.on_signal_dropped(signal);
@@ -134,8 +110,8 @@ impl Registry {
         }
     }
 
-    pub(crate) fn on_reactive_dropped(&mut self, view_id: ViewId) {
-        self.reactive_callbacks.remove(&view_id);
+    pub fn on_reactive_dropped(&mut self, view_id: ViewId) {
+        self.reactive_entries.remove(&view_id);
 
         if let Some(signals) = self.subscriptions_by_view.remove(&view_id) {
             for signal in signals {
@@ -144,7 +120,7 @@ impl Registry {
         }
     }
 
-    pub(crate) fn on_signal_dropped(&mut self, signal: Signal) {
+    pub fn on_signal_dropped(&mut self, signal: Signal) {
         self.state_values.remove(&signal);
 
         if let Some(subscribers) = self.subscriptions_by_signal.remove(&signal) {
@@ -166,4 +142,10 @@ where
             from_map.remove(key);
         }
     }
+}
+
+fn fetch_add<T: Copy + AddAssign<T>>(value: &mut T, add: T) -> T {
+    let fetched = *value;
+    *value += add;
+    fetched
 }

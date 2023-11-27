@@ -41,9 +41,6 @@ Kano will use a reactivity architecture inspired by https://docs.rs/leptos_react
 It works by always evaluating subcribers from within Rust closures while a context is stored in a thread local.
 When the subscriber is read the first time, a reactive relationship is automatically registered between the reactive view and the subscriber (a "subscription").
 
-leptos-reactive also has a concept of a reactive dependency tree, where redudant updates get optimized out.
-Kano can implement something similar, but probably not in the first version.
-
 ## Templating language
 Let's use [audunhalland/hypp](https://github.com/audunhalland/hypp/blob/main/tests/compile_basic.rs) as inspiration.
 

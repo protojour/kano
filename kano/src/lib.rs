@@ -8,6 +8,7 @@ mod event;
 mod registry;
 mod signal;
 mod style;
+mod view_id;
 
 pub use event::*;
 pub use kano_macros::view;

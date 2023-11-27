@@ -1,6 +1,7 @@
 use crate::{
     platform::Platform,
-    registry::{ViewId, REGISTRY},
+    registry::{Registry, REGISTRY},
+    view_id::ViewId,
     Diff, View,
 };
 
@@ -11,14 +12,14 @@ impl<P: Platform, T: Diff<P>, F: (FnOnce() -> T) + 'static> Diff<P> for Func<F, 
 
     fn init(self, cursor: &mut P::Cursor) -> Self::State {
         let Func(func, ()) = self;
-        let view_id = ViewId::alloc();
-        let state = view_id.invoke_as_current_func_view(|| func().init(cursor));
+        let view_id = REGISTRY.with_borrow_mut(Registry::alloc_view_id);
+        let state = view_id.as_current_func(|| func().init(cursor));
         FuncState { state, view_id }
     }
 
     fn diff(self, state: &mut Self::State, cursor: &mut P::Cursor) {
         let Func(func, ()) = self;
-        state.view_id.invoke_as_current_func_view(|| {
+        state.view_id.as_current_func(|| {
             func().diff(&mut state.state, cursor);
         });
     }
@@ -33,14 +34,14 @@ macro_rules! tuples {
 
             fn init(self, cursor: &mut P::Cursor) -> Self::State {
                 let Func(func, args) = self;
-                let view_id = ViewId::alloc();
-                let state = view_id.invoke_as_current_func_view(|| func($(args.$i),+,).init(cursor));
+                let view_id = REGISTRY.with_borrow_mut(Registry::alloc_view_id);
+                let state = view_id.as_current_func(|| func($(args.$i),+,).init(cursor));
                 FuncState { state, view_id }
             }
 
             fn diff(self, state: &mut Self::State, cursor: &mut P::Cursor) {
                 let Func(func, args) = self;
-                state.view_id.invoke_as_current_func_view(|| {
+                state.view_id.as_current_func(|| {
                     func($(args.$i),+,).diff(&mut state.state, cursor);
                 });
             }

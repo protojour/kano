@@ -1,12 +1,9 @@
-use std::{
-    cell::RefCell,
-    rc::{Rc, Weak},
-};
+use std::{cell::RefCell, rc::Rc};
 
 use crate::{
     platform::{Cursor, Platform},
-    registry::{ViewId, REGISTRY},
-    signal::OnSignal,
+    registry::REGISTRY,
+    view_id::ViewId,
     Attr, Diff, View,
 };
 
@@ -35,7 +32,7 @@ impl<P: Platform, T: Diff<P> + 'static, F: (Fn() -> T) + 'static> Diff<P> for Re
         cursor.enter_diff();
         let new_state = state
             .view_id
-            .invoke_as_current_reactive_view(|| (self.0)().init(cursor));
+            .as_current_reactive(|| (self.0)().init(cursor));
         cursor.exit_diff();
 
         let mut data_cell = state.data_cell.borrow_mut();
@@ -59,24 +56,35 @@ impl<P: Platform, T: Diff<P> + 'static> ReactiveState<P, T> {
         update_func: impl Fn(Option<T::State>, &mut P::Cursor) -> T::State + 'static,
         cursor: &mut P::Cursor,
     ) -> Self {
-        let view_id = ViewId::alloc();
+        let (view_id, data_cell) = REGISTRY.with_borrow_mut(|registry| {
+            let view_id = registry.alloc_view_id();
 
-        // Initialize this to None..
-        let data_cell: Rc<RefCell<Option<Data<P, T>>>> = Rc::new(RefCell::new(None));
+            // Initialize this to None..
+            let data_cell: Rc<RefCell<Option<Data<P, T>>>> = Rc::new(RefCell::new(None));
 
-        // ..so we can make a weak reference to the cell
-        // for the reactive callback (it should not own the view).
-        REGISTRY.with_borrow_mut(|registry| {
-            registry.reactive_callbacks.insert(
+            // ..so we can make a weak reference to the cell
+            // for the reactive callback (it should not own the view).
+            let weak_data_cell = Rc::downgrade(&data_cell);
+
+            registry.add_reactive_view(
                 view_id,
-                Rc::new(UpdateCallback {
-                    weak_data_cell: Rc::downgrade(&data_cell),
+                Rc::new(move |view_id| {
+                    if let Some(strong_data_cell) = weak_data_cell.upgrade() {
+                        let mut data_borrow = strong_data_cell.borrow_mut();
+                        data_borrow.as_mut().unwrap().update(view_id);
+
+                        true
+                    } else {
+                        false
+                    }
                 }),
             );
+
+            (view_id, data_cell.clone())
         });
 
         // Perform the initial "hydration" while registering reactive subscriptions
-        let actual_state = view_id.invoke_as_current_reactive_view(|| update_func(None, cursor));
+        let actual_state = view_id.as_current_reactive(|| update_func(None, cursor));
 
         // Now all information is ready to store the data, including the cursor.
         *data_cell.borrow_mut() = Some(Data {
@@ -109,26 +117,9 @@ impl<P: Platform, T: Diff<P>> Data<P, T> {
     fn update(&mut self, view_id: ViewId) {
         let old_state = self.actual_state.take();
 
-        let new_state = view_id
-            .invoke_as_current_reactive_view(|| (self.update_func)(old_state, &mut self.cursor));
+        let new_state =
+            view_id.as_current_reactive(|| (self.update_func)(old_state, &mut self.cursor));
 
         self.actual_state = Some(new_state);
-    }
-}
-
-struct UpdateCallback<P: Platform, T: Diff<P>> {
-    weak_data_cell: Weak<RefCell<Option<Data<P, T>>>>,
-}
-
-impl<P: Platform, T: Diff<P> + 'static> OnSignal for UpdateCallback<P, T> {
-    fn on_signal(&self, view_id: ViewId) -> bool {
-        if let Some(strong_data_cell) = self.weak_data_cell.upgrade() {
-            let mut data_borrow = strong_data_cell.borrow_mut();
-            data_borrow.as_mut().unwrap().update(view_id);
-
-            true
-        } else {
-            false
-        }
     }
 }
