@@ -1,5 +1,12 @@
+use std::rc::Rc;
+
 use autostrata::Children;
-use ratatui::{layout::Rect, widgets::Paragraph, Frame};
+use ratatui::{
+    style::{Color, Modifier},
+    text::{Line, Span, Text},
+    widgets::{Block, Borders, Padding, Paragraph, Wrap},
+    Frame,
+};
 
 use crate::{
     node::{NodeKind, NodeRef},
@@ -8,18 +15,18 @@ use crate::{
 
 #[derive(Clone)]
 pub struct Component<C> {
-    pub kind: ComponentKind,
+    pub data: Rc<ComponentData>,
     pub children: C,
 }
 
 impl<C: Children<Tui>> autostrata::Diff<Tui> for Component<C> {
-    type State = (ComponentKind, C::State);
+    type State = (Rc<ComponentData>, C::State);
 
     fn init(self, cursor: &mut <Tui as autostrata::prelude::Platform>::Cursor) -> Self::State {
-        cursor.set_component(self.kind.clone());
+        cursor.set_component(self.data.clone());
         let children_state = self.children.init(cursor);
 
-        (self.kind, children_state)
+        (self.data, children_state)
     }
 
     fn diff(
@@ -34,31 +41,50 @@ impl<C: Children<Tui>> autostrata::Diff<Tui> for Component<C> {
 impl<C: Children<Tui>> autostrata::View<Tui> for Component<C> {}
 
 #[derive(Clone, Debug)]
-pub enum ComponentKind {
-    Layout,
-    Paragraph,
-    Button,
+pub struct ComponentData {
+    pub layout: Layout,
+    pub style: Style,
 }
 
-impl ComponentKind {
+#[derive(Clone, Debug)]
+pub enum Layout {
+    Block,
+    Paragraph,
+    Inline,
+}
+
+#[derive(Clone, Default, Debug)]
+pub struct Style {
+    pub modifier: Option<Modifier>,
+    pub fg: Option<Color>,
+    pub bg: Option<Color>,
+    pub prefix: Option<(&'static str, Box<Style>)>,
+    pub postfix: Option<(&'static str, Box<Style>)>,
+}
+
+impl ComponentData {
     pub fn render(&self, node: NodeRef, frame: &mut Frame, area: ratatui::prelude::Rect) {
-        let mut text = String::new();
-        all_text_under(node.clone(), &mut text);
+        let mut spans = vec![];
+        let mut lines = vec![];
 
-        match self {
-            Self::Layout => {
-                for (index, child) in all_children(node).into_iter().enumerate() {
-                    let area = Rect::new(0, index as u16, frame.size().width, 1);
+        collect_lines(node, &mut spans, &mut lines, Default::default());
 
-                    child.render(frame, area);
-                }
-            }
-            Self::Paragraph => {
-                let text = text_children(node);
-                frame.render_widget(Paragraph::new(text), area);
-            }
-            Self::Button => {}
+        if !spans.is_empty() {
+            lines.push(Line::from(spans));
         }
+
+        frame.render_widget(
+            Paragraph::new(Text::from(lines))
+                .wrap(Wrap { trim: true })
+                .block(
+                    Block::default()
+                        .title("AutoStrata TUI. Press q to quit.")
+                        .borders(Borders::ALL)
+                        .border_set(ratatui::symbols::border::DOUBLE)
+                        .padding(Padding::uniform(1)),
+                ),
+            area,
+        );
     }
 }
 
@@ -93,36 +119,60 @@ pub fn text_children(node: NodeRef) -> String {
     buf
 }
 
-pub fn all_text_under(node: NodeRef, buf: &mut String) {
-    let mut next_child = node.first_child();
-
-    while let Some(child) = next_child {
-        match &child.0.borrow().kind {
-            NodeKind::Empty => {}
-            NodeKind::Text(text) => {
-                buf.push_str(&text);
-            }
-            NodeKind::Component(_) => {
-                if let Some(first_child) = child.first_child() {
-                    all_text_under(first_child, buf);
+fn collect_lines<'a>(
+    node: NodeRef,
+    spans: &mut Vec<Span<'a>>,
+    lines: &mut Vec<Line<'a>>,
+    tui_style: ratatui::style::Style,
+) {
+    match &node.0.borrow().kind {
+        NodeKind::Empty => {}
+        NodeKind::Text(text) => {
+            spans.push(Span::styled(text.clone(), tui_style));
+        }
+        NodeKind::Component(data) => {
+            match &data.layout {
+                Layout::Block | Layout::Paragraph => {
+                    if !spans.is_empty() {
+                        lines.push(Line::from(std::mem::take(spans)));
+                    }
                 }
+                Layout::Inline => {}
+            }
+
+            if let Some((prefix, style)) = &data.style.prefix {
+                let mut tui_style = tui_style.clone();
+                apply_style(&mut tui_style, &style);
+                spans.push(Span::styled(*prefix, tui_style));
+            }
+
+            let mut sub_style = tui_style.clone();
+            apply_style(&mut sub_style, &data.style);
+
+            let mut next_child = node.first_child();
+
+            while let Some(child) = next_child {
+                collect_lines(child.clone(), spans, lines, sub_style);
+                next_child = child.next_sibling();
+            }
+
+            if let Some((postfix, style)) = &data.style.postfix {
+                let mut tui_style = tui_style.clone();
+                apply_style(&mut tui_style, &style);
+                spans.push(Span::styled(*postfix, tui_style));
             }
         }
-
-        next_child = child.next_sibling();
     }
 }
 
-pub fn count_nodes(node: NodeRef, out: &mut usize, dbg: &mut String) {
-    *out += 1;
-
-    dbg.push_str("N");
-
-    let mut next_child = node.first_child();
-
-    while let Some(child) = next_child {
-        dbg.push_str("C");
-        count_nodes(child.clone(), out, dbg);
-        next_child = child.next_sibling();
+fn apply_style(tui_style: &mut ratatui::style::Style, style: &Style) {
+    if let Some(modifier) = &style.modifier {
+        *tui_style = tui_style.add_modifier(*modifier);
+    }
+    if let Some(fg) = &style.fg {
+        *tui_style = tui_style.fg(*fg);
+    }
+    if let Some(bg) = &style.bg {
+        *tui_style = tui_style.bg(*bg);
     }
 }

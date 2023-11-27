@@ -1,5 +1,5 @@
 use autostrata::Diff;
-use component::ComponentKind;
+use component::ComponentData;
 use crossterm::{
     event::{self, DisableMouseCapture, KeyCode, KeyEventKind},
     terminal::{self, EnterAlternateScreen, LeaveAlternateScreen},
@@ -16,6 +16,8 @@ use std::{
 
 pub mod component;
 pub mod node;
+
+pub use ratatui;
 
 pub struct Tui;
 
@@ -120,7 +122,7 @@ impl TuiCursor {
         )
     }
 
-    fn set_component(&mut self, component: ComponentKind) {
+    fn set_component(&mut self, component: Rc<ComponentData>) {
         self.set_node(NodeKind::Component(component));
     }
 

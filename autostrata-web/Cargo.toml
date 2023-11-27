@@ -23,7 +23,7 @@ web-sys = { version = "0.3", features = [
     "HtmlElement",
     "Comment",
 ]}
-gloo = { version = "0.10", features = ["events"] }
+gloo = { version = "0.10", default-features = false, features = ["events"] }
 wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4"
 console_error_panic_hook = "0.1"
