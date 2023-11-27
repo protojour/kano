@@ -1,10 +1,10 @@
 # Kano
 
-Yet another experimental GUI framework. Work in progress.
+Yet another experimental, work-in-progress GUI application framework written for and in Rust.
 
-It's a fine-grained reactivity architecture inspired by https://github.com/gbj/tachys, which is probably going to be the next version of https://github.com/leptos-rs/leptos. It draws inspiration from https://github.com/linebender/xilem, but tweaked for fine-grained reactivity.
+It's a fine-grained reactivity architecture that is explicitly platform agnostic and _component-library-first_.
 
-It has a `Platform` abstraction, and is designed to work on lots of platforms.
+Kano elevates component libraries to act as the main platform abstraction.
 
 ## Hello world!
 ```rust
@@ -53,20 +53,10 @@ Kano will use a _much_ simpler desugaring than hypp, since the intermediate lang
 
 In this DSL, string literals are always `"quoted"`, so that language keywords are available without any escaping (.e.g. `if`, `for`, `match`).
 
-### Ideas
-```rust
-fn my_view() -> impl View {
-    let (things, things_mut) = use_state(vec![]);
+## Acknowledgements
+This project builds on a lot of ideas from great people.
 
-    view! {
-        <h2>
-            "My list of things"
-        </h2>
-        <ul>
-        for thing in things {
-            <li>{thing}</li>
-        }
-        </ul>
-    }
-}
-```
+* [leptos](https://github.com/leptos-rs/leptos)
+* [xilem](https://github.com/linebender/xilem)
+* [svelte](https://svelte.dev)
+* [hypp](https://github.com/audunhalland/hypp)

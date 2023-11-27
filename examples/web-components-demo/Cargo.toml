@@ -1,10 +1,9 @@
 [package]
 name = "web-components-demo"
-version = "0.1.0"
+version.workspace = true
+authors = ["Audun Halland <audun.halland@pm.me>"]
 edition = "2021"
 publish = false
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 kano.path = "../../kano"
