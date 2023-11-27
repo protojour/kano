@@ -1,10 +1,10 @@
 [workspace]
 members = [
-    "autostrata",
-    "autostrata-macros",
-    "autostrata-tui",
-    "autostrata-web",
-    "autostrata-basic-components",
+    "kano",
+    "kano-macros",
+    "kano-tui",
+    "kano-web",
+    "kano-basic-components",
     "examples/web-components-demo",
     "examples/demo",
 ]

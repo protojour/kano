@@ -1,5 +1,5 @@
 [package]
-name = "autostrata-web"
+name = "kano-web"
 version = "0.1.0"
 edition = "2021"
 
@@ -9,7 +9,7 @@ edition = "2021"
 web-component = []
 
 [dependencies]
-autostrata = { path = "../autostrata", features = ["web"] }
+kano = { path = "../kano", features = ["web"] }
 anyhow = "1"
 js-sys = "0.3"
 web-sys = { version = "0.3", features = [

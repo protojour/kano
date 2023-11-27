@@ -1,4 +1,4 @@
-use autostrata::{AttrSet, Children, Diff, View};
+use kano::{AttrSet, Children, Diff, View};
 
 use crate::{Web, WebCursor};
 

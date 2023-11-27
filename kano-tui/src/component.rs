@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use autostrata::Children;
+use kano::Children;
 use ratatui::{
     style::{Color, Modifier},
     text::{Line, Span, Text},
@@ -19,26 +19,22 @@ pub struct Component<C> {
     pub children: C,
 }
 
-impl<C: Children<Tui>> autostrata::Diff<Tui> for Component<C> {
+impl<C: Children<Tui>> kano::Diff<Tui> for Component<C> {
     type State = (Rc<ComponentData>, C::State);
 
-    fn init(self, cursor: &mut <Tui as autostrata::prelude::Platform>::Cursor) -> Self::State {
+    fn init(self, cursor: &mut <Tui as kano::prelude::Platform>::Cursor) -> Self::State {
         cursor.set_component(self.data.clone());
         let children_state = self.children.init(cursor);
 
         (self.data, children_state)
     }
 
-    fn diff(
-        self,
-        state: &mut Self::State,
-        cursor: &mut <Tui as autostrata::prelude::Platform>::Cursor,
-    ) {
+    fn diff(self, state: &mut Self::State, cursor: &mut <Tui as kano::prelude::Platform>::Cursor) {
         self.children.diff(&mut state.1, cursor);
     }
 }
 
-impl<C: Children<Tui>> autostrata::View<Tui> for Component<C> {}
+impl<C: Children<Tui>> kano::View<Tui> for Component<C> {}
 
 #[derive(Clone, Debug)]
 pub struct ComponentData {
@@ -78,7 +74,7 @@ impl ComponentData {
                 .wrap(Wrap { trim: true })
                 .block(
                     Block::default()
-                        .title("AutoStrata TUI. Press q to quit.")
+                        .title("Kano TUI. Press q to quit.")
                         .borders(Borders::ALL)
                         .border_set(ratatui::symbols::border::DOUBLE)
                         .padding(Padding::uniform(1)),

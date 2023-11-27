@@ -1,5 +1,5 @@
 [package]
-name = "autostrata-tui"
+name = "kano-tui"
 version = "0.1.0"
 edition = "2021"
 
@@ -9,7 +9,7 @@ edition = "2021"
 web-component = []
 
 [dependencies]
-autostrata = { path = "../autostrata", features = ["tui"] }
+kano = { path = "../kano", features = ["tui"] }
 anyhow = "1"
 crossterm = "0.27.0"
 ratatui = "0.24.0"

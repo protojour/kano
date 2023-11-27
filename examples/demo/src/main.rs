@@ -1,12 +1,12 @@
 #![allow(non_snake_case)]
 
-use autostrata::prelude::*;
-use autostrata_basic_components::*;
+use kano::prelude::*;
+use kano_basic_components::*;
 use todo::{add_todo, delete_todo, Todo};
 
 mod todo;
 
-autostrata::define_platform!(AppPlatform, View);
+kano::define_platform!(AppPlatform, View);
 
 fn main() {
     AppPlatform::run_app(App).unwrap();

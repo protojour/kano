@@ -1,5 +1,5 @@
 [package]
-name = "autostrata"
+name = "kano"
 version = "0.1.0"
 edition = "2021"
 
@@ -10,7 +10,7 @@ tui = []
 web = ["wasm-bindgen", "wasm-bindgen-futures"]
 
 [dependencies]
-autostrata-macros.path = "../autostrata-macros"
+kano-macros.path = "../kano-macros"
 anyhow = "1"
 lazy_static = "1"
 futures = "0.3"

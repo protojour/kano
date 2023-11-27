@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
-use autostrata::{AttrSet, Children, View};
-use autostrata_tui::{
+use kano::{AttrSet, Children, View};
+use kano_tui::{
     component::{Component, ComponentData, Layout, Style},
     ratatui::style::{Color, Modifier},
     Tui,

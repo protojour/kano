@@ -1,5 +1,5 @@
-use autostrata::{AttrSet, Children, View};
-use autostrata_web::{html, Web};
+use kano::{AttrSet, Children, View};
+use kano_web::{html, Web};
 
 pub fn layout(_attrs: (), children: impl Children<Web>) -> impl View<Web> {
     html::div((), children)

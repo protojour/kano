@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 
 use crate::AppPlatform;
-use autostrata::platform::Platform;
+use kano::platform::Platform;
 
 #[derive(Clone, Debug)]
 

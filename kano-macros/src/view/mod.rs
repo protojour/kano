@@ -35,7 +35,7 @@ pub fn view(node: Node) -> TokenStream {
                     match attr.key {
                         AttrKey::On(event) => {
                             quote! {
-                                autostrata::On::#event({#value})
+                                kano::On::#event({#value})
                             }
                         }
                         AttrKey::Text(_) => todo!(),
@@ -69,7 +69,7 @@ pub fn view(node: Node) -> TokenStream {
         Node::TextExpr(expr) => {
             let span = expr.span();
             quote_spanned! {span=>
-                autostrata::view::Reactive(move || #expr)
+                kano::view::Reactive(move || #expr)
             }
         }
         Node::Component(component) => {
@@ -78,14 +78,14 @@ pub fn view(node: Node) -> TokenStream {
             match component.attrs {
                 ComponentAttrs::Positional(positional) => {
                     quote_spanned! {span=>
-                        autostrata::view::Reactive(move ||
-                            autostrata::view::Func(#type_path, (#(#positional),*,))
+                        kano::view::Reactive(move ||
+                            kano::view::Func(#type_path, (#(#positional),*,))
                         )
                     }
                 }
                 ComponentAttrs::KeyValue(_) => {
                     quote_spanned! {span=>
-                        autostrata::view::Func(#type_path, ())
+                        kano::view::Func(#type_path, ())
                     }
                 }
             }
@@ -98,17 +98,17 @@ pub fn view(node: Node) -> TokenStream {
                 let view = view(arm.node);
                 if index == 0 {
                     quote_spanned! {span=>
-                        #pat => autostrata::view::Either::Left(#view),
+                        #pat => kano::view::Either::Left(#view),
                     }
                 } else {
                     quote_spanned! {span=>
-                        #pat => autostrata::view::Either::Right(#view),
+                        #pat => kano::view::Either::Right(#view),
                     }
                 }
             });
 
             quote_spanned! {span=>
-                autostrata::view::Reactive(move || {
+                kano::view::Reactive(move || {
                     match #expr {
                         #(#arms)*
                     }
@@ -126,7 +126,7 @@ pub fn view(node: Node) -> TokenStream {
             let child = view(*repeating_node);
 
             quote_spanned! {span=>
-                autostrata::view::seq_map(#expression, move |#pat| {
+                kano::view::seq_map(#expression, move |#pat| {
                     #child
                 })
             }

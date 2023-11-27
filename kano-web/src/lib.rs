@@ -1,14 +1,14 @@
 #![allow(non_snake_case, non_upper_case_globals)]
 
 use anyhow::anyhow;
-use autostrata::platform::Platform;
 use gloo::events::EventListener;
 use js_sys::wasm_bindgen::*;
+use kano::platform::Platform;
 use wasm_bindgen::prelude::*;
 use web_sys::{window, Document};
 use web_sys::{Element, EventTarget};
 
-use autostrata::{Diff, Event, On, View};
+use kano::{Diff, Event, On, View};
 
 pub mod html;
 
@@ -38,7 +38,7 @@ impl Platform for Web {
         console_error_panic_hook::set_once();
 
         let mut cursor = WebCursor::Detached;
-        let state = autostrata::view::Func(func, ()).init(&mut cursor);
+        let state = kano::view::Func(func, ()).init(&mut cursor);
 
         let WebCursor::Node(node, _) = cursor else {
             return Err(anyhow!("No node rendered"));
@@ -133,7 +133,7 @@ impl WebCursor {
     }
 }
 
-impl autostrata::platform::Cursor for WebCursor {
+impl kano::platform::Cursor for WebCursor {
     type TextHandle = web_sys::Node;
     type EventHandle = gloo::events::EventListener;
 

@@ -1,10 +1,10 @@
-use autostrata::Diff;
 use component::ComponentData;
 use crossterm::{
     event::{self, DisableMouseCapture, KeyCode, KeyEventKind},
     terminal::{self, EnterAlternateScreen, LeaveAlternateScreen},
     ExecutableCommand,
 };
+use kano::Diff;
 use node::{new_node_id, Node, NodeKind, NodeRef};
 use ratatui::prelude::{CrosstermBackend, Terminal};
 use std::{
@@ -21,14 +21,12 @@ pub use ratatui;
 
 pub struct Tui;
 
-impl autostrata::platform::Platform for Tui {
+impl kano::platform::Platform for Tui {
     type Cursor = TuiCursor;
 
     fn log(_s: &str) {}
 
-    fn run_app<V: autostrata::View<Self>, F: (FnOnce() -> V) + 'static>(
-        func: F,
-    ) -> anyhow::Result<()> {
+    fn run_app<V: kano::View<Self>, F: (FnOnce() -> V) + 'static>(func: F) -> anyhow::Result<()> {
         stdout().execute(EnterAlternateScreen)?;
         terminal::enable_raw_mode()?;
 
@@ -42,7 +40,7 @@ impl autostrata::platform::Platform for Tui {
         terminal.clear()?;
 
         let (mut cursor, empty_root) = TuiCursor::new_root();
-        let state = autostrata::view::Func(func, ()).init(&mut cursor);
+        let state = kano::view::Func(func, ()).init(&mut cursor);
         std::mem::forget(state);
 
         let root_node = empty_root.first_child().unwrap();
@@ -177,7 +175,7 @@ impl TuiCursor {
     }
 }
 
-impl autostrata::platform::Cursor for TuiCursor {
+impl kano::platform::Cursor for TuiCursor {
     type TextHandle = NodeRef;
     type EventHandle = ();
 
@@ -212,7 +210,7 @@ impl autostrata::platform::Cursor for TuiCursor {
         }
     }
 
-    fn on_event(&mut self, _event: autostrata::On) -> () {}
+    fn on_event(&mut self, _event: kano::On) -> () {}
 
     fn enter_children(&mut self) {
         match &self.location {

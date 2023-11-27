@@ -1,7 +1,7 @@
 use std::sync::{Arc, Mutex};
 
-use autostrata::{Diff, View};
 use js_sys::Function;
+use kano::{Diff, View};
 use wasm_bindgen::closure::Closure;
 use wasm_bindgen::prelude::*;
 use web_sys::HtmlElement;

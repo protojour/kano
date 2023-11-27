@@ -6,14 +6,14 @@ publish = false
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [features]
-tui = ["autostrata-tui", "autostrata-basic-components/tui"]
-web = ["autostrata-web", "autostrata-basic-components/web"]
+tui = ["kano-tui", "kano-basic-components/tui"]
+web = ["kano-web", "kano-basic-components/web"]
 
 [dependencies]
-autostrata.path = "../../autostrata"
-autostrata-tui = { path = "../../autostrata-tui", optional = true }
-autostrata-web = { path = "../../autostrata-web", optional = true }
-autostrata-basic-components = { path = "../../autostrata-basic-components" }
+kano.path = "../../kano"
+kano-tui = { path = "../../kano-tui", optional = true }
+kano-web = { path = "../../kano-web", optional = true }
+kano-basic-components = { path = "../../kano-basic-components" }
 wasm-bindgen = "0.2"
 console_error_panic_hook = "0.1"
 js-sys = "0.3"

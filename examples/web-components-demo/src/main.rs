@@ -1,5 +1,5 @@
-use autostrata::{view, View};
-use autostrata_web::{
+use kano::{view, View};
+use kano_web::{
     html::*,
     web_component::{ComponentConfig, Shadow, WebComponent},
     Web,
@@ -11,7 +11,7 @@ fn test_comp() -> impl View<Web> {
     view! {
         <section>
             if hello {
-                <h1>"This is AutoStrata Web Component!"</h1>
+                <h1>"This is Kano Web Component!"</h1>
             }
             <button>
                 <slot />

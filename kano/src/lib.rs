@@ -9,10 +9,9 @@ mod signal;
 mod style;
 
 pub use event::*;
+pub use kano_macros::view;
 use platform::{Cursor, Platform};
 pub use style::*;
-
-pub use autostrata_macros::view;
 
 pub trait Diff<P: Platform> {
     type State;
@@ -53,24 +52,24 @@ macro_rules! define_platform {
     ($platform:ident, $view:ident) => {
         /// Type alias for the current platform.
         #[cfg(feature = "tui")]
-        pub type $platform = autostrata_tui::Tui;
+        pub type $platform = kano_tui::Tui;
 
         /// The concrete view trait for this application.
         #[cfg(feature = "tui")]
-        pub trait $view: autostrata::View<autostrata_tui::Tui> {}
+        pub trait $view: kano::View<kano_tui::Tui> {}
 
         #[cfg(feature = "tui")]
-        impl<V: autostrata::View<autostrata_tui::Tui>> $view for V {}
+        impl<V: kano::View<kano_tui::Tui>> $view for V {}
 
         /// Type alias for the current platform.
         #[cfg(feature = "web")]
-        pub type $platform = autostrata_web::Web;
+        pub type $platform = kano_web::Web;
 
         /// The concrete view trait for this application.
         #[cfg(feature = "web")]
-        pub trait $view: autostrata::View<autostrata_web::Web> {}
+        pub trait $view: kano::View<kano_web::Web> {}
 
         #[cfg(feature = "web")]
-        impl<V: autostrata::View<autostrata_web::Web>> $view for V {}
+        impl<V: kano::View<kano_web::Web>> $view for V {}
     };
 }
