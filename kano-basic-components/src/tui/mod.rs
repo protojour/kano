@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use kano::{AttrSet, Children, View};
+use kano::prelude::platform::*;
 use kano_tui::{
     component::{Component, ComponentData, Layout, Style},
     ratatui::style::{Color, Modifier},

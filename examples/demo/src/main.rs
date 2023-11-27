@@ -1,6 +1,6 @@
 #![allow(non_snake_case)]
 
-use kano::prelude::*;
+use kano::prelude::app::*;
 use todo::{add_todo, delete_todo, Todo};
 
 kano::define_platform!(AppPlatform, View);

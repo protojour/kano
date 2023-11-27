@@ -1,11 +1,6 @@
 use std::{marker::PhantomData, ops::Deref};
 
-use crate::{
-    log,
-    platform::Cursor,
-    prelude::{Platform, Ref},
-    Diff, View,
-};
+use crate::{log, platform::Cursor, platform::Platform, reactive::Ref, Diff, View};
 
 pub trait Map<F>: Sized {
     type Seq;

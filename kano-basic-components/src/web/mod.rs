@@ -1,4 +1,4 @@
-use kano::{AttrSet, Children, View};
+use kano::prelude::platform::*;
 use kano_web::{html, Web};
 
 pub fn layout(_attrs: (), children: impl Children<Web>) -> impl View<Web> {
