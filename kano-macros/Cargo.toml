@@ -2,6 +2,7 @@
 name = "kano-macros"
 version.workspace = true
 license = "MIT"
+description = "Procedural macros for the Kano framework."
 authors = ["Audun Halland <audun.halland@pm.me>"]
 edition = "2021"
 repository.workspace = true
@@ -10,6 +11,6 @@ repository.workspace = true
 proc-macro = true
 
 [dependencies]
-syn = { version = "2", features = ["full", "extra-traits"] }
+syn = { version = "2.0.39", features = ["full", "extra-traits"] }
 quote = "1"
 proc-macro2 = "1"

@@ -2,6 +2,8 @@
 name = "kano"
 version.workspace = true
 license = "MIT"
+description = "Kano is a graphical user interface framework which rethinks how cross-platform development works."
+keywords = ["kano", "ui", "gui"]
 authors = ["Audun Halland <audun.halland@pm.me>"]
 edition = "2021"
 repository.workspace = true
@@ -11,7 +13,7 @@ tui = []
 web = ["wasm-bindgen", "wasm-bindgen-futures"]
 
 [dependencies]
-kano-macros.path = "../kano-macros"
+kano-macros = { version = "0.0.1", path = "../kano-macros" }
 anyhow = "1"
 lazy_static = "1"
 futures = "0.3"

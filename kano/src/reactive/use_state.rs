@@ -134,7 +134,7 @@ impl<'a, T: 'static> Deref for RefBorrow<'a, T> {
     }
 }
 
-/// For direct use with [crate::view::Format].
+/// For direct use with [crate::view::Fmt].
 impl<T: Display + 'static> Display for State<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.signal.register_reactive_dependency();
