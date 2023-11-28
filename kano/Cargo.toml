@@ -13,5 +13,4 @@ repository.workspace = true
 [dependencies]
 kano-macros = { version = "0.0.1", path = "../kano-macros" }
 anyhow = "1"
-lazy_static = "1"
 futures = "0.3"
