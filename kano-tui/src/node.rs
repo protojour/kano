@@ -6,7 +6,7 @@ use std::{
 
 use ratatui::{widgets::Paragraph, Frame};
 
-use crate::component::ComponentData;
+use crate::{component::ComponentData, tui_state::TuiState};
 
 thread_local! {
     pub(crate) static NEXT_NODE_ID: RefCell<u64> = RefCell::new(0);
@@ -24,6 +24,7 @@ pub(crate) fn new_node_id() -> u64 {
 pub struct Node {
     pub id: u64,
     pub kind: NodeKind,
+    pub on_events: Vec<kano::On>,
     pub parent: Option<Weak<RefCell<Node>>>,
     pub first_child: Option<NodeRef>,
     pub next_sibling: Option<NodeRef>,
@@ -40,13 +41,15 @@ pub enum NodeKind {
 pub struct NodeRef(pub Rc<RefCell<Node>>);
 
 impl NodeRef {
-    pub fn render(self, frame: &mut Frame, area: ratatui::prelude::Rect) {
+    pub fn render(self, tui_state: &mut TuiState, frame: &mut Frame, area: ratatui::prelude::Rect) {
         let node = self.0.borrow();
         match &node.kind {
             NodeKind::Empty => {}
-            NodeKind::Text(text) => frame.render_widget(Paragraph::new(text.as_str()), area),
+            NodeKind::Text(text) => {
+                frame.render_widget(Paragraph::new(text.as_str()), area);
+            }
             NodeKind::Component(data) => {
-                data.render(self.clone(), frame, area);
+                data.render(self.clone(), tui_state, frame, area);
             }
         }
     }
@@ -76,6 +79,7 @@ impl NodeRef {
         let new_node = Rc::new(RefCell::new(Node {
             id: new_node_id(),
             kind,
+            on_events: vec![],
             parent: self_borrow.parent.clone(),
             first_child: None,
             next_sibling: self_borrow.next_sibling.clone(),

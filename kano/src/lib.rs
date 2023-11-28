@@ -49,6 +49,10 @@ mod web_util {
     }
 }
 
+pub fn dispatch_pending_signals() {
+    signal::dispatch_pending_signals();
+}
+
 #[macro_export]
 macro_rules! define_platform {
     ($platform:ident, $view:ident) => {

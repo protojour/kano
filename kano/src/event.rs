@@ -1,3 +1,5 @@
+use std::{fmt::Debug, rc::Rc};
+
 use crate::{
     platform::{Cursor, Platform},
     Attr, Diff,
@@ -9,9 +11,16 @@ pub enum Event {
     MouseOver,
 }
 
+#[derive(Clone)]
 pub struct On {
     event: Event,
-    func: Box<dyn Fn()>,
+    func: Rc<dyn Fn()>,
+}
+
+impl Debug for On {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("On").field("event", &self.event).finish()
+    }
 }
 
 impl On {
@@ -26,7 +35,7 @@ impl On {
     fn new(event: Event, func: impl Fn() + 'static) -> Self {
         Self {
             event,
-            func: Box::new(func),
+            func: Rc::new(func),
         }
     }
 

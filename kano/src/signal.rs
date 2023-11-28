@@ -79,6 +79,13 @@ fn broadcast(signals: HashSet<Signal>) {
     }
 }
 
+pub fn dispatch_pending_signals() {
+    let pending_signals =
+        REGISTRY.with_borrow_mut(|registry| std::mem::take(&mut registry.pending_signals));
+
+    broadcast(pending_signals);
+}
+
 fn get_signal_sender(registry: &mut Registry) -> futures::channel::mpsc::Sender<()> {
     if let Some(sender) = &registry.signal_sender {
         sender.clone()
@@ -90,11 +97,7 @@ fn get_signal_sender(registry: &mut Registry) -> futures::channel::mpsc::Sender<
             wasm_bindgen_futures::spawn_local(async move {
                 loop {
                     if let Some(()) = receiver.next().await {
-                        let pending_signals = REGISTRY.with_borrow_mut(|registry| {
-                            std::mem::take(&mut registry.pending_signals)
-                        });
-
-                        broadcast(pending_signals);
+                        dispatch_pending_signals();
                     } else {
                         panic!("signal connection lost");
                     }

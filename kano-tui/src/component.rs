@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use kano::{platform::Platform, Children};
+use kano::{platform::Platform, AttrSet, Children};
 use ratatui::{
     style::{Color, Modifier},
     text::{Line, Span, Text},
@@ -9,32 +9,42 @@ use ratatui::{
 };
 
 use crate::{
-    node::{NodeKind, NodeRef},
+    node::{Node, NodeKind, NodeRef},
+    tui_state::TuiState,
     Tui,
 };
 
 #[derive(Clone)]
-pub struct Component<C> {
+pub struct Component<A, C> {
     pub data: Rc<ComponentData>,
+    pub attrs: A,
     pub children: C,
 }
 
-impl<C: Children<Tui>> kano::Diff<Tui> for Component<C> {
-    type State = (Rc<ComponentData>, C::State);
+impl<A: AttrSet<Tui>, C: Children<Tui>> kano::Diff<Tui> for Component<A, C> {
+    type State = (Rc<ComponentData>, A::State, C::State);
 
     fn init(self, cursor: &mut <Tui as Platform>::Cursor) -> Self::State {
         cursor.set_component(self.data.clone());
+
+        cursor.enter_attrs();
+        let attr_state = self.attrs.init(cursor);
+        cursor.exit_attrs();
+
         let children_state = self.children.init(cursor);
 
-        (self.data, children_state)
+        (self.data, attr_state, children_state)
     }
 
     fn diff(self, state: &mut Self::State, cursor: &mut <Tui as Platform>::Cursor) {
-        self.children.diff(&mut state.1, cursor);
+        cursor.enter_attrs();
+        self.attrs.diff(&mut state.1, cursor);
+        cursor.exit_attrs();
+        self.children.diff(&mut state.2, cursor);
     }
 }
 
-impl<C: Children<Tui>> kano::View<Tui> for Component<C> {}
+impl<A: AttrSet<Tui>, C: Children<Tui>> kano::View<Tui> for Component<A, C> {}
 
 #[derive(Clone, Debug)]
 pub struct ComponentData {
@@ -49,28 +59,68 @@ pub enum Layout {
     Inline,
 }
 
+#[derive(Clone, Copy)]
+pub enum StyleState {
+    Normal,
+    Focused,
+}
+
 #[derive(Clone, Default, Debug)]
 pub struct Style {
-    pub modifier: Option<Modifier>,
-    pub fg: Option<Color>,
-    pub bg: Option<Color>,
+    pub modifier: Option<StateKeyed<Modifier>>,
+    pub fg: Option<StateKeyed<Color>>,
+    pub bg: Option<StateKeyed<Color>>,
     pub prefix: Option<(&'static str, Box<Style>)>,
     pub postfix: Option<(&'static str, Box<Style>)>,
 }
 
+#[derive(Clone, Debug)]
+pub struct StateKeyed<T> {
+    pub normal: T,
+    pub focused: T,
+}
+
+impl<T> StateKeyed<T> {
+    pub fn uniform(value: T) -> Self
+    where
+        T: Clone,
+    {
+        Self {
+            normal: value.clone(),
+            focused: value,
+        }
+    }
+
+    pub fn for_state(&self, state: StyleState) -> &T {
+        match state {
+            StyleState::Normal => &self.normal,
+            StyleState::Focused => &self.focused,
+        }
+    }
+}
+
 impl ComponentData {
-    pub fn render(&self, node: NodeRef, frame: &mut Frame, area: ratatui::prelude::Rect) {
-        let mut spans = vec![];
-        let mut lines = vec![];
+    pub fn render(
+        &self,
+        node: NodeRef,
+        tui_state: &mut TuiState,
+        frame: &mut Frame,
+        area: ratatui::prelude::Rect,
+    ) {
+        let mut collector = Collector {
+            spans: vec![],
+            lines: vec![],
+            tui_state,
+            style_state: StyleState::Normal,
+        };
+        collector.collect_lines(node, Default::default());
 
-        collect_lines(node, &mut spans, &mut lines, Default::default());
-
-        if !spans.is_empty() {
-            lines.push(Line::from(spans));
+        if !collector.spans.is_empty() {
+            collector.lines.push(Line::from(collector.spans));
         }
 
         frame.render_widget(
-            Paragraph::new(Text::from(lines))
+            Paragraph::new(Text::from(collector.lines))
                 .wrap(Wrap { trim: true })
                 .block(
                     Block::default()
@@ -115,60 +165,88 @@ pub fn text_children(node: NodeRef) -> String {
     buf
 }
 
-fn collect_lines<'a>(
-    node: NodeRef,
-    spans: &mut Vec<Span<'a>>,
-    lines: &mut Vec<Line<'a>>,
-    tui_style: ratatui::style::Style,
-) {
-    match &node.0.borrow().kind {
-        NodeKind::Empty => {}
-        NodeKind::Text(text) => {
-            spans.push(Span::styled(text.clone(), tui_style));
-        }
-        NodeKind::Component(data) => {
-            match &data.layout {
-                Layout::Block | Layout::Paragraph => {
-                    if !spans.is_empty() {
-                        lines.push(Line::from(std::mem::take(spans)));
+struct Collector<'t, 's> {
+    spans: Vec<Span<'t>>,
+    lines: Vec<Line<'t>>,
+    tui_state: &'s mut TuiState,
+    style_state: StyleState,
+}
+
+impl<'t, 's> Collector<'t, 's> {
+    fn collect_lines(&mut self, node: NodeRef, tui_style: ratatui::style::Style) {
+        let node_borrow = node.0.borrow();
+
+        match &node_borrow.kind {
+            NodeKind::Empty => {}
+            NodeKind::Text(text) => {
+                self.spans.push(Span::styled(text.clone(), tui_style));
+            }
+            NodeKind::Component(data) => {
+                match &data.layout {
+                    Layout::Block | Layout::Paragraph => {
+                        if !self.spans.is_empty() {
+                            self.lines.push(Line::from(std::mem::take(&mut self.spans)));
+                        }
                     }
+                    Layout::Inline => {}
                 }
-                Layout::Inline => {}
-            }
 
-            if let Some((prefix, style)) = &data.style.prefix {
-                let mut tui_style = tui_style.clone();
-                apply_style(&mut tui_style, &style);
-                spans.push(Span::styled(*prefix, tui_style));
-            }
+                let mut unfocus = false;
+                if let Some(click_handler) = find_click_handler(&node_borrow) {
+                    if self.tui_state.focusable_counter == self.tui_state.currently_focused {
+                        self.tui_state.focused_event_handler = Some(click_handler);
+                        self.style_state = StyleState::Focused;
+                        unfocus = true;
+                    }
 
-            let mut sub_style = tui_style.clone();
-            apply_style(&mut sub_style, &data.style);
+                    self.tui_state.focusable_counter += 1;
+                }
 
-            let mut next_child = node.first_child();
+                if let Some((prefix, style)) = &data.style.prefix {
+                    let mut tui_style = tui_style.clone();
+                    apply_style(&mut tui_style, &style, self.style_state);
+                    self.spans.push(Span::styled(*prefix, tui_style));
+                }
 
-            while let Some(child) = next_child {
-                collect_lines(child.clone(), spans, lines, sub_style);
-                next_child = child.next_sibling();
-            }
+                let mut sub_style = tui_style.clone();
+                apply_style(&mut sub_style, &data.style, self.style_state);
 
-            if let Some((postfix, style)) = &data.style.postfix {
-                let mut tui_style = tui_style.clone();
-                apply_style(&mut tui_style, &style);
-                spans.push(Span::styled(*postfix, tui_style));
+                let mut next_child = node.first_child();
+
+                while let Some(child) = next_child {
+                    self.collect_lines(child.clone(), sub_style);
+                    next_child = child.next_sibling();
+                }
+
+                if let Some((postfix, style)) = &data.style.postfix {
+                    let mut tui_style = tui_style.clone();
+                    apply_style(&mut tui_style, &style, self.style_state);
+                    self.spans.push(Span::styled(*postfix, tui_style));
+                }
+
+                if unfocus {
+                    self.style_state = StyleState::Normal;
+                }
             }
         }
     }
 }
 
-fn apply_style(tui_style: &mut ratatui::style::Style, style: &Style) {
+fn apply_style(tui_style: &mut ratatui::style::Style, style: &Style, state: StyleState) {
     if let Some(modifier) = &style.modifier {
-        *tui_style = tui_style.add_modifier(*modifier);
+        *tui_style = tui_style.add_modifier(*modifier.for_state(state));
     }
     if let Some(fg) = &style.fg {
-        *tui_style = tui_style.fg(*fg);
+        *tui_style = tui_style.fg(*fg.for_state(state));
     }
     if let Some(bg) = &style.bg {
-        *tui_style = tui_style.bg(*bg);
+        *tui_style = tui_style.bg(*bg.for_state(state));
     }
+}
+
+fn find_click_handler(node: &Node) -> Option<kano::On> {
+    node.on_events
+        .iter()
+        .find(|on_event| on_event.event() == &kano::Event::Click)
+        .cloned()
 }
