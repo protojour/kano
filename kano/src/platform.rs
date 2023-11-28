@@ -38,3 +38,42 @@ pub trait Cursor: Clone + Debug {
 
     fn replace(&mut self, func: impl FnOnce(&mut Self));
 }
+
+#[cfg(test)]
+pub(crate) mod test_platform {
+    use super::Cursor;
+
+    pub struct TestPlatform;
+
+    impl super::Platform for TestPlatform {
+        type Cursor = ();
+
+        fn run_app<V: crate::View<Self>, F: (FnOnce() -> V) + 'static>(
+            _func: F,
+        ) -> anyhow::Result<()> {
+            Ok(())
+        }
+
+        fn log(_s: &str) {}
+
+        fn spawn_task(_task: impl std::future::Future<Output = ()> + 'static) {}
+    }
+
+    impl Cursor for () {
+        type TextHandle = ();
+        type EventHandle = ();
+
+        fn from_text_handle(_handle: &Self::TextHandle) -> Self {}
+        fn empty(&mut self) {}
+        fn text(&mut self, _text: &str) -> Self::TextHandle {}
+        fn update_text(&mut self, _text: &str) {}
+        fn on_event(&mut self, _event: crate::On) -> Self::EventHandle {}
+        fn enter_children(&mut self) {}
+        fn exit_children(&mut self) {}
+        fn next_sibling(&mut self) {}
+        fn remove(&mut self) {}
+        fn enter_diff(&mut self) {}
+        fn exit_diff(&mut self) {}
+        fn replace(&mut self, _func: impl FnOnce(&mut Self)) {}
+    }
+}

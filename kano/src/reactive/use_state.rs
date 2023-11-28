@@ -146,3 +146,14 @@ impl<T: Display + 'static> Display for State<T> {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::use_state;
+
+    #[test]
+    #[should_panic = "state should not be used outside the view hierarchy!"]
+    fn use_state_outside_view() {
+        use_state(|| 666);
+    }
+}

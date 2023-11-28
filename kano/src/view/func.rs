@@ -79,3 +79,46 @@ impl<P: Platform, T: Diff<P>> Drop for FuncState<P, T> {
         });
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        platform::test_platform::TestPlatform,
+        prelude::platform::use_state,
+        registry::{Registry, REGISTRY},
+        Diff,
+    };
+
+    use super::Func;
+
+    #[test]
+    fn state_gc() {
+        REGISTRY.with_borrow_mut(Registry::reset);
+
+        let func_state = <Func<_, _> as Diff<TestPlatform>>::init(
+            Func(
+                || {
+                    use_state(|| 42);
+                    use_state(|| 42);
+                },
+                (),
+            ),
+            &mut (),
+        );
+
+        REGISTRY.with_borrow(|registry| {
+            let (_view_id, signals) = registry.owned_signals_ordered.iter().next().unwrap();
+
+            assert_eq!(registry.owned_signals_ordered.len(), 1);
+            assert_eq!(signals.len(), 2);
+            assert_eq!(registry.state_values.len(), 2);
+        });
+
+        drop(func_state);
+
+        REGISTRY.with_borrow(|registry| {
+            assert!(registry.owned_signals_ordered.is_empty());
+            assert!(registry.state_values.is_empty());
+        });
+    }
+}

@@ -39,11 +39,6 @@ thread_local! {
 }
 
 impl Registry {
-    #[cfg(test)]
-    pub fn reset(&mut self) {
-        *self = Self::default();
-    }
-
     pub fn alloc_view_id(&mut self) -> ViewId {
         ViewId(fetch_add(&mut self.next_view_id, 1))
     }
@@ -52,7 +47,7 @@ impl Registry {
     pub fn alloc_or_reuse_func_view_signal(&mut self) -> (Signal, bool) {
         let view_id = self
             .current_func_view
-            .expect("There must be a Func view in scope");
+            .expect("state should not be used outside the view hierarchy!");
 
         let owned_signals_ordered = self.owned_signals_ordered.entry(view_id).or_default();
 
@@ -128,6 +123,17 @@ impl Registry {
                 remove_set_entry(&mut self.subscriptions_by_view, &view_id, &signal);
             }
         }
+    }
+}
+
+#[cfg(test)]
+impl Registry {
+    pub fn reset(&mut self) {
+        *self = Self::default();
+    }
+
+    pub fn peek_next_signal_id(&self) -> u64 {
+        self.next_signal_id
     }
 }
 
