@@ -14,7 +14,9 @@ pub(crate) struct Registry {
     next_view_id: u64,
     next_signal_id: u64,
 
-    pub signal_sender: Option<futures::channel::mpsc::Sender<()>>,
+    pub logger: Option<Rc<dyn Fn(&str)>>,
+
+    pub platform_on_signal_tick: Option<Rc<dyn Fn()>>,
     pub pending_signals: HashSet<Signal>,
 
     pub subscriptions_by_signal: HashMap<Signal, BTreeSet<ViewId>>,

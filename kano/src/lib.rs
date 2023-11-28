@@ -10,10 +10,14 @@ mod signal;
 mod style;
 mod view_id;
 
+use std::marker::PhantomData;
+
 pub use event::*;
 pub use kano_macros::view;
-use platform::{Cursor, Platform};
+use platform::{Cursor, Platform, PlatformContext};
+use registry::REGISTRY;
 pub use style::*;
+use view::Func;
 
 pub trait Diff<P: Platform> {
     type State;
@@ -31,26 +35,40 @@ pub trait AttrSet<P: Platform>: Diff<P> {}
 
 pub trait Attr<P: Platform>: Diff<P> {}
 
-pub fn log(s: &str) {
-    #[cfg(feature = "web")]
-    web_util::log(s);
+pub struct Init<P> {
+    platform: PhantomData<P>,
+    context: PlatformContext,
 }
 
-#[cfg(feature = "web")]
-mod web_util {
-    use wasm_bindgen::prelude::*;
+pub fn init<P: Platform>() -> Init<P> {
+    let context = P::init(Box::new(|| signal::dispatch_pending_signals()));
+    let on_signal_tick = context.on_signal_tick.clone();
+    let logger = context.logger.clone();
 
-    #[wasm_bindgen]
-    extern "C" {
-        // Use `js_namespace` here to bind `console.log(..)` instead of just
-        // `log(..)`
-        #[wasm_bindgen(js_namespace = console)]
-        pub fn log(s: &str);
+    REGISTRY.with_borrow_mut(move |registry| {
+        registry.platform_on_signal_tick = Some(on_signal_tick);
+        registry.logger = Some(logger);
+    });
+
+    Init {
+        platform: PhantomData,
+        context,
     }
 }
 
-pub fn dispatch_pending_signals() {
-    signal::dispatch_pending_signals();
+impl<P: Platform> Init<P> {
+    pub fn run_app<V>(self, func: impl (FnOnce() -> V) + 'static) -> anyhow::Result<()>
+    where
+        V: View<P> + 'static,
+    {
+        P::run(Func(func, ()), self.context)
+    }
+}
+
+pub fn log(s: &str) {
+    if let Some(logger) = REGISTRY.with_borrow(|registry| registry.logger.clone()) {
+        logger(s)
+    }
 }
 
 #[macro_export]

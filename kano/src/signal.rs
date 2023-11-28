@@ -1,8 +1,6 @@
 use std::collections::{BTreeSet, HashMap, HashSet};
 
-use futures::{SinkExt, StreamExt};
-
-use crate::registry::{Registry, ViewCallback, REGISTRY};
+use crate::registry::{ViewCallback, REGISTRY};
 use crate::view_id::ViewId;
 
 /// The Id of a signal
@@ -12,18 +10,19 @@ pub struct Signal(pub(crate) u64);
 impl Signal {
     /// Send the signal
     pub(crate) fn send(self) {
-        REGISTRY.with_borrow_mut(|registry| {
+        let tick_fn = REGISTRY.with_borrow_mut(|registry| {
             if registry.pending_signals.is_empty() {
-                let mut sender = get_signal_sender(registry);
-
-                #[cfg(feature = "web")]
-                wasm_bindgen_futures::spawn_local(async move {
-                    sender.send(()).await.unwrap();
-                });
+                registry.pending_signals.insert(self);
+                registry.platform_on_signal_tick.clone()
+            } else {
+                registry.pending_signals.insert(self);
+                None
             }
+        });
 
-            registry.pending_signals.insert(self);
-        })
+        if let Some(tick_fn) = tick_fn {
+            tick_fn();
+        }
     }
 
     /// register a dependency upon a signal.
@@ -36,6 +35,13 @@ impl Signal {
             }
         });
     }
+}
+
+pub(crate) fn dispatch_pending_signals() {
+    let pending_signals =
+        REGISTRY.with_borrow_mut(|registry| std::mem::take(&mut registry.pending_signals));
+
+    broadcast(pending_signals);
 }
 
 /// Broadcast the set of signals to all subscribers.
@@ -79,40 +85,11 @@ fn broadcast(signals: HashSet<Signal>) {
     }
 }
 
-pub fn dispatch_pending_signals() {
-    let pending_signals =
-        REGISTRY.with_borrow_mut(|registry| std::mem::take(&mut registry.pending_signals));
-
-    broadcast(pending_signals);
-}
-
-fn get_signal_sender(registry: &mut Registry) -> futures::channel::mpsc::Sender<()> {
-    if let Some(sender) = &registry.signal_sender {
-        sender.clone()
-    } else {
-        let (sender, mut receiver) = futures::channel::mpsc::channel::<()>(1);
-
-        #[cfg(feature = "web")]
-        {
-            wasm_bindgen_futures::spawn_local(async move {
-                loop {
-                    if let Some(()) = receiver.next().await {
-                        dispatch_pending_signals();
-                    } else {
-                        panic!("signal connection lost");
-                    }
-                }
-            });
-        }
-
-        registry.signal_sender = Some(sender.clone());
-        sender
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use std::{cell::RefCell, rc::Rc};
+
+    use crate::registry::Registry;
 
     use super::*;
 

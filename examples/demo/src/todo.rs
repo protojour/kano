@@ -1,8 +1,5 @@
 use std::cell::RefCell;
 
-use crate::AppPlatform;
-use kano::platform::Platform;
-
 #[derive(Clone, Debug)]
 
 pub struct Todo {
@@ -25,7 +22,7 @@ pub fn add_todo(todos: &mut Vec<Todo>, text: Option<String>) {
 }
 
 pub fn delete_todo(todos: &mut Vec<Todo>, id: usize) {
-    AppPlatform::log(&format!("Deleting todo {id}"));
+    kano::log(&format!("Deleting todo {id}"));
     todos.retain(|todo| todo.id != id);
-    AppPlatform::log(&format!("list now: {todos:?}"));
+    kano::log(&format!("list now: {todos:?}"));
 }

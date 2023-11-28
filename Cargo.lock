@@ -269,8 +269,6 @@ dependencies = [
  "futures",
  "kano-macros",
  "lazy_static",
- "wasm-bindgen",
- "wasm-bindgen-futures",
 ]
 
 [[package]]
@@ -307,6 +305,7 @@ version = "0.0.1"
 dependencies = [
  "anyhow",
  "console_error_panic_hook",
+ "futures",
  "gloo",
  "js-sys",
  "kano",

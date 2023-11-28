@@ -9,7 +9,7 @@ kano::platform_use!(kano_basic_components::*);
 mod todo;
 
 fn main() {
-    AppPlatform::run_app(App).unwrap();
+    kano::init::<AppPlatform>().run_app(App).unwrap();
 }
 
 fn App() -> impl View {

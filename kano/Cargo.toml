@@ -9,13 +9,9 @@ edition = "2021"
 repository.workspace = true
 
 [features]
-tui = []
-web = ["wasm-bindgen", "wasm-bindgen-futures"]
 
 [dependencies]
 kano-macros = { version = "0.0.1", path = "../kano-macros" }
 anyhow = "1"
 lazy_static = "1"
 futures = "0.3"
-wasm-bindgen = { version = "0.2", optional = true }
-wasm-bindgen-futures = { version = "0.4", optional = true }

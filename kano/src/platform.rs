@@ -1,17 +1,26 @@
-use std::fmt::Debug;
+use std::{fmt::Debug, rc::Rc};
 
 use crate::{On, View};
 
 pub trait Platform: Sized + 'static {
     type Cursor: Cursor;
 
-    /// Run an application on the platform.
-    /// This function _may_ block indefinitely, depending on the platform.
-    fn run_app<V: View<Self>, F: (FnOnce() -> V) + 'static>(func: F) -> anyhow::Result<()>;
+    fn init(signal_dispatch: Box<dyn Fn()>) -> PlatformContext;
 
-    fn log(s: &str);
+    /// This function _may_ block indefinitely, depending on the platform.
+    fn run(view: impl View<Self>, context: PlatformContext) -> anyhow::Result<()>;
 
     fn spawn_task(task: impl std::future::Future<Output = ()> + 'static);
+}
+
+pub struct PlatformContext {
+    /// A function that triggers synchronous signal dispatch propagation into the reactive Kano views.
+    pub signal_dispatch: Box<dyn Fn()>,
+    /// A callback function that Kano calls when there are pending signals to dispatch.
+    /// After this function is called, Kano expects an asynchronous call to its signal dispatcher.
+    pub on_signal_tick: Rc<dyn Fn()>,
+    /// A platform specific logging function.
+    pub logger: Rc<dyn Fn(&str)>,
 }
 
 /// A cursor used to traverse the UI tree on a given platform.
@@ -41,20 +50,28 @@ pub trait Cursor: Clone + Debug {
 
 #[cfg(test)]
 pub(crate) mod test_platform {
-    use super::Cursor;
+    use std::rc::Rc;
+
+    use crate::View;
+
+    use super::{Cursor, PlatformContext};
 
     pub struct TestPlatform;
 
     impl super::Platform for TestPlatform {
         type Cursor = ();
 
-        fn run_app<V: crate::View<Self>, F: (FnOnce() -> V) + 'static>(
-            _func: F,
-        ) -> anyhow::Result<()> {
-            Ok(())
+        fn init(signal_dispatch: Box<dyn Fn()>) -> PlatformContext {
+            PlatformContext {
+                on_signal_tick: Rc::new(|| {}),
+                signal_dispatch,
+                logger: Rc::new(|_| {}),
+            }
         }
 
-        fn log(_s: &str) {}
+        fn run(_view: impl View<Self>, _context: PlatformContext) -> anyhow::Result<()> {
+            Ok(())
+        }
 
         fn spawn_task(_task: impl std::future::Future<Output = ()> + 'static) {}
     }

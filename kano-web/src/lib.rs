@@ -1,15 +1,18 @@
 //! Kano is a work-in-progress GUI application framework written for and in Rust.
 #![allow(non_snake_case, non_upper_case_globals)]
 
+use std::rc::Rc;
+
 use anyhow::anyhow;
+use futures::{SinkExt, StreamExt};
 use gloo::events::EventListener;
 use js_sys::wasm_bindgen::*;
-use kano::platform::Platform;
+use kano::platform::{Platform, PlatformContext};
 use wasm_bindgen::prelude::*;
 use web_sys::{window, Document};
 use web_sys::{Element, EventTarget};
 
-use kano::{Diff, Event, On, View};
+use kano::{Event, On};
 
 pub mod html;
 
@@ -35,11 +38,37 @@ pub struct Web {}
 impl Platform for Web {
     type Cursor = WebCursor;
 
-    fn run_app<V: View<Self>, F: (FnOnce() -> V) + 'static>(func: F) -> anyhow::Result<()> {
+    fn init(signal_dispatch: Box<dyn Fn()>) -> PlatformContext {
         console_error_panic_hook::set_once();
 
+        let (dispatch_tx, mut dispatch_rx) = futures::channel::mpsc::channel::<()>(1);
+        wasm_bindgen_futures::spawn_local(async move {
+            loop {
+                if let Some(()) = dispatch_rx.next().await {
+                    signal_dispatch();
+                } else {
+                    panic!("signal connection lost");
+                }
+            }
+        });
+
+        PlatformContext {
+            on_signal_tick: Rc::new(move || {
+                let mut tx = dispatch_tx.clone();
+                wasm_bindgen_futures::spawn_local(async move {
+                    tx.send(()).await.unwrap();
+                });
+            }),
+            signal_dispatch: Box::new(|| {}),
+            logger: Rc::new(|s| {
+                js::log(s);
+            }),
+        }
+    }
+
+    fn run(view: impl kano::View<Self>, _context: PlatformContext) -> anyhow::Result<()> {
         let mut cursor = WebCursor::Detached;
-        let state = kano::view::Func(func, ()).init(&mut cursor);
+        let state = view.init(&mut cursor);
 
         let WebCursor::Node(node, _) = cursor else {
             return Err(anyhow!("No node rendered"));
@@ -54,10 +83,6 @@ impl Platform for Web {
         // Need to keep the initial state around, it keeps EventListeners alive
         std::mem::forget(state);
         Ok(())
-    }
-
-    fn log(s: &str) {
-        js::log(s);
     }
 
     fn spawn_task(task: impl std::future::Future<Output = ()> + 'static) {
@@ -178,14 +203,14 @@ impl kano::platform::Cursor for WebCursor {
     fn on_event(&mut self, on_event: On) -> EventListener {
         match self {
             WebCursor::AttrsOf(element, _mode) => {
-                Web::log("on_event");
+                kano::log("on_event");
                 let event_target: &EventTarget = element.dyn_ref().unwrap();
                 let event_type = match on_event.event() {
                     Event::Click => "click",
                     Event::MouseOver => "mouseover",
                 };
 
-                EventListener::new(&event_target, event_type, move |_| {
+                EventListener::new(event_target, event_type, move |_| {
                     on_event.invoke();
                 })
             }

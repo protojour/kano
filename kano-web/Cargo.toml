@@ -12,8 +12,9 @@ repository.workspace = true
 web-component = []
 
 [dependencies]
-kano = { version = "0.0.1", path = "../kano", features = ["web"] }
+kano = { version = "0.0.1", path = "../kano" }
 anyhow = "1"
+futures = "0.3"
 js-sys = "0.3"
 web-sys = { version = "0.3", features = [
     "Window",

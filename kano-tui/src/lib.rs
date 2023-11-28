@@ -5,11 +5,12 @@ use crossterm::{
     ExecutableCommand,
 };
 use cursor::TuiCursor;
-use kano::Diff;
+use kano::platform::PlatformContext;
 use ratatui::prelude::{CrosstermBackend, Terminal};
 use std::{
     io::{self, stdout},
     panic,
+    rc::Rc,
 };
 use tui_state::TuiState;
 
@@ -26,9 +27,15 @@ pub struct Tui;
 impl kano::platform::Platform for Tui {
     type Cursor = TuiCursor;
 
-    fn log(_s: &str) {}
+    fn init(signal_dispatch: Box<dyn Fn()>) -> PlatformContext {
+        PlatformContext {
+            on_signal_tick: Rc::new(|| {}),
+            signal_dispatch,
+            logger: Rc::new(|_| {}),
+        }
+    }
 
-    fn run_app<V: kano::View<Self>, F: (FnOnce() -> V) + 'static>(func: F) -> anyhow::Result<()> {
+    fn run(view: impl kano::View<Self>, context: PlatformContext) -> anyhow::Result<()> {
         stdout().execute(EnterAlternateScreen)?;
         terminal::enable_raw_mode()?;
 
@@ -42,7 +49,7 @@ impl kano::platform::Platform for Tui {
         terminal.clear()?;
 
         let (mut cursor, empty_root) = TuiCursor::new_root();
-        let state = kano::view::Func(func, ()).init(&mut cursor);
+        let state = view.init(&mut cursor);
         std::mem::forget(state);
 
         let root_node = empty_root.first_child().unwrap();
@@ -81,7 +88,7 @@ impl kano::platform::Platform for Tui {
                             KeyCode::Char(' ') | KeyCode::Enter => {
                                 if let Some(handler) = tui_state.focused_event_handler.take() {
                                     handler.invoke();
-                                    kano::dispatch_pending_signals();
+                                    (context.signal_dispatch)();
                                 }
                             }
                             _ => {}

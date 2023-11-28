@@ -57,7 +57,7 @@ impl<P: Platform, T: Display + 'static> Diff<P> for Fmt<T> {
         let mut string = String::new();
         write!(&mut string, "{}", self.0).unwrap();
 
-        P::log(&format!("Format diff new=`{string}` old=`{old}`"));
+        crate::log(&format!("Format diff new=`{string}` old=`{old}`"));
 
         if string != *old {
             let mut cursor = P::Cursor::from_text_handle(&handle);

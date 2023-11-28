@@ -8,7 +8,7 @@ Kano elevates component libraries to act as the main platform abstraction.
 
 ## Hello world!
 ```rust
-use kano::prelude::*;
+use kano::prelude::app::*;
 
 /// Two important definitions are generated here:
 /// `AppPlatform` is a type alias for the current platform.
@@ -16,7 +16,7 @@ use kano::prelude::*;
 kano::define_platform!(AppPlatform, View);
 
 fn main() {
-    AppPlatform::run_app(HelloWorld);
+    kano::init::<AppPlatform>().run_app(HelloWorld).unwrap();
 }
 
 fn HelloWorld() -> impl View {
