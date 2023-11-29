@@ -4,6 +4,9 @@ pub mod prelude;
 pub mod reactive;
 pub mod view;
 
+#[cfg(feature = "vdom")]
+pub mod vdom;
+
 mod event;
 mod registry;
 mod signal;
@@ -41,6 +44,7 @@ pub struct Init<P> {
 }
 
 thread_local! {
+    #[allow(clippy::type_complexity)]
     pub(crate) static LOGGER: RefCell<Rc<dyn Fn(&str)>> = RefCell::new(Rc::new(|_| {}));
 }
 

@@ -1,6 +1,10 @@
 use std::rc::Rc;
 
-use kano::{platform::Platform, AttrSet, Children};
+use kano::{
+    platform::Platform,
+    vdom::vnode::{VNode, VNodeRef},
+    AttrSet, Children,
+};
 use ratatui::{
     style::{Color, Modifier},
     text::{Line, Span, Text},
@@ -9,7 +13,7 @@ use ratatui::{
 };
 
 use crate::{
-    node::{Node, NodeKind, NodeRef},
+    node_data::{NodeData, NodeKind},
     tui_state::TuiState,
     Tui,
 };
@@ -102,7 +106,7 @@ impl<T> StateKeyed<T> {
 impl ComponentData {
     pub fn render(
         &self,
-        node: NodeRef,
+        node: VNodeRef<NodeData>,
         tui_state: &mut TuiState,
         frame: &mut Frame,
         area: ratatui::prelude::Rect,
@@ -134,7 +138,7 @@ impl ComponentData {
     }
 }
 
-pub fn all_children(node: NodeRef) -> Vec<NodeRef> {
+pub fn all_children(node: VNodeRef<NodeData>) -> Vec<VNodeRef<NodeData>> {
     let mut output = vec![];
     let mut next_child = node.first_child();
 
@@ -154,10 +158,10 @@ struct Collector<'t, 's> {
 }
 
 impl<'t, 's> Collector<'t, 's> {
-    fn collect_lines(&mut self, node: NodeRef, tui_style: ratatui::style::Style) {
+    fn collect_lines(&mut self, node: VNodeRef<NodeData>, tui_style: ratatui::style::Style) {
         let node_borrow = node.0.borrow();
 
-        match &node_borrow.kind {
+        match &node_borrow.data.kind {
             NodeKind::Empty => {}
             NodeKind::Text(text) => {
                 self.spans.push(Span::styled(text.clone(), tui_style));
@@ -225,8 +229,9 @@ fn apply_style(tui_style: &mut ratatui::style::Style, style: &Style, state: Styl
     }
 }
 
-fn find_click_handler(node: &Node) -> Option<kano::On> {
-    node.on_events
+fn find_click_handler(node: &VNode<NodeData>) -> Option<kano::On> {
+    node.data
+        .on_events
         .iter()
         .find(|on_event| on_event.event() == &kano::Event::Click)
         .cloned()

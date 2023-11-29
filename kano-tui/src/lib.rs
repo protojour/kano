@@ -4,22 +4,27 @@ use crossterm::{
     terminal::{self, EnterAlternateScreen, LeaveAlternateScreen},
     ExecutableCommand,
 };
-use cursor::TuiCursor;
-use kano::platform::PlatformContext;
-use ratatui::prelude::{CrosstermBackend, Terminal};
+use kano::{platform::PlatformContext, vdom::vnode::VNodeRef};
+use node_data::{NodeData, NodeKind};
+use ratatui::{
+    prelude::{CrosstermBackend, Terminal},
+    widgets::Paragraph,
+    Frame,
+};
 use std::{
     io::{self, stdout},
     panic,
     rc::Rc,
 };
+use tui_cursor::TuiCursor;
 use tui_state::TuiState;
 
 pub mod component;
-pub mod node;
+pub mod node_data;
 
 pub use ratatui;
 
-mod cursor;
+mod tui_cursor;
 mod tui_state;
 
 pub struct Tui;
@@ -65,7 +70,7 @@ impl kano::platform::Platform for Tui {
 
             terminal.draw(|frame| {
                 let area = frame.size();
-                root_node.clone().render(&mut tui_state, frame, area);
+                render_node(root_node.clone(), &mut tui_state, frame, area);
             })?;
 
             if event::poll(std::time::Duration::from_millis(16))? {
@@ -112,4 +117,22 @@ fn reset_terminal() -> anyhow::Result<()> {
     terminal::disable_raw_mode()?;
     crossterm::execute!(io::stderr(), LeaveAlternateScreen, DisableMouseCapture)?;
     Ok(())
+}
+
+pub fn render_node(
+    node: VNodeRef<NodeData>,
+    tui_state: &mut TuiState,
+    frame: &mut Frame,
+    area: ratatui::prelude::Rect,
+) {
+    let borrow = node.0.borrow();
+    match &borrow.data.kind {
+        NodeKind::Empty => {}
+        NodeKind::Text(text) => {
+            frame.render_widget(Paragraph::new(text.as_str()), area);
+        }
+        NodeKind::Component(data) => {
+            data.render(node.clone(), tui_state, frame, area);
+        }
+    }
 }

@@ -9,6 +9,8 @@ edition = "2021"
 repository.workspace = true
 
 [features]
+default = []
+vdom = []
 
 [dependencies]
 kano-macros = { version = "0.0.1", path = "../kano-macros" }
