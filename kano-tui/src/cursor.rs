@@ -13,7 +13,6 @@ pub struct TuiCursor {
 
 #[derive(Clone, Debug)]
 enum Location {
-    Detached,
     Node(NodeRef),
     EndOfChildren(NodeRef),
     Attrs(NodeRef),
@@ -26,13 +25,6 @@ enum Mode {
 }
 
 impl TuiCursor {
-    fn new_detached() -> Self {
-        Self {
-            location: Location::Detached,
-            mode: Mode::Append,
-        }
-    }
-
     pub fn new_root() -> (Self, NodeRef) {
         let root = NodeRef(Rc::new(RefCell::new(Node {
             id: new_node_id(),
@@ -57,18 +49,6 @@ impl TuiCursor {
 
     fn set_node(&mut self, kind: NodeKind) {
         match (&self.mode, &self.location) {
-            (Mode::Append, Location::Detached) => {
-                let node = Rc::new(RefCell::new(Node {
-                    id: new_node_id(),
-                    kind,
-                    on_events: vec![],
-                    parent: None,
-                    first_child: None,
-                    next_sibling: None,
-                }));
-
-                self.location = Location::Node(NodeRef(node));
-            }
             (Mode::Append, Location::Node(node)) => {
                 node.append_sibling(kind);
                 self.location = Location::Node(node.next_sibling().unwrap());
@@ -214,7 +194,6 @@ impl kano::platform::Cursor for TuiCursor {
                 self.location = Location::Node(parent.clone());
             }
             Location::Attrs(_) => {}
-            _ => panic!(),
         }
     }
 
@@ -231,7 +210,6 @@ impl kano::platform::Cursor for TuiCursor {
             }
             Location::EndOfChildren(_) => {}
             Location::Attrs(_) => {}
-            _ => panic!(),
         }
     }
 
@@ -275,13 +253,10 @@ impl kano::platform::Cursor for TuiCursor {
     }
 
     fn replace(&mut self, func: impl FnOnce(&mut Self)) {
-        let mut replacement_cursor = Self::new_detached();
+        let (mut replacement_cursor, root_ref) = Self::new_root();
         func(&mut replacement_cursor);
 
-        let Location::Node(node) = replacement_cursor.location else {
-            panic!();
-        };
-
+        let node = root_ref.first_child().unwrap();
         let kind = node.0.borrow().kind.clone();
 
         match &self.location {
