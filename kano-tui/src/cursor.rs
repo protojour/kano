@@ -53,6 +53,9 @@ impl TuiCursor {
                 node.append_sibling(kind);
                 self.location = Location::Node(node.next_sibling().unwrap());
             }
+            (Mode::Diff, Location::Node(node)) => {
+                node.0.borrow_mut().kind = kind;
+            }
             (Mode::Append, Location::EndOfChildren(parent)) => {
                 let node = Rc::new(RefCell::new(Node {
                     id: new_node_id(),
@@ -76,7 +79,6 @@ impl TuiCursor {
 
                 self.location = Location::Node(NodeRef(node));
             }
-            (Mode::Diff, Location::Node(_)) => {}
             (_, Location::Attrs(_)) => {}
             other => todo!("{other:?}"),
         }
