@@ -146,25 +146,6 @@ pub fn all_children(node: NodeRef) -> Vec<NodeRef> {
     output
 }
 
-pub fn text_children(node: NodeRef) -> String {
-    let mut buf = String::new();
-
-    let mut next_child = node.first_child();
-
-    while let Some(child) = next_child {
-        match &child.0.borrow().kind {
-            NodeKind::Text(text) => {
-                buf.push_str(&text);
-            }
-            _ => {}
-        }
-
-        next_child = child.next_sibling();
-    }
-
-    buf
-}
-
 struct Collector<'t, 's> {
     spans: Vec<Span<'t>>,
     lines: Vec<Line<'t>>,
@@ -203,12 +184,12 @@ impl<'t, 's> Collector<'t, 's> {
                 }
 
                 if let Some((prefix, style)) = &data.style.prefix {
-                    let mut tui_style = tui_style.clone();
-                    apply_style(&mut tui_style, &style, self.style_state);
-                    self.spans.push(Span::styled(*prefix, tui_style));
+                    let mut prefix_style = tui_style;
+                    apply_style(&mut prefix_style, style, self.style_state);
+                    self.spans.push(Span::styled(*prefix, prefix_style));
                 }
 
-                let mut sub_style = tui_style.clone();
+                let mut sub_style = tui_style;
                 apply_style(&mut sub_style, &data.style, self.style_state);
 
                 let mut next_child = node.first_child();
@@ -219,9 +200,9 @@ impl<'t, 's> Collector<'t, 's> {
                 }
 
                 if let Some((postfix, style)) = &data.style.postfix {
-                    let mut tui_style = tui_style.clone();
-                    apply_style(&mut tui_style, &style, self.style_state);
-                    self.spans.push(Span::styled(*postfix, tui_style));
+                    let mut postfix_style = tui_style;
+                    apply_style(&mut postfix_style, style, self.style_state);
+                    self.spans.push(Span::styled(*postfix, postfix_style));
                 }
 
                 if unfocus {

@@ -98,10 +98,7 @@ impl State<bool> {
 
 impl<T> Clone for State<T> {
     fn clone(&self) -> Self {
-        Self {
-            signal: self.signal,
-            phantom: PhantomData,
-        }
+        *self
     }
 }
 

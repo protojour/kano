@@ -47,13 +47,7 @@ impl<P: Platform, M, T: Diff<P>, F: Fn(M) -> T> Diff<P> for SeqMap<Vec<M>, F> {
     fn diff(self, state: &mut Self::State, cursor: &mut <P as Platform>::Cursor) {
         let SeqMap(model, func) = self;
 
-        Differ::<P>::apply_diff(
-            model.len(),
-            model.into_iter(),
-            state,
-            |model_element| func(model_element),
-            cursor,
-        );
+        Differ::<P>::apply_diff(model.len(), model.into_iter(), state, func, cursor);
     }
 }
 
@@ -121,13 +115,13 @@ impl<P: Platform> Differ<P> {
         }
 
         // Delete elements
-        while let Some(_) = state_iter.next() {
+        for _ in state_iter {
             cursor.remove();
         }
 
         // Append new items
-        while let Some(model_elem) = model_iter.next() {
-            log(&format!("Appending"));
+        for model_elem in model_iter {
+            log("Appending");
             state.push(func(model_elem).init(cursor));
         }
 

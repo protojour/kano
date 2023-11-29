@@ -87,7 +87,6 @@ pub fn button(attrs: impl AttrSet<Tui>, children: impl Children<Tui>) -> impl Vi
                         ..Default::default()
                     }),
                 )),
-                ..Default::default()
             },
         }),
         attrs,

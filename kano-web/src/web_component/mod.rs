@@ -1,4 +1,4 @@
-use std::sync::{Arc, Mutex};
+use std::{cell::RefCell, rc::Rc};
 
 use js_sys::Function;
 use kano::{Diff, View};
@@ -106,14 +106,13 @@ fn make_web_component_helper(
 
 fn js_constructor<D: WebComponent + 'static>(spec: &'static D) -> Closure<dyn FnMut(HtmlElement)> {
     Closure::wrap(Box::new(move |this: HtmlElement| {
-        let handle: Arc<Mutex<Option<ComponentHandle>>> = Arc::new(Mutex::new(None));
+        let handle: Rc<RefCell<Option<ComponentHandle>>> = Rc::new(RefCell::new(None));
 
         // hydrate
         let h = handle.clone();
         let constructor = Closure::wrap(Box::new({
             move |this, anchor| {
-                let mut lock = h.lock().unwrap_throw();
-                *lock = Some(spec.hydrate(&this, &anchor));
+                *h.borrow_mut() = Some(spec.hydrate(&this, &anchor));
             }
         }) as Box<dyn FnMut(HtmlElement, HtmlElement)>);
         js_sys::Reflect::set(

@@ -166,11 +166,8 @@ impl kano::platform::Cursor for TuiCursor {
         match &mut self.location {
             Location::Node(node) => {
                 let mut borrow = node.0.borrow_mut();
-                match &mut borrow.kind {
-                    NodeKind::Text(text) => {
-                        *text = new_text.into();
-                    }
-                    _ => {}
+                if let NodeKind::Text(text) = &mut borrow.kind {
+                    *text = new_text.into();
                 }
             }
             _ => panic!(),
@@ -180,7 +177,7 @@ impl kano::platform::Cursor for TuiCursor {
     fn on_event(&mut self, on_event: kano::On) -> TuiEventHandle {
         match &mut self.location {
             Location::Attrs(node) => {
-                let event = on_event.event().clone();
+                let event = *on_event.event();
                 {
                     let mut node_mut = node.0.borrow_mut();
                     node_mut.on_events.push(on_event);
@@ -188,7 +185,7 @@ impl kano::platform::Cursor for TuiCursor {
 
                 TuiEventHandle {
                     node: node.clone(),
-                    event: event,
+                    event,
                 }
             }
             other => panic!("{other:?}"),

@@ -12,7 +12,7 @@ impl<P: Platform> Diff<P> for &'static str {
 
     fn diff(self, (handle, old): &mut Self::State, _cursor: &mut P::Cursor) {
         if self != *old {
-            let mut cursor = P::Cursor::from_text_handle(&handle);
+            let mut cursor = P::Cursor::from_text_handle(handle);
             cursor.update_text(self);
             *old = self;
         }
@@ -30,7 +30,7 @@ impl<P: Platform> Diff<P> for String {
 
     fn diff(self, (handle, old): &mut Self::State, _cursor: &mut P::Cursor) {
         if self != *old {
-            let mut cursor = P::Cursor::from_text_handle(&handle);
+            let mut cursor = P::Cursor::from_text_handle(handle);
             cursor.update_text(self.as_str());
             *old = self;
         }
@@ -60,7 +60,7 @@ impl<P: Platform, T: Display + 'static> Diff<P> for Fmt<T> {
         crate::log(&format!("Format diff new=`{string}` old=`{old}`"));
 
         if string != *old {
-            let mut cursor = P::Cursor::from_text_handle(&handle);
+            let mut cursor = P::Cursor::from_text_handle(handle);
             cursor.update_text(&string);
             *old = string;
         }

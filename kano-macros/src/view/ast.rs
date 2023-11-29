@@ -187,7 +187,7 @@ impl Parser {
 
     fn parse_node(&self, input: ParseStream) -> syn::Result<Node> {
         if input.peek(syn::token::Lt) {
-            return Ok(self.parse_element_or_fragment(input)?);
+            return self.parse_element_or_fragment(input);
         }
 
         if let Ok(text) = input.parse::<Text>() {
@@ -236,7 +236,7 @@ impl Parser {
             input.parse::<syn::token::Slash>()?;
             input.parse::<syn::token::Gt>()?;
 
-            return Ok(self.element_or_component(tag_with_attrs, vec![])?);
+            return self.element_or_component(tag_with_attrs, vec![]);
         }
 
         input.parse::<syn::token::Gt>()?;
@@ -260,7 +260,7 @@ impl Parser {
         }
         input.parse::<syn::token::Gt>()?;
 
-        Ok(self.element_or_component(tag_with_attrs, children)?)
+        self.element_or_component(tag_with_attrs, children)
     }
 
     fn element_or_component(
@@ -339,7 +339,7 @@ impl Parser {
                 } else {
                     return Err(syn::Error::new(
                         input.span(),
-                        format!("Invalid attribute prefix"),
+                        "Invalid attribute prefix".to_string(),
                     ));
                 }
             } else {

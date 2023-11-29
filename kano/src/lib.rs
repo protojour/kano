@@ -41,7 +41,7 @@ pub struct Init<P> {
 }
 
 pub fn init<P: Platform>() -> Init<P> {
-    let context = P::init(Box::new(|| signal::dispatch_pending_signals()));
+    let context = P::init(Box::new(signal::dispatch_pending_signals));
     let on_signal_tick = context.on_signal_tick.clone();
     let logger = context.logger.clone();
 

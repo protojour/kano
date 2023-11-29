@@ -1,3 +1,5 @@
+#![allow(clippy::type_complexity)]
+
 use std::{
     cell::RefCell,
     rc::{Rc, Weak},
@@ -18,15 +20,16 @@ impl<P: Platform, T: Diff<P> + 'static, F: (Fn() -> T) + 'static> Diff<P> for Re
     type State = ReactiveState<P, T>;
 
     fn init(self, cursor: &mut P::Cursor) -> Self::State {
+        let func = self.0;
         mk_reactive_state(
-            move |prev_state, cursor| {
+            Box::new(move |prev_state, cursor| {
                 if let Some(mut state) = prev_state {
-                    (self.0)().diff(&mut state, cursor);
+                    func().diff(&mut state, cursor);
                     state
                 } else {
-                    (self.0)().init(cursor)
+                    func().init(cursor)
                 }
-            },
+            }),
             cursor,
         )
     }
@@ -70,7 +73,7 @@ impl<P: Platform, T: Diff<P>> Drop for ReactiveState<P, T> {
 }
 
 fn mk_reactive_state<P: Platform, T: Diff<P> + 'static>(
-    update_func: impl Fn(Option<T::State>, &mut P::Cursor) -> T::State + 'static,
+    update_func: Box<dyn Fn(Option<T::State>, &mut P::Cursor) -> T::State>,
     cursor: &mut P::Cursor,
 ) -> ReactiveState<P, T> {
     let (view_id, data_cell) = REGISTRY.with_borrow_mut(|registry| {
@@ -92,7 +95,7 @@ fn mk_reactive_state<P: Platform, T: Diff<P> + 'static>(
     // Now all information is ready to store the data, including the cursor.
     *data_cell.borrow_mut() = Some(Data {
         actual_state: Some(actual_state),
-        update_func: Box::new(update_func),
+        update_func,
         cursor: cursor.clone(),
     });
 

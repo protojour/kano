@@ -14,6 +14,7 @@ pub(crate) struct Registry {
     next_view_id: u64,
     next_signal_id: u64,
 
+    #[allow(clippy::type_complexity)]
     pub logger: Option<Rc<dyn Fn(&str)>>,
 
     pub platform_on_signal_tick: Option<Rc<dyn Fn()>>,

@@ -62,7 +62,7 @@ impl NodeRef {
         let parent = self.0.borrow().parent.clone();
         parent
             .map(|parent| parent.upgrade().expect("Parent garbage collected"))
-            .map(|rc| Self(rc))
+            .map(Self)
     }
 
     pub fn first_child(&self) -> Option<NodeRef> {
