@@ -10,7 +10,7 @@ mod signal;
 mod style;
 mod view_id;
 
-use std::marker::PhantomData;
+use std::{cell::RefCell, marker::PhantomData, rc::Rc};
 
 pub use event::*;
 pub use kano_macros::view;
@@ -40,14 +40,25 @@ pub struct Init<P> {
     context: PlatformContext,
 }
 
+thread_local! {
+    pub(crate) static LOGGER: RefCell<Rc<dyn Fn(&str)>> = RefCell::new(Rc::new(|_| {}));
+}
+
 pub fn init<P: Platform>() -> Init<P> {
     let context = P::init(Box::new(signal::dispatch_pending_signals));
-    let on_signal_tick = context.on_signal_tick.clone();
-    let logger = context.logger.clone();
 
-    REGISTRY.with_borrow_mut(move |registry| {
-        registry.platform_on_signal_tick = Some(on_signal_tick);
-        registry.logger = Some(logger);
+    LOGGER.with_borrow_mut({
+        let context_logger = context.logger.clone();
+        |logger| {
+            *logger = context_logger;
+        }
+    });
+
+    REGISTRY.with_borrow_mut({
+        let on_signal_tick = context.on_signal_tick.clone();
+        move |registry| {
+            registry.platform_on_signal_tick = Some(on_signal_tick);
+        }
     });
 
     Init {
@@ -66,9 +77,9 @@ impl<P: Platform> Init<P> {
 }
 
 pub fn log(s: &str) {
-    if let Some(logger) = REGISTRY.with_borrow(|registry| registry.logger.clone()) {
-        logger(s)
-    }
+    LOGGER.with_borrow(|logger| {
+        logger(s);
+    });
 }
 
 #[macro_export]
