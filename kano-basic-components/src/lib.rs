@@ -7,7 +7,7 @@ pub mod tui;
 pub mod web;
 
 /// Props for Kano Basic Components
-#[derive(kano::Attribute)]
-pub enum KBCProperty {
+#[derive(kano::FromProperty)]
+pub enum KBCAttributes {
     OnClick(kano::On<Click>),
 }

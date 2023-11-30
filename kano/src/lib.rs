@@ -17,12 +17,13 @@ use std::{cell::RefCell, convert::Infallible, marker::PhantomData, rc::Rc};
 
 pub use event::*;
 pub use kano_macros::view;
-pub use kano_macros::Attribute;
+pub use kano_macros::FromProperty;
 use platform::{Cursor, Platform, PlatformContext};
 use registry::REGISTRY;
 pub use style::*;
 use view::Func;
 
+/// Kano's core trait for view diffing.
 pub trait Diff<P: Platform> {
     type State;
 
@@ -31,41 +32,51 @@ pub trait Diff<P: Platform> {
     fn diff(self, state: &mut Self::State, cursor: &mut P::Cursor);
 }
 
+/// A marker trait for views.
 pub trait View<P: Platform>: Diff<P> {}
 
+/// A marker trait for the children of a view.
 pub trait Children<P: Platform>: Diff<P> {}
 
-pub trait Props<T> {
-    type Iterator<'a>: Iterator<Item = &'a mut Option<T>>
+/// The Props trait marks properties passed into a view function.
+///
+/// Props are instances a set of valid attributes, indicated by the generic parameter `A`.
+pub trait Props<A> {
+    type Iterator<'a>: Iterator<Item = &'a mut Option<A>>
     where
-        T: 'a,
+        A: 'a,
         Self: 'a;
 
     fn mut_iterator(&mut self) -> Self::Iterator<'_>;
 }
 
-pub trait Attribute<T> {
-    fn into_prop(self) -> Option<T>;
+/// A trait for attribute casting.
+///
+/// The trait expresses that some property of the attribte `A` can be converted into the attribute `Self`.
+pub trait FromProperty<A>: Sized {
+    fn from_property(property: A) -> Option<Self>;
 }
 
-/// A type used to signal that a type accepts no properties.
+/// An empty set of attributes.
+///
+/// # Example
 ///
 /// ```rust
 /// fn component(_props: impl Props<Empty>) {}
 /// ```
 pub type Empty = Infallible;
 
-impl<T, const N: usize> Props<T> for [Option<T>; N] {
-    type Iterator<'a> = core::slice::IterMut<'a, Option<T>> where T: 'a;
+impl<A, const N: usize> Props<A> for [Option<A>; N] {
+    type Iterator<'a> = core::slice::IterMut<'a, Option<A>> where A: 'a;
 
     fn mut_iterator(&mut self) -> Self::Iterator<'_> {
         self.iter_mut()
     }
 }
 
-impl<T, A: Attribute<T>> Attribute<T> for Option<A> {
-    fn into_prop(self) -> Option<T> {
-        self.and_then(A::into_prop)
+impl<A, B: FromProperty<A>> FromProperty<Option<A>> for B {
+    fn from_property(attr: Option<A>) -> Option<B> {
+        attr.and_then(Self::from_property)
     }
 }
 

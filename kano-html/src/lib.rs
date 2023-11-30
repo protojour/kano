@@ -3,6 +3,8 @@ mod tag;
 pub mod attr;
 pub mod properties;
 
+pub use tag::*;
+
 #[derive(Clone, Copy)]
 pub struct Element<T, C> {
     pub name: &'static str,
@@ -20,4 +22,8 @@ impl<T, C> Element<T, C> {
     }
 }
 
-pub use tag::*;
+#[derive(kano::FromProperty)]
+pub enum Attributes {
+    Attribute(properties::Property),
+    Event(kano::On<kano::Event>),
+}

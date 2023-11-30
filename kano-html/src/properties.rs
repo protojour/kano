@@ -1,39 +1,35 @@
-use kano::{Click, MouseOver};
+use kano::{Click, MouseOver, On};
 
 use std::borrow::Cow;
 
-#[derive(kano::Attribute)]
-pub enum HtmlProperties {
-    Attribute(HtmlProperty),
-    Event(kano::On<kano::Event>),
-}
+use crate::Attributes;
 
-impl kano::Attribute<HtmlProperties> for kano::On<Click> {
-    fn into_prop(self) -> Option<HtmlProperties> {
-        Some(HtmlProperties::Event(self.into()))
+impl kano::FromProperty<On<Click>> for Attributes {
+    fn from_property(property: On<Click>) -> Option<Self> {
+        Some(Self::Event(property.into()))
     }
 }
 
-impl kano::Attribute<HtmlProperties> for kano::On<MouseOver> {
-    fn into_prop(self) -> Option<HtmlProperties> {
-        Some(HtmlProperties::Event(self.into()))
+impl kano::FromProperty<On<MouseOver>> for Attributes {
+    fn from_property(property: On<MouseOver>) -> Option<Self> {
+        Some(Self::Event(property.into()))
     }
 }
 
 #[derive(PartialEq)]
-pub struct HtmlProperty {
+pub struct Property {
     pub idl_name: &'static str,
-    pub value: HtmlPropertyValue,
+    pub value: PropertyValue,
 }
 
-impl HtmlProperty {
-    pub const fn new(idl_name: &'static str, value: HtmlPropertyValue) -> Self {
+impl Property {
+    pub const fn new(idl_name: &'static str, value: PropertyValue) -> Self {
         Self { idl_name, value }
     }
 }
 
 #[derive(PartialEq)]
-pub enum HtmlPropertyValue {
+pub enum PropertyValue {
     String(Cow<'static, str>),
     CommaSep(Vec<Cow<'static, str>>),
     SpaceSep(Vec<Cow<'static, str>>),

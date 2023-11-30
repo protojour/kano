@@ -1,7 +1,7 @@
 use quote::{quote, quote_spanned};
 use syn::spanned::Spanned;
 
-pub fn attribute(input: syn::ItemEnum) -> syn::Result<proc_macro2::TokenStream> {
+pub fn from_property(input: syn::ItemEnum) -> syn::Result<proc_macro2::TokenStream> {
     let enum_ident = input.ident;
     let mut impls = vec![];
 
@@ -31,9 +31,9 @@ pub fn attribute(input: syn::ItemEnum) -> syn::Result<proc_macro2::TokenStream> 
         let ty = field.ty;
 
         impls.push(quote_spanned! {span=>
-            impl kano::Attribute<#enum_ident> for #ty {
-                fn into_prop(self) -> Option<#enum_ident> {
-                    Some(#enum_ident::#variant_ident(self))
+            impl kano::FromProperty<#ty> for #enum_ident {
+                fn from_property(property: #ty) -> Option<Self> {
+                    Some(Self::#variant_ident(property))
                 }
             }
         });

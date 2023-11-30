@@ -1,58 +1,58 @@
 use std::borrow::Cow;
 
-use crate::properties::{HtmlProperty, HtmlPropertyValue, StringOrBool, Strings};
+use crate::properties::{Property, PropertyValue, StringOrBool, Strings};
 
 macro_rules! define_attr {
     (($ident:ident, $name:literal, $idl:literal, STRING)) => {
         /// The
         #[doc = concat!("`", stringify!($name), "`")]
         /// attribute.
-        pub fn $ident(value: impl Into<Cow<'static, str>>) -> HtmlProperty {
-            HtmlProperty::new($idl, HtmlPropertyValue::String(value.into()))
+        pub fn $ident(value: impl Into<Cow<'static, str>>) -> Property {
+            Property::new($idl, PropertyValue::String(value.into()))
         }
     };
     (($ident:ident, $name:literal, $idl:literal, COMMA_SEP | STRING)) => {
         /// The
         #[doc = concat!("`", stringify!($name), "`")]
         /// attribute.
-        pub fn $ident(value: impl Into<Strings>) -> HtmlProperty {
-            HtmlProperty::new($idl, HtmlPropertyValue::CommaSep(value.into().0))
+        pub fn $ident(value: impl Into<Strings>) -> Property {
+            Property::new($idl, PropertyValue::CommaSep(value.into().0))
         }
     };
     (($ident:ident, $name:literal, $idl:literal, SPACE_SEP | STRING)) => {
         /// The
         #[doc = concat!("`", stringify!($name), "`")]
         /// attribute.
-        pub fn $ident(value: impl Into<Strings>) -> HtmlProperty {
-            HtmlProperty::new($idl, HtmlPropertyValue::SpaceSep(value.into().0))
+        pub fn $ident(value: impl Into<Strings>) -> Property {
+            Property::new($idl, PropertyValue::SpaceSep(value.into().0))
         }
     };
     (($ident:ident, $name:literal, $idl:literal, BOOL)) => {
         /// The
         #[doc = concat!("`", stringify!($name), "`")]
         /// attribute.
-        pub fn $ident(value: bool) -> HtmlProperty {
-            HtmlProperty::new($idl, HtmlPropertyValue::Bool(value))
+        pub fn $ident(value: bool) -> Property {
+            Property::new($idl, PropertyValue::Bool(value))
         }
     };
     (($ident:ident, $name:literal, $idl:literal, NUMBER)) => {
         /// The
         #[doc = concat!("`", stringify!($name), "`")]
         /// attribute.
-        pub fn $ident(value: i32) -> HtmlProperty {
-            HtmlProperty::new($idl, HtmlPropertyValue::Number(value))
+        pub fn $ident(value: i32) -> Property {
+            Property::new($idl, PropertyValue::Number(value))
         }
     };
     (($ident:ident, $name:literal, $idl:literal, TRUE | EMPTY_STRING | FALSE)) => {
         /// The
         #[doc = concat!("`", stringify!($name), "`")]
         /// attribute.
-        pub fn $ident(value: Option<bool>) -> HtmlProperty {
-            HtmlProperty::new(
+        pub fn $ident(value: Option<bool>) -> Property {
+            Property::new(
                 $idl,
                 match value {
-                    Some(bool) => HtmlPropertyValue::Bool(bool),
-                    None => HtmlPropertyValue::String("".into()),
+                    Some(bool) => PropertyValue::Bool(bool),
+                    None => PropertyValue::String("".into()),
                 },
             )
         }
@@ -61,12 +61,12 @@ macro_rules! define_attr {
         /// The
         #[doc = concat!("`", stringify!($name), "`")]
         /// attribute.
-        pub fn $ident(value: impl Into<StringOrBool>) -> HtmlProperty {
-            HtmlProperty::new(
+        pub fn $ident(value: impl Into<StringOrBool>) -> Property {
+            Property::new(
                 $idl,
                 match value.into() {
-                    StringOrBool::String(string) => HtmlPropertyValue::String(string),
-                    StringOrBool::Bool(bool) => HtmlPropertyValue::Bool(bool),
+                    StringOrBool::String(string) => PropertyValue::String(string),
+                    StringOrBool::Bool(bool) => PropertyValue::Bool(bool),
                 },
             )
         }

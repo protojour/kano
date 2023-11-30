@@ -6,7 +6,7 @@ use kano_html::{
 };
 use kano_web::Web;
 
-use crate::KBCProperty;
+use crate::KBCAttributes;
 
 pub fn layout(_: impl Props<Empty>, children: impl Children<Web>) -> impl View<Web> {
     view! {
@@ -26,8 +26,11 @@ pub fn strong(_: impl Props<Empty>, children: impl Children<Web>) -> impl View<W
     }
 }
 
-pub fn button(mut props: impl Props<KBCProperty>, children: impl Children<Web>) -> impl View<Web> {
-    let_props!({ KBCProperty::OnClick(on_click) } = props);
+pub fn button(
+    mut props: impl Props<KBCAttributes>,
+    children: impl Children<Web>,
+) -> impl View<Web> {
+    let_props!({ KBCAttributes::OnClick(on_click) } = props);
 
     let button_style = "
         border: 2px solid rgb(0, 70, 100);

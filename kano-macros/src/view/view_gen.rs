@@ -56,7 +56,7 @@ pub fn view(node: Node) -> TokenStream {
                 })
                 .collect();
             let attrs = quote_spanned! {span=>
-                [#(kano::Attribute::into_prop(#attrs)),*]
+                [#(kano::FromProperty::from_property(#attrs)),*]
             };
 
             match gen_children(children) {
