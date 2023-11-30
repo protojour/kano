@@ -1,6 +1,6 @@
 use kano::{view, View};
+use kano_html::*;
 use kano_web::{
-    html::*,
     web_component::{ComponentConfig, Shadow, WebComponent},
     Web,
 };

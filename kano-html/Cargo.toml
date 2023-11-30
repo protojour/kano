@@ -1,0 +1,12 @@
+[package]
+name = "kano-html"
+version.workspace = true
+license = "MIT"
+keywords = ["kano", "html"]
+description = "HTML elements and attributes for Kano"
+authors = ["Audun Halland <audun.halland@pm.me>"]
+edition = "2021"
+repository.workspace = true
+
+[dependencies]
+kano = { version = "0.0.1", path = "../kano" }

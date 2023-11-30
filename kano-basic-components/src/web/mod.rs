@@ -1,9 +1,10 @@
 use kano::{prelude::platform::*, Empty};
-use kano_web::{
-    html::{self, div, li, p, ul},
-    html_attrs::{class, style},
-    Web,
+use kano_html::{
+    self as html,
+    attr::{class, style},
+    div, li, p, ul,
 };
+use kano_web::Web;
 
 use crate::KBCProperty;
 

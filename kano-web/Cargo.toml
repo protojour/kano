@@ -13,6 +13,7 @@ web-component = []
 
 [dependencies]
 kano = { version = "0.0.1", path = "../kano" }
+kano-html = { version = "0.0.1", path = "../kano-html" }
 anyhow = "1"
 futures = "0.3"
 js-sys = "0.3"

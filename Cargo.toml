@@ -2,6 +2,7 @@
 members = [
     "kano",
     "kano-macros",
+    "kano-html",
     "kano-tui",
     "kano-web",
     "kano-basic-components",

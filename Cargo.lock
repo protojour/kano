@@ -275,8 +275,16 @@ name = "kano-basic-components"
 version = "0.0.1"
 dependencies = [
  "kano",
+ "kano-html",
  "kano-tui",
  "kano-web",
+]
+
+[[package]]
+name = "kano-html"
+version = "0.0.1"
+dependencies = [
+ "kano",
 ]
 
 [[package]]
@@ -308,6 +316,7 @@ dependencies = [
  "gloo",
  "js-sys",
  "kano",
+ "kano-html",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
@@ -647,6 +656,7 @@ dependencies = [
  "console_error_panic_hook",
  "js-sys",
  "kano",
+ "kano-html",
  "kano-web",
  "wasm-bindgen",
 ]

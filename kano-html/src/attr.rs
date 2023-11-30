@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use crate::props::{HtmlProperty, HtmlPropertyValue, StringOrBool, Strings};
+use crate::properties::{HtmlProperty, HtmlPropertyValue, StringOrBool, Strings};
 
 macro_rules! define_attr {
     (($ident:ident, $name:literal, $idl:literal, STRING)) => {

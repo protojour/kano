@@ -8,6 +8,7 @@ publish = false
 
 [dependencies]
 kano.path = "../../kano"
+kano-html = { path = "../../kano-html" }
 kano-web = { path = "../../kano-web", features = ["web-component"] }
 wasm-bindgen = "0.2"
 console_error_panic_hook = "0.1"

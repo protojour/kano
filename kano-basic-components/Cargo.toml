@@ -10,9 +10,10 @@ repository.workspace = true
 [features]
 default = []
 tui = ["kano-tui"]
-web = ["kano-web"]
+web = ["kano-web", "kano-html"]
 
 [dependencies]
 kano = { path = "../kano" }
 kano-tui = { path = "../kano-tui", optional = true }
+kano-html = { path = "../kano-html", optional = true }
 kano-web = { path = "../kano-web", optional = true }
