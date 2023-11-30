@@ -4,7 +4,7 @@ use syn::spanned::Spanned;
 
 use crate::view::ast::{AttrKey, AttrValue, ComponentAttrs};
 
-use super::ast::{Element, For, Match, Node};
+use super::ast::{Attr, Element, For, Match, Node};
 
 pub fn view(node: Node) -> TokenStream {
     match node {
@@ -17,26 +17,31 @@ pub fn view(node: Node) -> TokenStream {
             let span = type_path.span();
             let attrs: Vec<_> = attrs
                 .into_iter()
-                .map(|attr| {
-                    let value = match attr.value {
-                        AttrValue::ImplicitTrue => quote! { true },
-                        AttrValue::Block(block) => {
-                            let span = block.span();
-                            quote_spanned! {span=>
-                                #[allow(unused_braces)]
-                                #block
+                .map(|attr| match attr {
+                    Attr::KeyValue(attr) => {
+                        let value = match attr.value {
+                            AttrValue::ImplicitTrue => quote! { true },
+                            AttrValue::Block(block) => {
+                                let span = block.span();
+                                quote_spanned! {span=>
+                                    #[allow(unused_braces)]
+                                    #block
+                                }
                             }
-                        }
-                        _ => todo!(),
-                    };
+                            _ => todo!(),
+                        };
 
-                    match attr.key {
-                        AttrKey::On(event) => {
-                            quote! {
-                                kano::on::#event({#value})
+                        match attr.key {
+                            AttrKey::On(event) => {
+                                quote! {
+                                    kano::on::#event({#value})
+                                }
                             }
+                            AttrKey::Path(_) => todo!(),
                         }
-                        AttrKey::Text(_) => todo!(),
+                    }
+                    Attr::Implicit(ident) => {
+                        quote! { #ident }
                     }
                 })
                 .collect();

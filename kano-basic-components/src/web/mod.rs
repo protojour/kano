@@ -27,7 +27,11 @@ pub fn strong(_: impl Props<Empty>, children: impl Children<Web>) -> impl View<W
 pub fn button(mut props: impl Props<KBCProperty>, children: impl Children<Web>) -> impl View<Web> {
     let_props!({ KBCProperty::OnEvent(on_event) } = props);
 
-    html::button([kano::Attribute::into_prop(on_event)], children)
+    view! {
+        <html::button ..on_event>
+            ..children
+        </html::button>
+    }
 }
 
 pub fn unordered_list(_: impl Props<Empty>, children: impl Children<Web>) -> impl View<Web> {

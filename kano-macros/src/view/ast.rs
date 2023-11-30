@@ -42,14 +42,20 @@ impl TagName {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct Attr {
+pub enum Attr {
+    KeyValue(KeyValueAttr),
+    Implicit(syn::Ident),
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct KeyValueAttr {
     pub key: AttrKey,
     pub value: AttrValue,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum AttrKey {
-    Text(syn::Ident),
+    Path(syn::Ident),
     On(syn::Ident),
 }
 
@@ -85,7 +91,7 @@ pub struct Component {
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum ComponentAttrs {
-    KeyValue(Vec<Attr>),
+    KeyValue(Vec<KeyValueAttr>),
     Positional(Vec<syn::Expr>),
 }
 
@@ -267,12 +273,7 @@ impl Parser {
             TagWithAttrs::Element(type_path, attrs) => {
                 let attrs = attrs
                     .into_iter()
-                    .map(|attr| {
-                        Ok(Attr {
-                            key: attr.key,
-                            value: attr.value,
-                        })
-                    })
+                    .map(|attr| Ok(attr))
                     .collect::<syn::Result<Vec<_>>>()?;
 
                 Ok(Node::Element(Element {
@@ -291,7 +292,7 @@ impl Parser {
         let tag_name = parse_tag_name(input)?;
         match tag_name {
             TagName::Element(ident) => {
-                let attrs = self.parse_key_value_attrs(input)?;
+                let attrs = self.parse_attrs(input)?;
 
                 Ok(TagWithAttrs::Element(ident, attrs))
             }
@@ -307,7 +308,21 @@ impl Parser {
 
                     ComponentAttrs::Positional(expressions)
                 } else {
-                    ComponentAttrs::KeyValue(self.parse_key_value_attrs(input)?)
+                    let attrs = self.parse_attrs(input)?;
+                    let mut key_value_attrs = vec![];
+                    for attr in attrs {
+                        match attr {
+                            Attr::KeyValue(key_value_attr) => key_value_attrs.push(key_value_attr),
+                            Attr::Implicit(ident) => {
+                                return Err(syn::Error::new(
+                                    ident.span(),
+                                    "Ident not supported here",
+                                ))
+                            }
+                        }
+                    }
+
+                    ComponentAttrs::KeyValue(key_value_attrs)
                 };
 
                 Ok(TagWithAttrs::Component(type_path, component_attrs))
@@ -316,12 +331,19 @@ impl Parser {
     }
 
     /// Parse the attributes to an element or component
-    fn parse_key_value_attrs(&self, input: ParseStream) -> syn::Result<Vec<Attr>> {
+    fn parse_attrs(&self, input: ParseStream) -> syn::Result<Vec<Attr>> {
         let mut attrs = vec![];
 
         loop {
             if input.peek(syn::token::Slash) || input.peek(syn::token::Gt) {
                 break;
+            }
+
+            if input.peek(syn::token::DotDot) {
+                let _dot_dot: syn::token::DotDot = input.parse()?;
+                let ident = input.parse()?;
+                attrs.push(Attr::Implicit(ident));
+                continue;
             }
 
             let name = input.parse()?;
@@ -338,7 +360,7 @@ impl Parser {
                     ));
                 }
             } else {
-                AttrKey::Text(name)
+                AttrKey::Path(name)
             };
 
             let value = if input.peek(syn::token::Eq) {
@@ -348,7 +370,7 @@ impl Parser {
                 AttrValue::ImplicitTrue
             };
 
-            attrs.push(Attr { key, value });
+            attrs.push(Attr::KeyValue(KeyValueAttr { key, value }));
         }
 
         Ok(attrs)
@@ -553,18 +575,18 @@ mod tests {
 
     #[allow(unused)]
     fn attr(name: &str, value: AttrValue) -> Attr {
-        Attr {
-            key: AttrKey::Text(quote::format_ident!("{}", name)),
+        Attr::KeyValue(KeyValueAttr {
+            key: AttrKey::Path(quote::format_ident!("{}", name)),
             value,
-        }
+        })
     }
 
     #[allow(unused)]
     fn html_attr(tag: &str, name: &str, value: AttrValue) -> Attr {
-        Attr {
-            key: AttrKey::Text(quote::format_ident!("{name}")),
+        Attr::KeyValue(KeyValueAttr {
+            key: AttrKey::Path(quote::format_ident!("{name}")),
             value,
-        }
+        })
     }
 
     #[test]
