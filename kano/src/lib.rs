@@ -13,7 +13,7 @@ mod signal;
 mod style;
 mod view_id;
 
-use std::{cell::RefCell, marker::PhantomData, rc::Rc};
+use std::{cell::RefCell, convert::Infallible, marker::PhantomData, rc::Rc};
 
 pub use event::*;
 pub use kano_macros::view;
@@ -34,9 +34,64 @@ pub trait View<P: Platform>: Diff<P> {}
 
 pub trait Children<P: Platform>: Diff<P> {}
 
-pub trait AttrSet<P: Platform>: Diff<P> {}
+pub trait Props<T> {
+    fn cond_take<U>(&mut self, func: impl Fn(T) -> Result<U, T>) -> Option<U>;
+    fn take_all<U>(&mut self, func: impl Fn(T) -> Result<U, T>) -> Vec<U>;
+}
 
-pub trait Attr<P: Platform>: Diff<P> {}
+pub trait Attribute<T> {
+    fn into_prop(self) -> Option<T>;
+}
+
+/// A type used to signal that a type accepts no properties.
+///
+/// ```rust
+/// fn component(_props: impl Props<Empty>) {}
+/// ```
+pub type Empty = Infallible;
+
+impl<T, const N: usize> Props<T> for [Option<T>; N] {
+    fn cond_take<U>(&mut self, func: impl Fn(T) -> Result<U, T>) -> Option<U> {
+        for element in self.iter_mut().rev() {
+            if let Some(prop) = element.take() {
+                match func(prop) {
+                    Ok(taken) => return Some(taken),
+                    Err(failed) => {
+                        // put back
+                        *element = Some(failed);
+                    }
+                }
+            }
+        }
+
+        None
+    }
+
+    fn take_all<U>(&mut self, func: impl Fn(T) -> Result<U, T>) -> Vec<U> {
+        let mut out = vec![];
+        for element in self.iter_mut().rev() {
+            if let Some(prop) = element.take() {
+                match func(prop) {
+                    Ok(taken) => {
+                        out.push(taken);
+                    }
+                    Err(failed) => {
+                        // put back
+                        *element = Some(failed);
+                    }
+                }
+            }
+        }
+
+        out
+    }
+}
+
+impl<T, A: Attribute<T>> Attribute<T> for Option<A> {
+    fn into_prop(self) -> Option<T> {
+        self.and_then(A::into_prop)
+    }
+}
 
 pub struct Init<P> {
     platform: PhantomData<P>,

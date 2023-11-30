@@ -1,9 +1,8 @@
 use std::rc::Rc;
 
 use kano::{
-    platform::Platform,
     vdom::vnode::{VNode, VNodeRef},
-    AttrSet, Children,
+    Children,
 };
 use ratatui::{
     style::{Color, Modifier},
@@ -14,41 +13,38 @@ use ratatui::{
 
 use crate::{
     node_data::{NodeData, NodeKind},
+    tui_cursor::TuiCursor,
     tui_state::TuiState,
     Tui,
 };
 
 #[derive(Clone)]
-pub struct Component<A, C> {
+pub struct Component<C> {
     pub data: Rc<ComponentData>,
-    pub attrs: A,
+    pub events: Vec<kano::OnEvent>,
     pub children: C,
 }
 
-impl<A: AttrSet<Tui>, C: Children<Tui>> kano::Diff<Tui> for Component<A, C> {
-    type State = (Rc<ComponentData>, A::State, C::State);
+impl<C: Children<Tui>> kano::Diff<Tui> for Component<C> {
+    type State = (Rc<ComponentData>, C::State);
 
-    fn init(self, cursor: &mut <Tui as Platform>::Cursor) -> Self::State {
+    fn init(self, cursor: &mut TuiCursor) -> Self::State {
         cursor.set_component(self.data.clone());
 
-        cursor.enter_attrs();
-        let attr_state = self.attrs.init(cursor);
-        cursor.exit_attrs();
+        cursor.set_events(self.events);
 
         let children_state = self.children.init(cursor);
 
-        (self.data, attr_state, children_state)
+        (self.data, children_state)
     }
 
-    fn diff(self, state: &mut Self::State, cursor: &mut <Tui as Platform>::Cursor) {
-        cursor.enter_attrs();
-        self.attrs.diff(&mut state.1, cursor);
-        cursor.exit_attrs();
-        self.children.diff(&mut state.2, cursor);
+    fn diff(self, state: &mut Self::State, cursor: &mut TuiCursor) {
+        cursor.set_events(self.events);
+        self.children.diff(&mut state.1, cursor);
     }
 }
 
-impl<A: AttrSet<Tui>, C: Children<Tui>> kano::View<Tui> for Component<A, C> {}
+impl<C: Children<Tui>> kano::View<Tui> for Component<C> {}
 
 #[derive(Clone, Debug)]
 pub struct ComponentData {

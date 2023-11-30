@@ -1,51 +1,51 @@
-use kano::{AttrSet, Children, Diff, View};
+use kano::{Children, Diff, Props, View};
 
-use crate::{Web, WebCursor};
+use crate::{props::HtmlProp, Web, WebCursor};
 
 #[derive(Clone, Copy)]
-pub struct Element<A, C> {
+pub struct Element<T, C> {
     name: &'static str,
-    attrs: A,
+    props: T,
     children: C,
 }
 
-impl<A, C> Element<A, C> {
-    pub const fn new(name: &'static str, attrs: A, children: C) -> Self {
+impl<T: Props<HtmlProp> + Diff<Web>, C> Element<T, C> {
+    pub const fn new(name: &'static str, props: T, children: C) -> Self {
         Self {
             name,
-            attrs,
+            props,
             children,
         }
     }
 }
 
-impl<A: AttrSet<Web>, C: Children<Web>> Diff<Web> for Element<A, C> {
-    type State = State<A, C>;
+impl<T: Props<HtmlProp> + Diff<Web>, C: Children<Web>> Diff<Web> for Element<T, C> {
+    type State = State<T, C>;
 
     fn init(self, cursor: &mut WebCursor) -> Self::State {
         let _ = cursor.element(self.name);
 
         cursor.enter_attrs();
-        let attrs = self.attrs.init(cursor);
+        let props = self.props.init(cursor);
         cursor.exit_attrs();
 
         let children = self.children.init(cursor);
 
-        State { attrs, children }
+        State { props, children }
     }
 
     fn diff(self, state: &mut Self::State, cursor: &mut crate::WebCursor) {
         cursor.enter_attrs();
-        self.attrs.diff(&mut state.attrs, cursor);
+        self.props.diff(&mut state.props, cursor);
         cursor.exit_attrs();
 
         self.children.diff(&mut state.children, cursor);
     }
 }
 
-impl<A: AttrSet<Web>, C: Children<Web>> View<Web> for Element<A, C> {}
+impl<T: Props<HtmlProp> + Diff<Web>, C: Children<Web>> View<Web> for Element<T, C> {}
 
-pub struct State<A: AttrSet<Web>, C: Children<Web>> {
-    attrs: A::State,
+pub struct State<T: Diff<Web>, C: Children<Web>> {
+    props: T::State,
     children: C::State,
 }

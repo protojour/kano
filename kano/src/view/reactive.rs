@@ -9,7 +9,7 @@ use crate::{
     platform::{Cursor, Platform},
     registry::{ViewCallback, REGISTRY},
     view_id::ViewId,
-    Attr, Diff, View,
+    Diff, View,
 };
 
 /// Reactive wraps a function `F` that produces something diffable,
@@ -50,7 +50,6 @@ impl<P: Platform, T: Diff<P> + 'static, F: (Fn() -> T) + 'static> Diff<P> for Re
 }
 
 impl<P: Platform, T: Diff<P> + 'static, F: (Fn() -> T) + 'static> View<P> for Reactive<F> {}
-impl<P: Platform, T: Attr<P> + 'static, F: (Fn() -> T) + 'static> Attr<P> for Reactive<F> {}
 
 pub struct ReactiveState<P: Platform, T: Diff<P>> {
     view_id: ViewId,

@@ -35,12 +35,14 @@ impl TuiCursor {
         }
     }
 
-    pub fn enter_attrs(&mut self) {
-        self.vcursor.enter_attrs().unwrap();
-    }
-
-    pub fn exit_attrs(&mut self) {
-        self.vcursor.exit_attrs().unwrap();
+    pub fn set_events(&mut self, events: Vec<kano::OnEvent>) {
+        match &mut self.vcursor.location {
+            Location::Node(node) => {
+                let mut node_mut = node.0.borrow_mut();
+                node_mut.data.on_events = events;
+            }
+            other => panic!("{other:?}"),
+        }
     }
 }
 
@@ -91,24 +93,6 @@ impl kano::platform::Cursor for TuiCursor {
                 }
             }
             _ => panic!(),
-        }
-    }
-
-    fn on_event(&mut self, on_event: kano::OnEvent) -> TuiEventHandle {
-        match &mut self.vcursor.location {
-            Location::Attrs(node) => {
-                let event = *on_event.event();
-                {
-                    let mut node_mut = node.0.borrow_mut();
-                    node_mut.data.on_events.push(on_event);
-                }
-
-                TuiEventHandle {
-                    node: node.clone(),
-                    event,
-                }
-            }
-            other => panic!("{other:?}"),
         }
     }
 

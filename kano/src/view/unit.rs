@@ -1,4 +1,4 @@
-use crate::{platform::Cursor, AttrSet, Children, Diff, Platform, View};
+use crate::{platform::Cursor, Children, Diff, Platform, View};
 
 impl<P: Platform> Diff<P> for () {
     type State = ();
@@ -10,5 +10,4 @@ impl<P: Platform> Diff<P> for () {
 }
 
 impl<P: Platform> Children<P> for () {}
-impl<P: Platform> AttrSet<P> for () {}
 impl<P: Platform> View<P> for () {}

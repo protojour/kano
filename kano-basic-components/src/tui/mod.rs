@@ -1,37 +1,39 @@
 use std::rc::Rc;
 
-use kano::prelude::platform::*;
+use kano::{prelude::platform::*, Empty};
 use kano_tui::{
     component::{Component, ComponentData, Layout, StateKeyed, Style},
     ratatui::style::{Color, Modifier},
     Tui,
 };
 
+use crate::KBCProperty;
+
 // These Rc's are always constant and could be saved in a thread local.
 
-pub fn layout(attrs: (), children: impl Children<Tui>) -> impl View<Tui> {
+pub fn layout(_: impl Props<Empty>, children: impl Children<Tui>) -> impl View<Tui> {
     Component {
         data: Rc::new(ComponentData {
             layout: Layout::Block,
             style: Default::default(),
         }),
-        attrs,
+        events: vec![],
         children,
     }
 }
 
-pub fn paragraph(attrs: (), children: impl Children<Tui>) -> impl View<Tui> {
+pub fn paragraph(_: impl Props<Empty>, children: impl Children<Tui>) -> impl View<Tui> {
     Component {
         data: Rc::new(ComponentData {
             layout: Layout::Paragraph,
             style: Default::default(),
         }),
-        attrs,
+        events: vec![],
         children,
     }
 }
 
-pub fn strong(attrs: (), children: impl Children<Tui>) -> impl View<Tui> {
+pub fn strong(_: impl Props<Empty>, children: impl Children<Tui>) -> impl View<Tui> {
     Component {
         data: Rc::new(ComponentData {
             layout: Layout::Inline,
@@ -40,12 +42,17 @@ pub fn strong(attrs: (), children: impl Children<Tui>) -> impl View<Tui> {
                 ..Default::default()
             },
         }),
-        attrs,
+        events: vec![],
         children,
     }
 }
 
-pub fn button(attrs: impl AttrSet<Tui>, children: impl Children<Tui>) -> impl View<Tui> {
+pub fn button(mut props: impl Props<KBCProperty>, children: impl Children<Tui>) -> impl View<Tui> {
+    let events = props.take_all(|prop| {
+        let KBCProperty::OnEvent(event) = prop;
+        Ok(event)
+    });
+
     Component {
         data: Rc::new(ComponentData {
             layout: Layout::Inline,
@@ -89,23 +96,23 @@ pub fn button(attrs: impl AttrSet<Tui>, children: impl Children<Tui>) -> impl Vi
                 )),
             },
         }),
-        attrs,
+        events,
         children,
     }
 }
 
-pub fn unordered_list(attrs: (), children: impl Children<Tui>) -> impl View<Tui> {
+pub fn unordered_list(_: impl Props<Empty>, children: impl Children<Tui>) -> impl View<Tui> {
     Component {
         data: Rc::new(ComponentData {
             layout: Layout::Block,
             style: Style::default(),
         }),
-        attrs,
+        events: vec![],
         children,
     }
 }
 
-pub fn list_item(attrs: (), children: impl Children<Tui>) -> impl View<Tui> {
+pub fn list_item(_: impl Props<Empty>, children: impl Children<Tui>) -> impl View<Tui> {
     Component {
         data: Rc::new(ComponentData {
             layout: Layout::Paragraph,
@@ -120,7 +127,7 @@ pub fn list_item(attrs: (), children: impl Children<Tui>) -> impl View<Tui> {
                 ..Style::default()
             },
         }),
-        attrs,
+        events: vec![],
         children,
     }
 }

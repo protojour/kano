@@ -40,10 +40,8 @@ pub fn view(node: Node) -> TokenStream {
                     }
                 })
                 .collect();
-            let attrs = if attrs.is_empty() {
-                quote! { () }
-            } else {
-                quote! { (#(#attrs),*,) }
+            let attrs = quote_spanned! {span=>
+                [#(kano::Attribute::into_prop(#attrs)),*]
             };
 
             let children = children.into_iter().map(view);

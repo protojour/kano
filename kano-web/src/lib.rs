@@ -15,8 +15,10 @@ use web_sys::{Element, EventTarget};
 use kano::{Event, OnEvent};
 
 pub mod html;
+pub mod html_attrs;
 
 mod element;
+mod props;
 
 #[cfg(feature = "web-component")]
 pub mod web_component;
@@ -131,6 +133,26 @@ impl WebCursor {
         }
     }
 
+    fn on_event(&mut self, on_event: OnEvent) -> EventListener {
+        match self {
+            WebCursor::AttrsOf(element, _mode) => {
+                kano::log("on_event");
+                let event_target: &EventTarget = element.dyn_ref().unwrap();
+                let event_type = match on_event.event() {
+                    Event::Click => "click",
+                    Event::MouseOver => "mouseover",
+                };
+
+                EventListener::new(event_target, event_type, move |_| {
+                    on_event.invoke();
+                })
+            }
+            WebCursor::Node(..) => panic!(),
+            WebCursor::Detached => panic!(),
+            WebCursor::AfterLastChild(..) => panic!(),
+        }
+    }
+
     fn enter_attrs(&mut self) {
         match self {
             WebCursor::Node(node, mode) => {
@@ -197,26 +219,6 @@ impl kano::platform::Cursor for WebCursor {
                 node.set_node_value(Some(text));
             }
             _ => panic!(),
-        }
-    }
-
-    fn on_event(&mut self, on_event: OnEvent) -> EventListener {
-        match self {
-            WebCursor::AttrsOf(element, _mode) => {
-                kano::log("on_event");
-                let event_target: &EventTarget = element.dyn_ref().unwrap();
-                let event_type = match on_event.event() {
-                    Event::Click => "click",
-                    Event::MouseOver => "mouseover",
-                };
-
-                EventListener::new(event_target, event_type, move |_| {
-                    on_event.invoke();
-                })
-            }
-            WebCursor::Node(..) => panic!(),
-            WebCursor::Detached => panic!(),
-            WebCursor::AfterLastChild(..) => panic!(),
         }
     }
 

@@ -1,4 +1,4 @@
-use crate::{Attr, AttrSet, Children, Cursor, Diff, Platform, View};
+use crate::{Children, Cursor, Diff, Platform, View};
 
 macro_rules! tuples {
     ($(($t:ident, $i:tt)),+) => {
@@ -30,9 +30,6 @@ macro_rules! tuples {
         }
 
         impl<P: Platform, $($t: View<P>),+> Children<P> for ($($t),+,) {
-        }
-
-        impl<P: Platform, $($t: Attr<P>),+> AttrSet<P> for ($($t),+,) {
         }
     }
 }

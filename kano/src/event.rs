@@ -1,10 +1,5 @@
 use std::{fmt::Debug, rc::Rc};
 
-use crate::{
-    platform::{Cursor, Platform},
-    Attr, Diff,
-};
-
 pub mod on {
     use super::*;
 
@@ -51,18 +46,3 @@ impl OnEvent {
         (self.func)();
     }
 }
-
-impl<P: Platform> Diff<P> for OnEvent {
-    type State = Option<<P::Cursor as Cursor>::EventHandle>;
-
-    fn init(self, cursor: &mut P::Cursor) -> Self::State {
-        Some(cursor.on_event(self))
-    }
-
-    fn diff(self, state: &mut Self::State, cursor: &mut P::Cursor) {
-        drop(state.take());
-        *state = Some(cursor.on_event(self));
-    }
-}
-
-impl<P: Platform> Attr<P> for OnEvent {}
