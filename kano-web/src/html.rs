@@ -1,11 +1,13 @@
 use crate::element::Element;
+use crate::Web;
+use kano::AttrSet;
 
 macro_rules! define_element {
     (($ns:expr, $ty_name:ident, $name:ident, $dom_interface:ident)) => {
         /// The
         #[doc = concat!("`", stringify!($name), "`")]
         /// element.
-        pub const fn $name<A, C>(attrs: A, children: C) -> Element<A, C> {
+        pub const fn $name<A: AttrSet<Web>, C>(attrs: A, children: C) -> Element<A, C> {
             Element::new(stringify!($name), attrs, children)
         }
     };

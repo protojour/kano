@@ -5,6 +5,18 @@ use crate::{
     Attr, Diff,
 };
 
+pub mod on {
+    use super::*;
+
+    pub fn click(func: impl Fn() + 'static) -> OnEvent {
+        OnEvent::new(Event::Click, func)
+    }
+
+    pub fn mouseover(func: impl Fn() + 'static) -> OnEvent {
+        OnEvent::new(Event::MouseOver, func)
+    }
+}
+
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Event {
     Click,
@@ -12,26 +24,18 @@ pub enum Event {
 }
 
 #[derive(Clone)]
-pub struct On {
+pub struct OnEvent {
     event: Event,
     func: Rc<dyn Fn()>,
 }
 
-impl Debug for On {
+impl Debug for OnEvent {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("On").field("event", &self.event).finish()
     }
 }
 
-impl On {
-    pub fn click(func: impl Fn() + 'static) -> Self {
-        Self::new(Event::Click, func)
-    }
-
-    pub fn mouseover(func: impl Fn() + 'static) -> Self {
-        Self::new(Event::MouseOver, func)
-    }
-
+impl OnEvent {
     fn new(event: Event, func: impl Fn() + 'static) -> Self {
         Self {
             event,
@@ -48,7 +52,7 @@ impl On {
     }
 }
 
-impl<P: Platform> Diff<P> for On {
+impl<P: Platform> Diff<P> for OnEvent {
     type State = Option<<P::Cursor as Cursor>::EventHandle>;
 
     fn init(self, cursor: &mut P::Cursor) -> Self::State {
@@ -61,4 +65,4 @@ impl<P: Platform> Diff<P> for On {
     }
 }
 
-impl<P: Platform> Attr<P> for On {}
+impl<P: Platform> Attr<P> for OnEvent {}

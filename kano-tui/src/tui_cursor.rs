@@ -94,7 +94,7 @@ impl kano::platform::Cursor for TuiCursor {
         }
     }
 
-    fn on_event(&mut self, on_event: kano::On) -> TuiEventHandle {
+    fn on_event(&mut self, on_event: kano::OnEvent) -> TuiEventHandle {
         match &mut self.vcursor.location {
             Location::Attrs(node) => {
                 let event = *on_event.event();

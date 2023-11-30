@@ -5,7 +5,7 @@ use crate::component::ComponentData;
 #[derive(Clone, Debug)]
 pub struct NodeData {
     pub kind: NodeKind,
-    pub on_events: Vec<kano::On>,
+    pub on_events: Vec<kano::OnEvent>,
 }
 
 impl Default for NodeData {

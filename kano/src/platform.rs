@@ -1,6 +1,6 @@
 use std::{fmt::Debug, rc::Rc};
 
-use crate::{On, View};
+use crate::{OnEvent, View};
 
 pub trait Platform: Sized + 'static {
     type Cursor: Cursor;
@@ -35,7 +35,7 @@ pub trait Cursor: Clone + Debug {
     fn text(&mut self, text: &str) -> Self::TextHandle;
     fn update_text(&mut self, text: &str);
 
-    fn on_event(&mut self, event: On) -> Self::EventHandle;
+    fn on_event(&mut self, event: OnEvent) -> Self::EventHandle;
 
     fn enter_children(&mut self);
     fn exit_children(&mut self);
@@ -84,7 +84,7 @@ pub(crate) mod test_platform {
         fn empty(&mut self) {}
         fn text(&mut self, _text: &str) -> Self::TextHandle {}
         fn update_text(&mut self, _text: &str) {}
-        fn on_event(&mut self, _event: crate::On) -> Self::EventHandle {}
+        fn on_event(&mut self, _event: crate::OnEvent) -> Self::EventHandle {}
         fn enter_children(&mut self) {}
         fn exit_children(&mut self) {}
         fn next_sibling(&mut self) {}

@@ -1,7 +1,7 @@
 pub struct TuiState {
     pub currently_focused: usize,
     pub focusable_counter: usize,
-    pub focused_event_handler: Option<kano::On>,
+    pub focused_event_handler: Option<kano::OnEvent>,
 }
 
 impl TuiState {

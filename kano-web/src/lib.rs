@@ -12,7 +12,7 @@ use wasm_bindgen::prelude::*;
 use web_sys::{window, Document};
 use web_sys::{Element, EventTarget};
 
-use kano::{Event, On};
+use kano::{Event, OnEvent};
 
 pub mod html;
 
@@ -200,7 +200,7 @@ impl kano::platform::Cursor for WebCursor {
         }
     }
 
-    fn on_event(&mut self, on_event: On) -> EventListener {
+    fn on_event(&mut self, on_event: OnEvent) -> EventListener {
         match self {
             WebCursor::AttrsOf(element, _mode) => {
                 kano::log("on_event");

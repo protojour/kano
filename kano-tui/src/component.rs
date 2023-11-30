@@ -229,7 +229,7 @@ fn apply_style(tui_style: &mut ratatui::style::Style, style: &Style, state: Styl
     }
 }
 
-fn find_click_handler(node: &VNode<NodeData>) -> Option<kano::On> {
+fn find_click_handler(node: &VNode<NodeData>) -> Option<kano::OnEvent> {
     node.data
         .on_events
         .iter()
