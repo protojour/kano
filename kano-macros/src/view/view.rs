@@ -28,16 +28,26 @@ pub fn view(node: Node) -> TokenStream {
                                     #block
                                 }
                             }
-                            _ => todo!(),
+                            AttrValue::Literal(lit) => {
+                                quote! { #lit }
+                            }
                         };
 
                         match attr.key {
-                            AttrKey::On(event) => {
-                                quote! {
-                                    kano::on::#event({#value})
+                            AttrKey::On(ident) => {
+                                let span = ident.span();
+                                quote_spanned! {span=>
+                                    kano::on::#ident(
+                                        #value
+                                    )
                                 }
                             }
-                            AttrKey::Path(_) => todo!(),
+                            AttrKey::Path(path) => {
+                                let span = path.span();
+                                quote_spanned! {span=>
+                                    #path(#value)
+                                }
+                            }
                         }
                     }
                     Attr::Implicit(ident) => {
