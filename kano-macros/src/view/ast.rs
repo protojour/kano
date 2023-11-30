@@ -270,18 +270,11 @@ impl Parser {
         children: Vec<Node>,
     ) -> syn::Result<Node> {
         match tag_with_attrs {
-            TagWithAttrs::Element(type_path, attrs) => {
-                let attrs = attrs
-                    .into_iter()
-                    .map(|attr| Ok(attr))
-                    .collect::<syn::Result<Vec<_>>>()?;
-
-                Ok(Node::Element(Element {
-                    type_path,
-                    attrs,
-                    children,
-                }))
-            }
+            TagWithAttrs::Element(type_path, attrs) => Ok(Node::Element(Element {
+                type_path,
+                attrs,
+                children,
+            })),
             TagWithAttrs::Component(type_path, attrs) => {
                 Ok(Node::Component(Component { type_path, attrs }))
             }

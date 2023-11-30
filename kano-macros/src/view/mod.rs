@@ -1,5 +1,5 @@
 pub mod ast;
 
-mod view;
+mod view_gen;
 
-pub use view::view;
+pub use view_gen::view;

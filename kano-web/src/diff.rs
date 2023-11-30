@@ -95,11 +95,11 @@ fn set_html_attribute(element: &web_sys::Element, property: &HtmlProperty) {
             element.set_attribute(name, string).unwrap();
         }
         HtmlPropertyValue::CommaSep(strings) => {
-            let items = strings.iter().map(|s| -> &str { &*s }).collect::<Vec<_>>();
+            let items = strings.iter().map(|s| -> &str { s }).collect::<Vec<_>>();
             element.set_attribute(name, &items.join(", ")).unwrap();
         }
         HtmlPropertyValue::SpaceSep(strings) => {
-            let items = strings.iter().map(|s| -> &str { &*s }).collect::<Vec<_>>();
+            let items = strings.iter().map(|s| -> &str { s }).collect::<Vec<_>>();
             element.set_attribute(name, &items.join(" ")).unwrap();
         }
         HtmlPropertyValue::Bool(bool) => {

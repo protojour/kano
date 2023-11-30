@@ -81,12 +81,8 @@ impl kano::platform::Cursor for WebCursor {
     }
 
     fn empty(&mut self) {
-        match &self {
-            _ => {
-                let comment = document().create_comment("");
-                self.append_node(&comment);
-            }
-        }
+        let comment = document().create_comment("");
+        self.append_node(&comment);
     }
 
     fn text(&mut self, text: &str) -> web_sys::Node {

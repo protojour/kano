@@ -46,7 +46,7 @@ pub struct Strings(pub(crate) Vec<Cow<'static, str>>);
 
 impl<const N: usize> From<[&'static str; N]> for Strings {
     fn from(value: [&'static str; N]) -> Self {
-        Self(value.into_iter().map(|str| Cow::Borrowed(str)).collect())
+        Self(value.into_iter().map(Cow::Borrowed).collect())
     }
 }
 
