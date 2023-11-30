@@ -16,10 +16,7 @@ pub fn strong(_: impl Props<Empty>, children: impl Children<Web>) -> impl View<W
 }
 
 pub fn button(mut props: impl Props<KBCProperty>, children: impl Children<Web>) -> impl View<Web> {
-    let on_event = props.cond_take(|prop| {
-        let KBCProperty::OnEvent(on_event) = prop;
-        Ok(on_event)
-    });
+    let_props!({ KBCProperty::OnEvent(on_event) } = props);
 
     html::button([kano::Attribute::into_prop(on_event)], children)
 }

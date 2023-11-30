@@ -35,8 +35,12 @@ pub trait View<P: Platform>: Diff<P> {}
 pub trait Children<P: Platform>: Diff<P> {}
 
 pub trait Props<T> {
-    fn cond_take<U>(&mut self, func: impl Fn(T) -> Result<U, T>) -> Option<U>;
-    fn take_all<U>(&mut self, func: impl Fn(T) -> Result<U, T>) -> Vec<U>;
+    type Iterator<'a>: Iterator<Item = &'a mut Option<T>>
+    where
+        T: 'a,
+        Self: 'a;
+
+    fn mut_iterator(&mut self) -> Self::Iterator<'_>;
 }
 
 pub trait Attribute<T> {
@@ -51,39 +55,10 @@ pub trait Attribute<T> {
 pub type Empty = Infallible;
 
 impl<T, const N: usize> Props<T> for [Option<T>; N] {
-    fn cond_take<U>(&mut self, func: impl Fn(T) -> Result<U, T>) -> Option<U> {
-        for element in self.iter_mut().rev() {
-            if let Some(prop) = element.take() {
-                match func(prop) {
-                    Ok(taken) => return Some(taken),
-                    Err(failed) => {
-                        // put back
-                        *element = Some(failed);
-                    }
-                }
-            }
-        }
+    type Iterator<'a> = core::slice::IterMut<'a, Option<T>> where T: 'a;
 
-        None
-    }
-
-    fn take_all<U>(&mut self, func: impl Fn(T) -> Result<U, T>) -> Vec<U> {
-        let mut out = vec![];
-        for element in self.iter_mut().rev() {
-            if let Some(prop) = element.take() {
-                match func(prop) {
-                    Ok(taken) => {
-                        out.push(taken);
-                    }
-                    Err(failed) => {
-                        // put back
-                        *element = Some(failed);
-                    }
-                }
-            }
-        }
-
-        out
+    fn mut_iterator(&mut self) -> Self::Iterator<'_> {
+        self.iter_mut()
     }
 }
 
@@ -176,5 +151,39 @@ macro_rules! platform_use {
 
         #[cfg(feature = "web")]
         use $lib::web$($path)*;
+    };
+}
+
+#[macro_export]
+macro_rules! let_props {
+    ({ $( $($seg:ident)::+ ($var:tt) $(,)?)+ } = $props:ident) => {
+        $(
+            let_props!(let mut $var);
+        )+
+
+        for prop in $props.mut_iterator() {
+            match prop.take() {
+                $(
+                    Some($($seg)::+(binding)) => {
+                        let_props!($var = binding);
+                    }
+                ),+
+                #[allow(unreachable_patterns)]
+                _ => {}
+            }
+        }
+        drop($props);
+    };
+    (let mut $var:ident) => {
+        let mut $var = None;
+    };
+    (let mut [$var:ident]) => {
+        let mut $var = Vec::new();
+    };
+    ($var:ident = $expr:expr) => {
+        $var = Some($expr);
+    };
+    ([$var:ident] = $expr:expr) => {
+        $var.push($expr);
     };
 }

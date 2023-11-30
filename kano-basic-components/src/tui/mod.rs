@@ -48,10 +48,7 @@ pub fn strong(_: impl Props<Empty>, children: impl Children<Tui>) -> impl View<T
 }
 
 pub fn button(mut props: impl Props<KBCProperty>, children: impl Children<Tui>) -> impl View<Tui> {
-    let events = props.take_all(|prop| {
-        let KBCProperty::OnEvent(event) = prop;
-        Ok(event)
-    });
+    let_props!({ KBCProperty::OnEvent([events]) } = props);
 
     Component {
         data: Rc::new(ComponentData {

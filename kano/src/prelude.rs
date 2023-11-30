@@ -1,5 +1,6 @@
 /// Prelude for apps which excludes platform-agnostic types.
 pub mod app {
+    pub use crate::let_props;
     pub use crate::platform::Platform;
     pub use crate::reactive::*;
     pub use crate::view::Fmt;
