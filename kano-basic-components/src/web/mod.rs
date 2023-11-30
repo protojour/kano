@@ -1,7 +1,7 @@
 use kano::{prelude::platform::*, Empty};
 use kano_web::{
     html::{self, div, li, p, ul},
-    html_attrs::style,
+    html_attrs::{class, style},
     Web,
 };
 
@@ -28,8 +28,18 @@ pub fn strong(_: impl Props<Empty>, children: impl Children<Web>) -> impl View<W
 pub fn button(mut props: impl Props<KBCProperty>, children: impl Children<Web>) -> impl View<Web> {
     let_props!({ KBCProperty::OnEvent(on_event) } = props);
 
+    let button_style = "
+        border: 2px solid rgb(0, 70, 100);
+        cursor: pointer;
+        position: relative;
+        background-color: transparent;
+        text-decoration: none;
+        z-index: 1;
+        font-family: inherit;
+    ";
+
     view! {
-        <html::button style="foobar" ..on_event>
+        <html::button class={["kbc_button"]} style={button_style} ..on_event>
             ..children
         </html::button>
     }

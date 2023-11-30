@@ -24,21 +24,14 @@ impl<T: Props<HtmlProperties> + Diff<Web>, C: Children<Web>> Diff<Web> for Eleme
 
     fn init(self, cursor: &mut WebCursor) -> Self::State {
         let _ = cursor.element(self.name);
-
-        cursor.enter_attrs();
         let props = self.props.init(cursor);
-        cursor.exit_attrs();
-
         let children = self.children.init(cursor);
 
         State { props, children }
     }
 
     fn diff(self, state: &mut Self::State, cursor: &mut crate::WebCursor) {
-        cursor.enter_attrs();
         self.props.diff(&mut state.props, cursor);
-        cursor.exit_attrs();
-
         self.children.diff(&mut state.children, cursor);
     }
 }

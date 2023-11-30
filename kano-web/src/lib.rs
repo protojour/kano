@@ -97,7 +97,6 @@ pub enum WebCursor {
     Detached,
     Node(web_sys::Node, Mode),
     AfterLastChild(web_sys::Element, Mode),
-    AttrsOf(web_sys::Element, Mode),
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -109,7 +108,6 @@ pub enum Mode {
 impl WebCursor {
     fn mode(&self) -> Mode {
         match self {
-            WebCursor::AttrsOf(_, mode) => *mode,
             WebCursor::AfterLastChild(_, mode) => *mode,
             WebCursor::Node(_, mode) => *mode,
             WebCursor::Detached => Mode::Append,
@@ -135,7 +133,7 @@ impl WebCursor {
 
     fn on_event(&mut self, on_event: OnEvent) -> EventListener {
         match self {
-            WebCursor::AttrsOf(element, _mode) => {
+            WebCursor::Node(element, _mode) => {
                 kano::log("on_event");
                 let event_target: &EventTarget = element.dyn_ref().unwrap();
                 let event_type = match on_event.event() {
@@ -147,36 +145,15 @@ impl WebCursor {
                     on_event.invoke();
                 })
             }
-            WebCursor::Node(..) => panic!(),
             WebCursor::Detached => panic!(),
             WebCursor::AfterLastChild(..) => panic!(),
         }
     }
 
-    fn enter_attrs(&mut self) {
+    pub fn get_element(&self) -> &web_sys::Element {
         match self {
-            WebCursor::Node(node, mode) => {
-                if let Some(element) = node.dyn_ref::<web_sys::Element>() {
-                    *self = WebCursor::AttrsOf(element.clone(), *mode);
-                } else {
-                    panic!("Non-element attributes");
-                }
-            }
-            WebCursor::AfterLastChild(..) => {
-                panic!("Entering attrs of empty children");
-            }
-            WebCursor::AttrsOf(..) | WebCursor::Detached => panic!(),
-        }
-    }
-
-    fn exit_attrs(&mut self) {
-        match self {
-            WebCursor::AttrsOf(element, mode) => {
-                *self = WebCursor::Node(element.dyn_ref::<web_sys::Node>().unwrap().clone(), *mode);
-            }
-            WebCursor::AfterLastChild(..) => panic!(),
-            WebCursor::Node(..) => panic!(),
-            WebCursor::Detached => panic!(),
+            WebCursor::Node(node, _mode) => node.dyn_ref().unwrap(),
+            _ => panic!(),
         }
     }
 }
@@ -191,7 +168,6 @@ impl kano::platform::Cursor for WebCursor {
 
     fn empty(&mut self) {
         match &self {
-            WebCursor::AttrsOf(..) => {}
             _ => {
                 let comment = document().create_comment("");
                 self.append_node(&comment);
@@ -238,7 +214,6 @@ impl kano::platform::Cursor for WebCursor {
             WebCursor::AfterLastChild(_, _) | WebCursor::Detached => {
                 panic!("Enter empty children");
             }
-            WebCursor::AttrsOf(_, _) => {}
         }
     }
 
@@ -252,7 +227,6 @@ impl kano::platform::Cursor for WebCursor {
             WebCursor::AfterLastChild(element, mode) => {
                 *self = WebCursor::Node(element.dyn_ref::<web_sys::Node>().unwrap().clone(), *mode);
             }
-            WebCursor::AttrsOf(..) => {}
             WebCursor::Detached => panic!("no children"),
         }
     }
@@ -261,9 +235,6 @@ impl kano::platform::Cursor for WebCursor {
         match &self {
             WebCursor::AfterLastChild(..) => {}
             WebCursor::Detached => panic!(),
-            WebCursor::AttrsOf(..) => {
-                // FIXME!
-            }
             WebCursor::Node(node, mode) => {
                 if let Some(next) = node.next_sibling() {
                     *self = WebCursor::Node(next, *mode);
@@ -279,9 +250,6 @@ impl kano::platform::Cursor for WebCursor {
         match &self {
             WebCursor::AfterLastChild(..) => panic!(),
             WebCursor::Detached => panic!(),
-            WebCursor::AttrsOf(..) => {
-                todo!()
-            }
             WebCursor::Node(node, mode) => {
                 let next = if let Some(next) = node.next_sibling() {
                     WebCursor::Node(next, *mode)
@@ -304,9 +272,6 @@ impl kano::platform::Cursor for WebCursor {
 
     fn enter_diff(&mut self) {
         match self {
-            WebCursor::AttrsOf(_, mode) => {
-                *mode = Mode::Diff;
-            }
             WebCursor::AfterLastChild(_, mode) => {
                 *mode = Mode::Diff;
             }
@@ -319,9 +284,6 @@ impl kano::platform::Cursor for WebCursor {
 
     fn exit_diff(&mut self) {
         match self {
-            WebCursor::AttrsOf(_, mode) => {
-                *mode = Mode::Append;
-            }
             WebCursor::AfterLastChild(_, mode) => {
                 *mode = Mode::Append;
             }
@@ -346,9 +308,6 @@ impl kano::platform::Cursor for WebCursor {
             }
             (WebCursor::Node(_node, _), WebCursor::Detached) => {
                 panic!();
-            }
-            (WebCursor::AttrsOf(_el, _), _) => {
-                panic!()
             }
             (WebCursor::AfterLastChild(..), _) => {
                 panic!();
@@ -378,7 +337,6 @@ impl WebCursor {
                     .expect("insert_before");
                 *self = Self::Node(appendee.clone(), *mode);
             }
-            Self::AttrsOf(..) => panic!("append to attrs"),
         }
     }
 
@@ -387,7 +345,6 @@ impl WebCursor {
             Self::Detached => panic!(),
             Self::Node(node, _) => node.clone(),
             Self::AfterLastChild(..) => panic!(),
-            Self::AttrsOf(..) => panic!(),
         }
     }
 }
