@@ -1,4 +1,4 @@
-use kano::Diff;
+use kano::{Click, Diff, MouseOver};
 
 use std::{borrow::Cow, collections::HashMap};
 
@@ -7,7 +7,19 @@ use crate::{Web, WebCursor};
 #[derive(kano::Attribute)]
 pub enum HtmlProperties {
     Attribute(HtmlProperty),
-    Event(kano::OnEvent),
+    Event(kano::On<kano::Event>),
+}
+
+impl kano::Attribute<HtmlProperties> for kano::On<Click> {
+    fn into_prop(self) -> Option<HtmlProperties> {
+        Some(HtmlProperties::Event(self.into()))
+    }
+}
+
+impl kano::Attribute<HtmlProperties> for kano::On<MouseOver> {
+    fn into_prop(self) -> Option<HtmlProperties> {
+        Some(HtmlProperties::Event(self.into()))
+    }
 }
 
 #[derive(PartialEq)]

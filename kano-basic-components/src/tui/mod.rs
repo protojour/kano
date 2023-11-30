@@ -17,7 +17,7 @@ pub fn layout(_: impl Props<Empty>, children: impl Children<Tui>) -> impl View<T
             layout: Layout::Block,
             style: Default::default(),
         }),
-        events: vec![],
+        on_click: None,
         children,
     }
 }
@@ -28,7 +28,7 @@ pub fn paragraph(_: impl Props<Empty>, children: impl Children<Tui>) -> impl Vie
             layout: Layout::Paragraph,
             style: Default::default(),
         }),
-        events: vec![],
+        on_click: None,
         children,
     }
 }
@@ -42,13 +42,13 @@ pub fn strong(_: impl Props<Empty>, children: impl Children<Tui>) -> impl View<T
                 ..Default::default()
             },
         }),
-        events: vec![],
+        on_click: None,
         children,
     }
 }
 
 pub fn button(mut props: impl Props<KBCProperty>, children: impl Children<Tui>) -> impl View<Tui> {
-    let_props!({ KBCProperty::OnEvent([events]) } = props);
+    let_props!({ KBCProperty::OnClick(on_click) } = props);
 
     Component {
         data: Rc::new(ComponentData {
@@ -93,7 +93,7 @@ pub fn button(mut props: impl Props<KBCProperty>, children: impl Children<Tui>) 
                 )),
             },
         }),
-        events,
+        on_click,
         children,
     }
 }
@@ -104,7 +104,7 @@ pub fn unordered_list(_: impl Props<Empty>, children: impl Children<Tui>) -> imp
             layout: Layout::Block,
             style: Style::default(),
         }),
-        events: vec![],
+        on_click: None,
         children,
     }
 }
@@ -124,7 +124,7 @@ pub fn list_item(_: impl Props<Empty>, children: impl Children<Tui>) -> impl Vie
                 ..Style::default()
             },
         }),
-        events: vec![],
+        on_click: None,
         children,
     }
 }

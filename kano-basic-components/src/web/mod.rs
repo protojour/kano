@@ -26,7 +26,7 @@ pub fn strong(_: impl Props<Empty>, children: impl Children<Web>) -> impl View<W
 }
 
 pub fn button(mut props: impl Props<KBCProperty>, children: impl Children<Web>) -> impl View<Web> {
-    let_props!({ KBCProperty::OnEvent(on_event) } = props);
+    let_props!({ KBCProperty::OnClick(on_click) } = props);
 
     let button_style = "
         border: 2px solid rgb(0, 70, 100);
@@ -39,7 +39,7 @@ pub fn button(mut props: impl Props<KBCProperty>, children: impl Children<Web>) 
     ";
 
     view! {
-        <html::button class={["kbc_button"]} style={button_style} ..on_event>
+        <html::button class={["kbc_button"]} style={button_style} ..on_click>
             ..children
         </html::button>
     }

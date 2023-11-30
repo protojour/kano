@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use kano::{
     vdom::vnode::{VNode, VNodeRef},
-    Children,
+    Children, Click, On,
 };
 use ratatui::{
     style::{Color, Modifier},
@@ -21,7 +21,7 @@ use crate::{
 #[derive(Clone)]
 pub struct Component<C> {
     pub data: Rc<ComponentData>,
-    pub events: Vec<kano::OnEvent>,
+    pub on_click: Option<On<Click>>,
     pub children: C,
 }
 
@@ -31,7 +31,7 @@ impl<C: Children<Tui>> kano::Diff<Tui> for Component<C> {
     fn init(self, cursor: &mut TuiCursor) -> Self::State {
         cursor.set_component(self.data.clone());
 
-        cursor.set_events(self.events);
+        cursor.set_on_click(self.on_click.clone());
 
         let children_state = self.children.init(cursor);
 
@@ -39,7 +39,7 @@ impl<C: Children<Tui>> kano::Diff<Tui> for Component<C> {
     }
 
     fn diff(self, state: &mut Self::State, cursor: &mut TuiCursor) {
-        cursor.set_events(self.events);
+        cursor.set_on_click(self.on_click);
         self.children.diff(&mut state.1, cursor);
     }
 }
@@ -225,10 +225,6 @@ fn apply_style(tui_style: &mut ratatui::style::Style, style: &Style, state: Styl
     }
 }
 
-fn find_click_handler(node: &VNode<NodeData>) -> Option<kano::OnEvent> {
-    node.data
-        .on_events
-        .iter()
-        .find(|on_event| on_event.event() == &kano::Event::Click)
-        .cloned()
+fn find_click_handler(node: &VNode<NodeData>) -> Option<On<Click>> {
+    node.data.on_click.clone()
 }

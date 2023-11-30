@@ -1,8 +1,11 @@
 use std::rc::Rc;
 
-use kano::vdom::{
-    vcursor::{Location, Mode, VCursor},
-    vnode::VNodeRef,
+use kano::{
+    vdom::{
+        vcursor::{Location, Mode, VCursor},
+        vnode::VNodeRef,
+    },
+    Click, On,
 };
 
 use crate::{
@@ -35,11 +38,11 @@ impl TuiCursor {
         }
     }
 
-    pub fn set_events(&mut self, events: Vec<kano::OnEvent>) {
+    pub fn set_on_click(&mut self, on_click: Option<On<Click>>) {
         match &mut self.vcursor.location {
             Location::Node(node) => {
                 let mut node_mut = node.0.borrow_mut();
-                node_mut.data.on_events = events;
+                node_mut.data.on_click = on_click;
             }
             other => panic!("{other:?}"),
         }
@@ -48,16 +51,12 @@ impl TuiCursor {
 
 pub struct TuiEventHandle {
     node: NodeRef,
-    event: kano::Event,
 }
 
 impl Drop for TuiEventHandle {
     fn drop(&mut self) {
         let mut node_mut = self.node.0.borrow_mut();
-        node_mut
-            .data
-            .on_events
-            .retain(|on_event| on_event.event() != &self.event);
+        node_mut.data.on_click = None;
     }
 }
 
