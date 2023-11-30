@@ -4,36 +4,46 @@ use std::{borrow::Cow, collections::HashMap};
 
 use crate::{Web, WebCursor};
 
-pub enum HtmlProp {
+#[derive(kano::Attribute)]
+pub enum HtmlProperties {
     OnEvent(kano::OnEvent),
-    String(&'static str, Cow<'static, str>),
-    Bool(&'static str, bool),
+    String(HtmlValueProp<Cow<'static, str>>),
+    MultiString(HtmlValueProp<Vec<Cow<'static, str>>>),
+    Bool(HtmlValueProp<bool>),
+    Number(HtmlValueProp<i32>),
+    MaybeBool(HtmlValueProp<Option<bool>>),
+    StringOrBool(HtmlValueProp<StringOrBool>),
 }
 
-pub struct HtmlStrProp {
-    name: &'static str,
-    value: Cow<'static, str>,
+pub struct HtmlValueProp<T> {
+    attr_name: &'static str,
+    value: T,
 }
 
-impl HtmlStrProp {
-    pub const fn new(name: &'static str, value: Cow<'static, str>) -> Self {
-        Self { name, value }
+impl<T> HtmlValueProp<T> {
+    pub const fn new(attr_name: &'static str, value: T) -> Self {
+        Self { attr_name, value }
     }
 }
 
-impl kano::Attribute<HtmlProp> for kano::OnEvent {
-    fn into_prop(self) -> Option<HtmlProp> {
-        Some(HtmlProp::OnEvent(self))
+pub enum StringOrBool {
+    String(Cow<'static, str>),
+    Bool(bool),
+}
+
+impl From<Cow<'static, str>> for StringOrBool {
+    fn from(value: Cow<'static, str>) -> Self {
+        Self::String(value)
     }
 }
 
-impl kano::Attribute<HtmlProp> for HtmlStrProp {
-    fn into_prop(self) -> Option<HtmlProp> {
-        Some(HtmlProp::String(self.name, self.value))
+impl From<bool> for StringOrBool {
+    fn from(value: bool) -> Self {
+        Self::Bool(value)
     }
 }
 
-impl<const N: usize> Diff<Web> for [Option<HtmlProp>; N] {
+impl<const N: usize> Diff<Web> for [Option<HtmlProperties>; N] {
     type State = (Self, HashMap<usize, gloo::events::EventListener>);
 
     fn init(self, cursor: &mut WebCursor) -> Self::State {
@@ -41,7 +51,7 @@ impl<const N: usize> Diff<Web> for [Option<HtmlProp>; N] {
 
         for (index, prop) in self.iter().enumerate() {
             match prop {
-                Some(HtmlProp::OnEvent(on_event)) => {
+                Some(HtmlProperties::OnEvent(on_event)) => {
                     listeners.insert(index, cursor.on_event(on_event.clone()));
                 }
                 _ => {}
@@ -54,10 +64,10 @@ impl<const N: usize> Diff<Web> for [Option<HtmlProp>; N] {
     fn diff(self, (old_props, listeners): &mut Self::State, cursor: &mut WebCursor) {
         for (index, (new, old)) in self.into_iter().zip(old_props.iter_mut()).enumerate() {
             match (new, old) {
-                (Some(HtmlProp::OnEvent(on_event)), _) => {
+                (Some(HtmlProperties::OnEvent(on_event)), _) => {
                     listeners.insert(index, cursor.on_event(on_event.clone()));
                 }
-                (None, Some(HtmlProp::OnEvent(_))) => {
+                (None, Some(HtmlProperties::OnEvent(_))) => {
                     // Listener was weirdly deleted
                     listeners.remove(&index);
                 }

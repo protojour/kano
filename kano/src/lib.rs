@@ -17,6 +17,7 @@ use std::{cell::RefCell, convert::Infallible, marker::PhantomData, rc::Rc};
 
 pub use event::*;
 pub use kano_macros::view;
+pub use kano_macros::Attribute;
 use platform::{Cursor, Platform, PlatformContext};
 use registry::REGISTRY;
 pub use style::*;

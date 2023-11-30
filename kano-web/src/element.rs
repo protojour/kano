@@ -1,6 +1,6 @@
 use kano::{Children, Diff, Props, View};
 
-use crate::{props::HtmlProp, Web, WebCursor};
+use crate::{props::HtmlProperties, Web, WebCursor};
 
 #[derive(Clone, Copy)]
 pub struct Element<T, C> {
@@ -9,7 +9,7 @@ pub struct Element<T, C> {
     children: C,
 }
 
-impl<T: Props<HtmlProp> + Diff<Web>, C> Element<T, C> {
+impl<T: Props<HtmlProperties> + Diff<Web>, C> Element<T, C> {
     pub const fn new(name: &'static str, props: T, children: C) -> Self {
         Self {
             name,
@@ -19,7 +19,7 @@ impl<T: Props<HtmlProp> + Diff<Web>, C> Element<T, C> {
     }
 }
 
-impl<T: Props<HtmlProp> + Diff<Web>, C: Children<Web>> Diff<Web> for Element<T, C> {
+impl<T: Props<HtmlProperties> + Diff<Web>, C: Children<Web>> Diff<Web> for Element<T, C> {
     type State = State<T, C>;
 
     fn init(self, cursor: &mut WebCursor) -> Self::State {
@@ -43,7 +43,7 @@ impl<T: Props<HtmlProp> + Diff<Web>, C: Children<Web>> Diff<Web> for Element<T, 
     }
 }
 
-impl<T: Props<HtmlProp> + Diff<Web>, C: Children<Web>> View<Web> for Element<T, C> {}
+impl<T: Props<HtmlProperties> + Diff<Web>, C: Children<Web>> View<Web> for Element<T, C> {}
 
 pub struct State<T: Diff<Web>, C: Children<Web>> {
     props: T::State,

@@ -1,5 +1,5 @@
 use crate::element::Element;
-use crate::props::HtmlProp;
+use crate::props::HtmlProperties;
 use crate::Web;
 use kano::{Diff, Props};
 
@@ -8,7 +8,7 @@ macro_rules! define_element {
         /// The
         #[doc = concat!("`", stringify!($name), "`")]
         /// element.
-        pub const fn $name<T: Props<HtmlProp> + Diff<Web>, C>(
+        pub const fn $name<T: Props<HtmlProperties> + Diff<Web>, C>(
             props: T,
             children: C,
         ) -> Element<T, C> {

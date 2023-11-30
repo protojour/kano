@@ -5,12 +5,7 @@ pub mod tui;
 pub mod web;
 
 /// Props for Kano Basic Components
+#[derive(kano::Attribute)]
 pub enum KBCProperty {
     OnEvent(kano::OnEvent),
-}
-
-impl kano::Attribute<KBCProperty> for kano::OnEvent {
-    fn into_prop(self) -> Option<KBCProperty> {
-        Some(KBCProperty::OnEvent(self))
-    }
 }
