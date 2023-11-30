@@ -18,6 +18,7 @@ pub enum Node {
     None,
     Element(Element),
     Fragment(Vec<Node>),
+    Spread(syn::Ident),
     Text(Text),
     TextExpr(syn::Expr),
     Component(Component),
@@ -27,15 +28,15 @@ pub enum Node {
 
 #[derive(Eq, PartialEq, Debug)]
 pub enum TagName {
-    Element(syn::Ident),
+    Element(syn::TypePath),
     Component(syn::TypePath),
 }
 
 impl TagName {
-    fn borrow(&self) -> TagNameBorrow<'_> {
+    fn type_path(&self) -> &syn::TypePath {
         match self {
-            Self::Element(ident) => TagNameBorrow::Element(ident),
-            Self::Component(type_path) => TagNameBorrow::Component(type_path),
+            Self::Element(type_path) => type_path,
+            Self::Component(type_path) => type_path,
         }
     }
 }
@@ -71,7 +72,7 @@ impl Parse for Text {
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct Element {
-    pub tag_name: syn::Ident,
+    pub type_path: syn::TypePath,
     pub attrs: Vec<Attr>,
     pub children: Vec<Node>,
 }
@@ -109,56 +110,44 @@ pub struct For {
     pub repeating_node: Box<Node>,
 }
 
+struct DisplayTypePath<'a>(&'a syn::TypePath);
+
+impl<'a> Display for DisplayTypePath<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let path = &self.0;
+        let tokens = quote::quote! {
+            #path
+        };
+
+        tokens.fmt(f)
+    }
+}
+
 pub fn parse_tag_name(input: ParseStream) -> Result<TagName, syn::Error> {
     let type_path: syn::TypePath = input.parse()?;
 
-    Ok(if type_path.path.segments.len() == 1 {
-        let ident = &type_path.path.segments[0].ident;
-        let ident_string = ident.to_string();
+    let last_segment = type_path.path.segments.last().unwrap();
 
+    let ident_string = last_segment.ident.to_string();
+
+    if ident_string.as_str() < "a" {
         // Component names start with an uppercase letter
-        if ident_string.as_str() < "a" {
-            TagName::Component(type_path)
-        } else {
-            let ident = type_path.path.segments.into_iter().next().unwrap().ident;
-            TagName::Element(ident)
-        }
+        Ok(TagName::Component(type_path))
     } else {
-        TagName::Component(type_path)
-    })
+        Ok(TagName::Element(type_path))
+    }
 }
 
 enum TagWithAttrs {
-    Element(syn::Ident, Vec<Attr>),
+    Element(syn::TypePath, Vec<Attr>),
     Component(syn::TypePath, ComponentAttrs),
 }
 
 impl TagWithAttrs {
-    fn tag_name(&self) -> TagNameBorrow<'_> {
+    fn type_path(&self) -> &syn::TypePath {
         match self {
-            Self::Element(tag_name, _) => TagNameBorrow::Element(tag_name),
-            Self::Component(type_path, _) => TagNameBorrow::Component(type_path),
-        }
-    }
-}
-
-#[derive(Debug, Eq, PartialEq)]
-enum TagNameBorrow<'a> {
-    Element(&'a syn::Ident),
-    Component(&'a syn::TypePath),
-}
-
-impl<'a> Display for TagNameBorrow<'a> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Element(ident) => write!(f, "{ident}"),
-            Self::Component(path) => {
-                let tokens = quote::quote! {
-                    #path
-                };
-
-                tokens.fmt(f)
-            }
+            Self::Element(type_path, _) => type_path,
+            Self::Component(type_path, _) => type_path,
         }
     }
 }
@@ -192,6 +181,12 @@ impl Parser {
 
         if let Ok(text) = input.parse::<Text>() {
             return Ok(Node::Text(text));
+        }
+
+        if input.peek(syn::token::DotDot) {
+            let _dot_dot: syn::token::DotDot = input.parse()?;
+            let ident = input.parse()?;
+            return Ok(Node::Spread(ident));
         }
 
         if input.peek(syn::token::If) {
@@ -248,13 +243,13 @@ impl Parser {
         input.parse::<syn::token::Slash>()?;
 
         let end_name = parse_tag_name(input)?;
-        if end_name.borrow() != tag_with_attrs.tag_name() {
+        if end_name.type_path() != tag_with_attrs.type_path() {
             return Err(syn::Error::new(
                 input.span(),
                 format!(
                     "Unexpected closing name `{}`. Expected `{}`.",
-                    end_name.borrow(),
-                    tag_with_attrs.tag_name(),
+                    DisplayTypePath(end_name.type_path()),
+                    DisplayTypePath(tag_with_attrs.type_path()),
                 ),
             ));
         }
@@ -269,7 +264,7 @@ impl Parser {
         children: Vec<Node>,
     ) -> syn::Result<Node> {
         match tag_with_attrs {
-            TagWithAttrs::Element(tag_name, attrs) => {
+            TagWithAttrs::Element(type_path, attrs) => {
                 let attrs = attrs
                     .into_iter()
                     .map(|attr| {
@@ -281,7 +276,7 @@ impl Parser {
                     .collect::<syn::Result<Vec<_>>>()?;
 
                 Ok(Node::Element(Element {
-                    tag_name,
+                    type_path,
                     attrs,
                     children,
                 }))
@@ -528,8 +523,9 @@ mod tests {
         A: Fn(&str) -> Vec<Attr>,
     {
         let attrs = attrs_fn(&tag_name);
+        let ident = quote::format_ident!("{tag_name}");
         Node::Element(Element {
-            tag_name: quote::format_ident!("{tag_name}"),
+            type_path: syn::parse_quote! { #ident },
             attrs,
             children,
         })

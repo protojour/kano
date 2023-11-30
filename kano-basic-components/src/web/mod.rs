@@ -1,18 +1,27 @@
 use kano::{prelude::platform::*, Empty};
-use kano_web::{html, Web};
+use kano_web::{
+    html::{self, div, li, p, ul},
+    Web,
+};
 
 use crate::KBCProperty;
 
 pub fn layout(_: impl Props<Empty>, children: impl Children<Web>) -> impl View<Web> {
-    html::div([], children)
+    view! {
+        <div>..children</div>
+    }
 }
 
 pub fn paragraph(_: impl Props<Empty>, children: impl Children<Web>) -> impl View<Web> {
-    html::p([], children)
+    view! {
+        <p>..children</p>
+    }
 }
 
 pub fn strong(_: impl Props<Empty>, children: impl Children<Web>) -> impl View<Web> {
-    html::strong([], children)
+    view! {
+        <html::strong>..children</html::strong>
+    }
 }
 
 pub fn button(mut props: impl Props<KBCProperty>, children: impl Children<Web>) -> impl View<Web> {
@@ -22,9 +31,13 @@ pub fn button(mut props: impl Props<KBCProperty>, children: impl Children<Web>) 
 }
 
 pub fn unordered_list(_: impl Props<Empty>, children: impl Children<Web>) -> impl View<Web> {
-    html::ul([], children)
+    view! {
+        <ul>..children</ul>
+    }
 }
 
 pub fn list_item(_: impl Props<Empty>, children: impl Children<Web>) -> impl View<Web> {
-    html::li([], children)
+    view! {
+        <li>..children</li>
+    }
 }

@@ -10,11 +10,11 @@ pub fn view(node: Node) -> TokenStream {
     match node {
         Node::None => quote!(()),
         Node::Element(Element {
-            tag_name,
+            type_path,
             attrs,
             children,
         }) => {
-            let span = tag_name.span();
+            let span = type_path.span();
             let attrs: Vec<_> = attrs
                 .into_iter()
                 .map(|attr| {
@@ -44,16 +44,28 @@ pub fn view(node: Node) -> TokenStream {
                 [#(kano::Attribute::into_prop(#attrs)),*]
             };
 
-            let children = children.into_iter().map(view);
-
-            quote_spanned! {span=>
-                #tag_name(#attrs, (
-                    #(#children,)*
-                ))
+            match gen_children(children) {
+                Children::Listed(children) => {
+                    quote_spanned! {span=>
+                        #type_path(#attrs, (
+                            #(#children,)*
+                        ))
+                    }
+                }
+                Children::Spread(ident) => {
+                    quote_spanned! {span=>
+                        #type_path(#attrs, #ident)
+                    }
+                }
             }
         }
         Node::Fragment(_frag) => {
             quote!(())
+        }
+        Node::Spread(ident) => {
+            quote! {
+                #ident
+            }
         }
         Node::Text(text) => {
             let span = text.0.span();
@@ -127,5 +139,22 @@ pub fn view(node: Node) -> TokenStream {
                 })
             }
         }
+    }
+}
+
+enum Children {
+    Listed(Vec<TokenStream>),
+    Spread(syn::Ident),
+}
+
+fn gen_children(nodes: Vec<Node>) -> Children {
+    if nodes.len() == 1 {
+        let node = nodes.into_iter().next().unwrap();
+        match node {
+            Node::Spread(ident) => Children::Spread(ident),
+            _ => Children::Listed(vec![view(node)]),
+        }
+    } else {
+        Children::Listed(nodes.into_iter().map(view).collect())
     }
 }
