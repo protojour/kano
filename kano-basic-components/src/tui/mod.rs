@@ -7,7 +7,7 @@ use kano_tui::{
     Tui,
 };
 
-use crate::KBCProperty;
+use crate::KBCAttributes;
 
 // These Rc's are always constant and could be saved in a thread local.
 
@@ -47,8 +47,11 @@ pub fn strong(_: impl Props<Empty>, children: impl Children<Tui>) -> impl View<T
     }
 }
 
-pub fn button(mut props: impl Props<KBCProperty>, children: impl Children<Tui>) -> impl View<Tui> {
-    let_props!({ KBCProperty::OnClick(on_click) } = props);
+pub fn button(
+    mut props: impl Props<KBCAttributes>,
+    children: impl Children<Tui>,
+) -> impl View<Tui> {
+    let_props!({ KBCAttributes::OnClick(on_click) } = props);
 
     Component {
         data: Rc::new(ComponentData {
