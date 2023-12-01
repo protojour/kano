@@ -30,7 +30,7 @@ pub struct Superclass {
 impl Default for Superclass {
     fn default() -> Self {
         Self {
-            super_constructor: &HtmlElementConstructor,
+            super_constructor: &js::HtmlElementConstructor,
             super_tag: None,
         }
     }
@@ -38,6 +38,16 @@ impl Default for Superclass {
 
 pub struct ComponentHandle {
     _root_state: Box<dyn std::any::Any>,
+}
+
+type NoProps<A> = [Option<A>; 0];
+
+// Currently unimplemented, but closer to a realistic API
+pub fn register_web_component<A, V, F>(_func: F, _config: ComponentConfig)
+where
+    V: View<Web>,
+    F: Fn(NoProps<A>, (kano_html::Element<NoProps<kano_html::Attributes>, ()>, ())) -> V,
+{
 }
 
 pub trait WebComponent {
@@ -94,7 +104,7 @@ fn make_web_component_helper(
             .collect::<js_sys::Array>(),
     );
 
-    register_web_component(
+    js::register_web_component(
         config.superclass.super_constructor,
         config.tag_name,
         config.shadow.0,
@@ -188,22 +198,26 @@ fn js_constructor<D: WebComponent + 'static>(spec: &'static D) -> Closure<dyn Fn
     }) as Box<dyn FnMut(HtmlElement)>)
 }
 
-// JavaScript shim
-#[wasm_bindgen(module = "/src/web_component/register_web_component.js")]
-extern "C" {
-    fn register_web_component(
-        superclass: &js_sys::Function,
-        tag_name: &str,
-        shadow: bool,
-        constructor: JsValue,
-        observed_attributes: JsValue,
-        superclass_tag: Option<&str>,
-    );
-}
+mod js {
+    use super::*;
 
-#[allow(non_upper_case_globals)]
-#[wasm_bindgen]
-extern "C" {
-    #[wasm_bindgen(js_name = HTMLElement, js_namespace = window)]
-    pub static HtmlElementConstructor: js_sys::Function;
+    // JavaScript shim
+    #[wasm_bindgen(module = "/src/web_component/register_web_component.js")]
+    extern "C" {
+        pub fn register_web_component(
+            superclass: &js_sys::Function,
+            tag_name: &str,
+            shadow: bool,
+            constructor: JsValue,
+            observed_attributes: JsValue,
+            superclass_tag: Option<&str>,
+        );
+    }
+
+    #[allow(non_upper_case_globals)]
+    #[wasm_bindgen]
+    extern "C" {
+        #[wasm_bindgen(js_name = HTMLElement, js_namespace = window)]
+        pub static HtmlElementConstructor: js_sys::Function;
+    }
 }
