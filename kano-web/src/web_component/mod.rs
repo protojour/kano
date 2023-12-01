@@ -42,35 +42,17 @@ pub struct ComponentHandle {
 
 type NoProps<A> = [Option<A>; 0];
 
-// Currently unimplemented, but closer to a realistic API
-pub fn register_web_component<A, V, F>(_func: F, _config: ComponentConfig)
-where
-    V: View<Web>,
-    F: Fn(NoProps<A>, (kano_html::Element<NoProps<kano_html::Attributes>, ()>, ())) -> V,
-{
-}
+type SlotChildren = (kano_html::Element<NoProps<kano_html::Attributes>, ()>,);
 
-pub trait WebComponent {
-    fn register(&'static self, config: ComponentConfig);
-    fn hydrate(&self, this: &HtmlElement, anchor: &HtmlElement) -> ComponentHandle;
-}
-
-impl<V, F> WebComponent for F
+pub fn register_web_component<A, V, F>(func: F, config: ComponentConfig)
 where
     V: View<Web>,
     <V as Diff<Web>>::State: std::any::Any,
-    F: (Fn() -> V) + 'static,
+    F: (Fn(NoProps<A>, SlotChildren) -> V) + Copy + 'static,
 {
-    fn register(&'static self, config: ComponentConfig) {
-        let constructor = js_constructor(self);
-
-        // The function takes no arguments, so there are no attributes
-        make_web_component_helper(constructor.into_js_value(), config, &[]);
-    }
-
-    fn hydrate(&self, _this: &HtmlElement, anchor: &HtmlElement) -> ComponentHandle {
+    let constructor = js_constructor(move |_this, anchor| {
         let mut cursor = WebCursor::Detached;
-        let state = self().init(&mut cursor);
+        let state = func([], (kano_html::slot([], ()),)).init(&mut cursor);
 
         let WebCursor::Node(node, _) = cursor else {
             panic!("No node rendered");
@@ -81,7 +63,25 @@ where
         ComponentHandle {
             _root_state: Box::new(state),
         }
-    }
+    });
+
+    let attributes = &["foo"];
+
+    let observed_attributes = JsValue::from(
+        attributes
+            .iter()
+            .map(|attr| JsValue::from_str(attr))
+            .collect::<js_sys::Array>(),
+    );
+
+    js::register_web_component(
+        config.superclass.super_constructor,
+        config.tag_name,
+        config.shadow.0,
+        constructor.into_js_value(),
+        observed_attributes,
+        config.superclass.super_tag,
+    )
 }
 
 pub trait UpdateAttribute {
@@ -92,29 +92,9 @@ impl UpdateAttribute for () {
     fn update(&mut self, _name: &str, _value: &str) {}
 }
 
-fn make_web_component_helper(
-    constructor: JsValue,
-    config: ComponentConfig,
-    observed_attributes: &[&str],
-) {
-    let observed_attributes = JsValue::from(
-        observed_attributes
-            .iter()
-            .map(|attr| JsValue::from_str(attr))
-            .collect::<js_sys::Array>(),
-    );
-
-    js::register_web_component(
-        config.superclass.super_constructor,
-        config.tag_name,
-        config.shadow.0,
-        constructor,
-        observed_attributes,
-        config.superclass.super_tag,
-    );
-}
-
-fn js_constructor<D: WebComponent + 'static>(spec: &'static D) -> Closure<dyn FnMut(HtmlElement)> {
+fn js_constructor<F: (Fn(&HtmlElement, &HtmlElement) -> ComponentHandle) + Copy + 'static>(
+    hydrate_func: F,
+) -> Closure<dyn FnMut(HtmlElement)> {
     Closure::wrap(Box::new(move |this: HtmlElement| {
         let handle: Rc<RefCell<Option<ComponentHandle>>> = Rc::new(RefCell::new(None));
 
@@ -122,7 +102,7 @@ fn js_constructor<D: WebComponent + 'static>(spec: &'static D) -> Closure<dyn Fn
         let h = handle.clone();
         let constructor = Closure::wrap(Box::new({
             move |this, anchor| {
-                *h.borrow_mut() = Some(spec.hydrate(&this, &anchor));
+                *h.borrow_mut() = Some(hydrate_func(&this, &anchor));
             }
         }) as Box<dyn FnMut(HtmlElement, HtmlElement)>);
         js_sys::Reflect::set(
