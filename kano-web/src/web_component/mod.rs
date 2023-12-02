@@ -1,12 +1,20 @@
+use std::any::Any;
 use std::{cell::RefCell, rc::Rc};
 
 use js_sys::Function;
-use kano::{Diff, View};
+use kano::{DeserializeAttribute, Diff, View};
 use wasm_bindgen::closure::Closure;
 use wasm_bindgen::prelude::*;
 use web_sys::HtmlElement;
 
+use crate::web_cursor::Position;
 use crate::{Web, WebCursor};
+
+use self::properties::{read_props, ComponentProperties};
+use self::slot::Slot;
+
+mod properties;
+mod slot;
 
 pub struct ComponentConfig {
     pub tag_name: &'static str,
@@ -36,39 +44,208 @@ impl Default for Superclass {
     }
 }
 
-pub struct ComponentHandle {
-    _root_state: Box<dyn std::any::Any>,
-}
-
-type NoProps<A> = [Option<A>; 0];
-
-type SlotChildren = (kano_html::Element<NoProps<kano_html::Attributes>, ()>,);
+type Props<A> = Vec<Option<A>>;
+type HydrateFn = Rc<dyn Fn(Rc<RefCell<ComponentHandle>>, HtmlElement, HtmlElement)>;
+type DiffFn = Rc<dyn Fn(Rc<RefCell<ComponentHandle>>)>;
 
 pub fn register_web_component<A, V, F>(func: F, config: ComponentConfig)
 where
+    A: DeserializeAttribute,
     V: View<Web>,
     <V as Diff<Web>>::State: std::any::Any,
-    F: (Fn(NoProps<A>, SlotChildren) -> V) + Copy + 'static,
+    F: (Fn(Props<A>, Slot) -> V) + Copy + 'static,
 {
-    let constructor = js_constructor(move |_this, anchor| {
-        let mut cursor = WebCursor::Detached;
-        let state = func([], (kano_html::slot([], ()),)).init(&mut cursor);
+    let shadow = config.shadow.0;
+    register_inner(
+        ComponentClass {
+            hydrate_fn: Rc::new(move |handle, _this, anchor| {
+                kano::log(&format!("rust constructor anchor = {anchor:?}"));
 
-        let WebCursor::Node(node, _) = cursor else {
-            panic!("No node rendered");
+                let mut cursor = WebCursor::new_detached();
+                let props = read_props::<A>(&handle.borrow().properties);
+                let state = func(props, Slot).init(&mut cursor);
+
+                let Position::Node(node) = cursor.position else {
+                    panic!("No node rendered");
+                };
+
+                anchor.append_child(&node).unwrap();
+
+                let mut handle = handle.borrow_mut();
+                handle.lifecycle_state = if shadow {
+                    LifecycleState::ShadowHydrated
+                } else {
+                    LifecycleState::Hydrated
+                };
+                handle.root_state = Some(Box::new(state));
+                handle.root_node = Some(node);
+            }),
+            diff_fn: Rc::new(move |handle: Rc<RefCell<ComponentHandle>>| {
+                let mut handle = handle.borrow_mut();
+
+                let mut state = handle
+                    .root_state
+                    .take()
+                    .unwrap()
+                    .downcast::<<V as Diff<Web>>::State>()
+                    .unwrap();
+                let props = read_props::<A>(&handle.properties);
+
+                kano::log(&format!("Diffing with {:?}", handle.root_node));
+
+                let mut cursor = WebCursor {
+                    position: Position::Node(handle.root_node.clone().unwrap()),
+                };
+                func(props, Slot).diff(&mut state, &mut cursor);
+
+                handle.root_state = Some(Box::new(state));
+            }),
+            observed_attributes: observed_attributes::<A>(),
+        },
+        config,
+    );
+}
+
+pub struct ComponentHandle {
+    lifecycle_state: LifecycleState,
+    properties: ComponentProperties,
+    root_state: Option<Box<dyn Any>>,
+    root_node: Option<web_sys::Node>,
+    diff_fn: DiffFn,
+}
+
+#[derive(Clone, Copy)]
+enum LifecycleState {
+    Allocated,
+    Hydrated,
+    ShadowHydrated,
+    ShadowAttributesDirty,
+    Connected,
+}
+
+fn on_connected(handle: Rc<RefCell<ComponentHandle>>) {
+    kano::log("on connected");
+    let lifecycle_state = handle.borrow().lifecycle_state;
+
+    if let LifecycleState::ShadowAttributesDirty = lifecycle_state {
+        let diff_fn = handle.borrow().diff_fn.clone();
+        diff_fn(handle.clone());
+    }
+
+    handle.borrow_mut().lifecycle_state = LifecycleState::Connected;
+}
+
+fn on_adopted(_handle: Rc<RefCell<ComponentHandle>>) {}
+
+fn on_attribute_changed(handle: Rc<RefCell<ComponentHandle>>, name: String, value: Option<String>) {
+    kano::log(&format!("Attribute changed `{name}` to {value:?}"));
+
+    let mut diff_fn = None;
+
+    {
+        let mut handle = handle.borrow_mut();
+        if let Some(value) = value {
+            handle.properties.insert(name, value);
+        } else {
+            handle.properties.remove(&name);
+        }
+
+        let next_state = match handle.lifecycle_state {
+            LifecycleState::ShadowHydrated => LifecycleState::ShadowAttributesDirty,
+            LifecycleState::Connected => {
+                diff_fn = Some(handle.diff_fn.clone());
+                handle.lifecycle_state
+            }
+            _ => handle.lifecycle_state,
         };
 
-        anchor.append_child(&node).unwrap();
+        handle.lifecycle_state = next_state;
+    };
 
-        ComponentHandle {
-            _root_state: Box::new(state),
-        }
-    });
+    if let Some(diff_fn) = diff_fn {
+        diff_fn(handle);
+    }
+}
 
-    let attributes = &["foo"];
+struct ComponentClass {
+    hydrate_fn: HydrateFn,
+    diff_fn: DiffFn,
+    observed_attributes: Vec<&'static str>,
+}
+
+fn observed_attributes<A: DeserializeAttribute>() -> Vec<&'static str> {
+    let mut attribute_names = vec![];
+    A::describe(&mut attribute_names);
+    attribute_names
+}
+
+fn register_inner(
+    ComponentClass {
+        hydrate_fn,
+        diff_fn,
+        observed_attributes,
+    }: ComponentClass,
+    config: ComponentConfig,
+) {
+    let js_constructor = Closure::wrap(Box::new(move |this: HtmlElement| {
+        let handle = Rc::new(RefCell::new(ComponentHandle {
+            lifecycle_state: LifecycleState::Allocated,
+            properties: ComponentProperties::default(),
+            root_state: None,
+            diff_fn: diff_fn.clone(),
+            root_node: None,
+        }));
+
+        let hydrate_fn = hydrate_fn.clone();
+
+        register_js_method(&this, "_hydrate", {
+            {
+                let handle = handle.clone();
+                Closure::wrap(Box::new(move |this, anchor| {
+                    hydrate_fn(handle.clone(), this, anchor);
+                })
+                    as Box<dyn FnMut(HtmlElement, HtmlElement)>)
+            }
+            .into_js_value()
+        });
+
+        register_js_method(&this, "_connectedCallback", {
+            let handle = handle.clone();
+            Closure::wrap(Box::new(move |_el| {
+                on_connected(handle.clone());
+            }) as Box<dyn FnMut(HtmlElement)>)
+            .into_js_value()
+        });
+
+        register_js_method(&this, "_adoptedCallback", {
+            let handle = handle.clone();
+            Closure::wrap(Box::new(move |_el| {
+                on_adopted(handle.clone());
+            }) as Box<dyn FnMut(HtmlElement)>)
+            .into_js_value()
+        });
+
+        register_js_method(&this, "_attributeChangedCallback", {
+            let handle = handle.clone();
+            Closure::wrap(Box::new(move |_el, name, _old_value, new_value| {
+                on_attribute_changed(handle.clone(), name, new_value);
+            })
+                as Box<dyn FnMut(HtmlElement, String, Option<String>, Option<String>)>)
+            .into_js_value()
+        });
+
+        register_js_method(&this, "_disconnectedCallback", {
+            let handle = handle.clone();
+            Closure::wrap(Box::new(move |_el| {
+                let mut borrow_mut = handle.borrow_mut();
+                drop(borrow_mut.root_state.take());
+            }) as Box<dyn FnMut(HtmlElement)>)
+            .into_js_value()
+        });
+    }) as Box<dyn FnMut(HtmlElement)>);
 
     let observed_attributes = JsValue::from(
-        attributes
+        observed_attributes
             .iter()
             .map(|attr| JsValue::from_str(attr))
             .collect::<js_sys::Array>(),
@@ -78,104 +255,14 @@ where
         config.superclass.super_constructor,
         config.tag_name,
         config.shadow.0,
-        constructor.into_js_value(),
+        js_constructor.into_js_value(),
         observed_attributes,
         config.superclass.super_tag,
-    )
+    );
 }
 
-pub trait UpdateAttribute {
-    fn update(&mut self, name: &str, value: &str);
-}
-
-impl UpdateAttribute for () {
-    fn update(&mut self, _name: &str, _value: &str) {}
-}
-
-fn js_constructor<F: (Fn(&HtmlElement, &HtmlElement) -> ComponentHandle) + Copy + 'static>(
-    hydrate_func: F,
-) -> Closure<dyn FnMut(HtmlElement)> {
-    Closure::wrap(Box::new(move |this: HtmlElement| {
-        let handle: Rc<RefCell<Option<ComponentHandle>>> = Rc::new(RefCell::new(None));
-
-        // hydrate
-        let h = handle.clone();
-        let constructor = Closure::wrap(Box::new({
-            move |this, anchor| {
-                *h.borrow_mut() = Some(hydrate_func(&this, &anchor));
-            }
-        }) as Box<dyn FnMut(HtmlElement, HtmlElement)>);
-        js_sys::Reflect::set(
-            &this,
-            &JsValue::from_str("_hydrate"),
-            &constructor.into_js_value(),
-        )
-        .unwrap_throw();
-
-        // connectedCallback
-        /*
-            let cmp = component.clone();
-            let connected = Closure::wrap(Box::new({
-                move |el| {
-                    let mut lock = cmp.lock().unwrap_throw();
-                    lock.connected_callback(&el);
-                }
-            }) as Box<dyn FnMut(HtmlElement)>);
-            js_sys::Reflect::set(
-                &this,
-                &JsValue::from_str("_connectedCallback"),
-                &connected.into_js_value(),
-            )
-            .unwrap_throw();
-        */
-
-        // disconnectedCallback
-        /*
-            let cmp = component.clone();
-            let disconnected = Closure::wrap(Box::new(move |el| {
-                let mut lock = cmp.lock().unwrap_throw();
-                lock.disconnected_callback(&el);
-            }) as Box<dyn FnMut(HtmlElement)>);
-            js_sys::Reflect::set(
-                &this,
-                &JsValue::from_str("_disconnectedCallback"),
-                &disconnected.into_js_value(),
-            )
-            .unwrap_throw();
-        */
-
-        // adoptedCallback
-        /*
-            let cmp = component.clone();
-            let adopted = Closure::wrap(Box::new(move |el| {
-                let mut lock = cmp.lock().unwrap_throw();
-                lock.adopted_callback(&el);
-            }) as Box<dyn FnMut(HtmlElement)>);
-            js_sys::Reflect::set(
-                &this,
-                &JsValue::from_str("_adoptedCallback"),
-                &adopted.into_js_value(),
-            )
-            .unwrap_throw();
-        */
-
-        // attributeChangedCallback
-        // TODO: Reactive attributes
-        /*
-            let cmp = component;
-            let attribute_changed = Closure::wrap(Box::new(move |el, name, old_value, new_value| {
-                let mut lock = cmp.lock().unwrap_throw();
-                lock.attribute_changed_callback(&el, name, old_value, new_value);
-            })
-                as Box<dyn FnMut(HtmlElement, String, Option<String>, Option<String>)>);
-            js_sys::Reflect::set(
-                &this,
-                &JsValue::from_str("_attributeChangedCallback"),
-                &attribute_changed.into_js_value(),
-            )
-            .unwrap_throw();
-        */
-    }) as Box<dyn FnMut(HtmlElement)>)
+fn register_js_method(this: &HtmlElement, method_name: &str, method: JsValue) {
+    js_sys::Reflect::set(this, &JsValue::from_str(method_name), &method).unwrap_throw();
 }
 
 mod js {

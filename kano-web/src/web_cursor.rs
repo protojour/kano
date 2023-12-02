@@ -7,47 +7,35 @@ use kano::{Event, On};
 use crate::document;
 
 #[derive(Clone, Debug)]
-pub enum WebCursor {
-    Detached,
-    Node(web_sys::Node, Mode),
-    AfterLastChild(web_sys::Element, Mode),
+pub struct WebCursor {
+    pub position: Position,
 }
 
-#[derive(Clone, Copy, Debug)]
-pub enum Mode {
-    Append,
-    Diff,
+#[derive(Clone, Debug)]
+pub enum Position {
+    Detached,
+    Node(web_sys::Node),
+    AfterLastChild(web_sys::Element),
+    EndOfShadowRoot(web_sys::ShadowRoot),
 }
 
 impl WebCursor {
-    pub fn mode(&self) -> Mode {
-        match self {
-            WebCursor::AfterLastChild(_, mode) => *mode,
-            WebCursor::Node(_, mode) => *mode,
-            WebCursor::Detached => Mode::Append,
+    pub fn new_detached() -> Self {
+        Self {
+            position: Position::Detached,
         }
     }
-}
 
-impl WebCursor {
     pub fn element(&mut self, tag: &str) -> web_sys::Node {
-        match self.mode() {
-            Mode::Append => {
-                let element = document().create_element(tag).unwrap();
-                self.append_node(&element);
-                // log(&format!("new element cursor: {cursor:?}"));
-                element.into()
-            }
-            Mode::Diff => match self {
-                Self::Node(..) => self.handle(),
-                _ => panic!(),
-            },
-        }
+        let element = document().create_element(tag).unwrap();
+        self.append_node(&element);
+        // log(&format!("new element cursor: {cursor:?}"));
+        element.into()
     }
 
     pub fn on_event(&mut self, on_event: On<Event>) -> EventListener {
-        match self {
-            WebCursor::Node(element, _mode) => {
+        match &mut self.position {
+            Position::Node(element) => {
                 kano::log("on_event");
                 let event_target: &EventTarget = element.dyn_ref().unwrap();
                 let event_type = match on_event.event() {
@@ -59,14 +47,14 @@ impl WebCursor {
                     on_event.invoke();
                 })
             }
-            WebCursor::Detached => panic!(),
-            WebCursor::AfterLastChild(..) => panic!(),
+            Position::Detached => panic!(),
+            Position::AfterLastChild(_) | Position::EndOfShadowRoot(_) => panic!(),
         }
     }
 
     pub fn get_element(&self) -> &web_sys::Element {
-        match self {
-            WebCursor::Node(node, _mode) => node.dyn_ref().unwrap(),
+        match &self.position {
+            Position::Node(node) => node.dyn_ref().unwrap(),
             _ => panic!(),
         }
     }
@@ -77,7 +65,9 @@ impl kano::platform::Cursor for WebCursor {
     type EventHandle = gloo::events::EventListener;
 
     fn from_text_handle(handle: &web_sys::Node) -> Self {
-        Self::Node(handle.clone(), Mode::Append)
+        Self {
+            position: Position::Node(handle.clone()),
+        }
     }
 
     fn empty(&mut self) {
@@ -86,22 +76,14 @@ impl kano::platform::Cursor for WebCursor {
     }
 
     fn text(&mut self, text: &str) -> web_sys::Node {
-        match self.mode() {
-            Mode::Append => {
-                let text_node = document().create_text_node(text);
-                self.append_node(&text_node);
-                text_node.into()
-            }
-            Mode::Diff => {
-                self.update_text(text);
-                self.handle()
-            }
-        }
+        let text_node = document().create_text_node(text);
+        self.append_node(&text_node);
+        text_node.into()
     }
 
     fn update_text(&mut self, text: &str) {
-        match self {
-            Self::Node(node, _) => {
+        match &self.position {
+            Position::Node(node) => {
                 node.set_node_value(Some(text));
             }
             _ => panic!(),
@@ -109,63 +91,74 @@ impl kano::platform::Cursor for WebCursor {
     }
 
     fn enter_children(&mut self) {
-        match self {
-            WebCursor::Node(node, mode) => {
+        match &mut self.position {
+            Position::Node(node) => {
                 if let Some(child) = node.first_child() {
                     // log(&format!("enter child: had child {child:?}"));
-                    *self = WebCursor::Node(child, *mode);
+                    self.position = Position::Node(child);
                 } else if let Some(element) = node.dyn_ref::<web_sys::Element>() {
                     // log(&format!("enter child: had no children"));
-                    *self = WebCursor::AfterLastChild(element.clone(), *mode);
+                    self.position = Position::AfterLastChild(element.clone());
                 } else {
-                    panic!("No children");
+                    panic!();
                 }
             }
-            WebCursor::AfterLastChild(_, _) | WebCursor::Detached => {
-                panic!("Enter empty children");
+            Position::AfterLastChild(_) | Position::Detached | Position::EndOfShadowRoot(_) => {
+                panic!("Enter empty children {:?}", self.position);
             }
         }
     }
 
     fn exit_children(&mut self) {
-        // log("exit child");
-        match self {
-            WebCursor::Node(node, mode) => {
+        match &mut self.position {
+            Position::Node(node) => {
                 let parent = node.parent_element().unwrap();
-                *self = WebCursor::Node(parent.dyn_into().unwrap(), *mode);
+                self.position = Position::Node(parent.dyn_into().unwrap());
             }
-            WebCursor::AfterLastChild(element, mode) => {
-                *self = WebCursor::Node(element.dyn_ref::<web_sys::Node>().unwrap().clone(), *mode);
+            Position::AfterLastChild(element) => {
+                self.position = Position::Node(element.clone().into());
             }
-            WebCursor::Detached => panic!("no children"),
+            Position::EndOfShadowRoot(shadow_root) => {
+                self.position = Position::Node(shadow_root.clone().into());
+            }
+            Position::Detached => panic!("no children"),
         }
     }
 
     fn next_sibling(&mut self) {
-        match &self {
-            WebCursor::AfterLastChild(..) => {}
-            WebCursor::Detached => panic!(),
-            WebCursor::Node(node, mode) => {
+        match &mut self.position {
+            Position::AfterLastChild(_) | Position::EndOfShadowRoot(_) => {}
+            Position::Detached => panic!(),
+            Position::Node(node) => {
                 if let Some(next) = node.next_sibling() {
-                    *self = WebCursor::Node(next, *mode);
+                    self.position = Position::Node(next);
                 } else {
-                    let parent = node.parent_element().unwrap();
-                    *self = WebCursor::AfterLastChild(parent, *mode);
+                    let parent_node = node.parent_node().unwrap();
+                    match parent_node.dyn_into::<web_sys::Element>() {
+                        Ok(parent_element) => {
+                            self.position = Position::AfterLastChild(parent_element);
+                        }
+                        Err(parent_node) => {
+                            self.position = Position::EndOfShadowRoot(
+                                parent_node.dyn_into::<web_sys::ShadowRoot>().unwrap(),
+                            );
+                        }
+                    }
                 }
             }
         }
     }
 
     fn remove(&mut self) {
-        match &self {
-            WebCursor::AfterLastChild(..) => panic!(),
-            WebCursor::Detached => panic!(),
-            WebCursor::Node(node, mode) => {
+        match &mut self.position {
+            Position::AfterLastChild(_) | Position::EndOfShadowRoot(_) => panic!(),
+            Position::Detached => panic!(),
+            Position::Node(node) => {
                 let next = if let Some(next) = node.next_sibling() {
-                    WebCursor::Node(next, *mode)
+                    Position::Node(next)
                 } else {
                     let parent = node.parent_element().unwrap();
-                    WebCursor::AfterLastChild(parent, *mode)
+                    Position::AfterLastChild(parent)
                 };
 
                 if let Some(element) = node.dyn_ref::<Element>() {
@@ -175,51 +168,29 @@ impl kano::platform::Cursor for WebCursor {
                     parent.remove_child(node).unwrap();
                 }
 
-                *self = next;
+                self.position = next;
             }
-        }
-    }
-
-    fn enter_diff(&mut self) {
-        match self {
-            WebCursor::AfterLastChild(_, mode) => {
-                *mode = Mode::Diff;
-            }
-            WebCursor::Node(_, mode) => {
-                *mode = Mode::Diff;
-            }
-            WebCursor::Detached => {}
-        }
-    }
-
-    fn exit_diff(&mut self) {
-        match self {
-            WebCursor::AfterLastChild(_, mode) => {
-                *mode = Mode::Append;
-            }
-            WebCursor::Node(_, mode) => {
-                *mode = Mode::Append;
-            }
-            WebCursor::Detached => {}
         }
     }
 
     fn replace(&mut self, func: impl FnOnce(&mut Self)) {
-        let mut replacement_cursor = WebCursor::Detached;
+        let mut replacement_cursor = WebCursor {
+            position: Position::Detached,
+        };
         func(&mut replacement_cursor);
 
-        match (&self, replacement_cursor) {
-            (WebCursor::Detached, _) => {}
-            (WebCursor::Node(node, _mode), WebCursor::Node(replacement, mode2)) => {
+        match (&self.position, replacement_cursor.position) {
+            (Position::Detached, _) => {}
+            (Position::Node(node), Position::Node(replacement)) => {
                 let parent = node.parent_element().unwrap();
                 parent.replace_child(&replacement, node).unwrap();
 
-                *self = WebCursor::Node(replacement, mode2);
+                self.position = Position::Node(replacement);
             }
-            (WebCursor::Node(_node, _), WebCursor::Detached) => {
+            (Position::Node(_node), Position::Detached) => {
                 panic!();
             }
-            (WebCursor::AfterLastChild(..), _) => {
+            (Position::AfterLastChild(..), _) => {
                 panic!();
             }
             _ => panic!(),
@@ -230,31 +201,26 @@ impl kano::platform::Cursor for WebCursor {
 impl WebCursor {
     fn append_node(&mut self, appendee: &web_sys::Node) {
         // log(&format!("append at Cursor: {self:?}"));
-        match self {
-            Self::Detached => {
-                *self = Self::Node(appendee.clone(), Mode::Append);
+        match &mut self.position {
+            Position::Detached => {
+                self.position = Position::Node(appendee.clone());
             }
-            Self::AfterLastChild(element, mode) => {
+            Position::AfterLastChild(element) => {
                 // log("append at empty");
                 element.append_child(appendee).expect("A");
-                *self = Self::Node(appendee.clone(), *mode);
+                self.position = Position::Node(appendee.clone());
             }
-            Self::Node(node, mode) => {
+            Position::Node(node) => {
                 // log("append after node");
                 node.parent_element()
                     .expect("parent element of node")
                     .insert_before(appendee, node.next_sibling().as_ref())
                     .expect("insert_before");
-                *self = Self::Node(appendee.clone(), *mode);
+                self.position = Position::Node(appendee.clone());
             }
-        }
-    }
-
-    fn handle(&self) -> web_sys::Node {
-        match self {
-            Self::Detached => panic!(),
-            Self::Node(node, _) => node.clone(),
-            Self::AfterLastChild(..) => panic!(),
+            Position::EndOfShadowRoot(_) => {
+                panic!()
+            }
         }
     }
 }

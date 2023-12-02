@@ -111,14 +111,6 @@ impl kano::platform::Cursor for TuiCursor {
         self.vcursor.remove();
     }
 
-    fn enter_diff(&mut self) {
-        self.vcursor.enter_diff();
-    }
-
-    fn exit_diff(&mut self) {
-        self.vcursor.exit_diff();
-    }
-
     fn replace(&mut self, func: impl FnOnce(&mut Self)) {
         let (mut replacement_cursor, root_ref) = Self::new_root();
         func(&mut replacement_cursor);

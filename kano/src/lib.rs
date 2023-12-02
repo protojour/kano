@@ -57,6 +57,12 @@ pub trait FromProperty<A>: Sized {
     fn from_property(property: A) -> Option<Self>;
 }
 
+pub trait DeserializeAttribute: Sized + 'static {
+    fn describe(names: &mut Vec<&'static str>);
+
+    fn deserialize(name: &str, value: String) -> Option<Self>;
+}
+
 /// An empty set of attributes.
 ///
 /// # Example
@@ -67,6 +73,14 @@ pub trait FromProperty<A>: Sized {
 pub type Empty = Infallible;
 
 impl<A, const N: usize> Props<A> for [Option<A>; N] {
+    type Iterator<'a> = core::slice::IterMut<'a, Option<A>> where A: 'a;
+
+    fn mut_iterator(&mut self) -> Self::Iterator<'_> {
+        self.iter_mut()
+    }
+}
+
+impl<A> Props<A> for Vec<Option<A>> {
     type Iterator<'a> = core::slice::IterMut<'a, Option<A>> where A: 'a;
 
     fn mut_iterator(&mut self) -> Self::Iterator<'_> {

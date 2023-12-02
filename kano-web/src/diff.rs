@@ -3,12 +3,12 @@ use std::collections::HashMap;
 use kano::{Children, Diff, Props, View};
 use kano_html::{
     properties::{Property, PropertyValue},
-    Attributes, Element,
+    Element, HtmlAttributes,
 };
 
 use crate::{web_cursor::WebCursor, Web};
 
-impl<T: Props<Attributes> + Diff<Web>, C: Children<Web>> Diff<Web> for Element<T, C> {
+impl<T: Props<HtmlAttributes> + Diff<Web>, C: Children<Web>> Diff<Web> for Element<T, C> {
     type State = State<T, C>;
 
     fn init(self, cursor: &mut WebCursor) -> Self::State {
@@ -25,14 +25,14 @@ impl<T: Props<Attributes> + Diff<Web>, C: Children<Web>> Diff<Web> for Element<T
     }
 }
 
-impl<T: Props<Attributes> + Diff<Web>, C: Children<Web>> View<Web> for Element<T, C> {}
+impl<T: Props<HtmlAttributes> + Diff<Web>, C: Children<Web>> View<Web> for Element<T, C> {}
 
 pub struct State<T: Diff<Web>, C: Children<Web>> {
     props: T::State,
     children: C::State,
 }
 
-impl<const N: usize> Diff<Web> for [Option<Attributes>; N] {
+impl<const N: usize> Diff<Web> for [Option<HtmlAttributes>; N] {
     type State = (Self, HashMap<usize, gloo::events::EventListener>);
 
     fn init(self, cursor: &mut WebCursor) -> Self::State {
@@ -40,10 +40,10 @@ impl<const N: usize> Diff<Web> for [Option<Attributes>; N] {
 
         for (index, prop) in self.iter().enumerate() {
             match prop {
-                Some(Attributes::Event(on_event)) => {
+                Some(HtmlAttributes::Event(on_event)) => {
                     listeners.insert(index, cursor.on_event(on_event.clone()));
                 }
-                Some(Attributes::Attribute(property)) => {
+                Some(HtmlAttributes::Attribute(property)) => {
                     set_html_attribute(cursor.get_element(), property);
                 }
                 _ => {}
@@ -56,24 +56,27 @@ impl<const N: usize> Diff<Web> for [Option<Attributes>; N] {
     fn diff(self, (old_props, listeners): &mut Self::State, cursor: &mut WebCursor) {
         for (index, (new, state)) in self.into_iter().zip(old_props.iter_mut()).enumerate() {
             match (new, &state) {
-                (Some(Attributes::Event(on_event)), _) => {
+                (Some(HtmlAttributes::Event(on_event)), _) => {
                     listeners.insert(index, cursor.on_event(on_event.clone()));
                 }
-                (None, Some(Attributes::Event(_))) => {
+                (None, Some(HtmlAttributes::Event(_))) => {
                     // Listener was weirdly deleted
                     listeners.remove(&index);
                 }
-                (Some(Attributes::Attribute(property)), Some(Attributes::Attribute(old))) => {
+                (
+                    Some(HtmlAttributes::Attribute(property)),
+                    Some(HtmlAttributes::Attribute(old)),
+                ) => {
                     if &property != old {
                         set_html_attribute(cursor.get_element(), &property);
                     }
-                    *state = Some(Attributes::Attribute(property));
+                    *state = Some(HtmlAttributes::Attribute(property));
                 }
-                (Some(Attributes::Attribute(property)), None) => {
+                (Some(HtmlAttributes::Attribute(property)), None) => {
                     set_html_attribute(cursor.get_element(), &property);
-                    *state = Some(Attributes::Attribute(property));
+                    *state = Some(HtmlAttributes::Attribute(property));
                 }
-                (None, Some(Attributes::Attribute(prop))) => {
+                (None, Some(HtmlAttributes::Attribute(prop))) => {
                     cursor
                         .get_element()
                         .remove_attribute(prop.idl_name)

@@ -23,7 +23,7 @@ impl<T, C> Element<T, C> {
 }
 
 #[derive(kano::FromProperty)]
-pub enum Attributes {
+pub enum HtmlAttributes {
     Attribute(properties::Property),
     Event(kano::On<kano::Event>),
 }

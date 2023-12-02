@@ -28,6 +28,7 @@ export function register_web_component(
             }
 
             attributeChangedCallback(name, oldValue, newValue) {
+                console.log("Attribute changed");
                 this._attributeChangedCallback(this, name, oldValue || "", newValue);
             }
 
@@ -42,15 +43,15 @@ export function register_web_component(
                 }
 
                 // otherwise, and also the first time, just run the callback
-                // this._connectedCallback(this);
+                this._connectedCallback(this);
             }
 
             disconnectedCallback() {
-                // this._disconnectedCallback(this);
+                this._disconnectedCallback(this);
             }
 
             adoptedCallback() {
-                // this._adoptedCallback(this);
+                this._adoptedCallback(this);
             }
         },
         superclassTag ? { extends: superclassTag } : undefined

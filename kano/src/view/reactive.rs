@@ -6,7 +6,7 @@ use std::{
 };
 
 use crate::{
-    platform::{Cursor, Platform},
+    platform::Platform,
     registry::{ViewCallback, REGISTRY},
     view_id::ViewId,
     Diff, View,
@@ -35,16 +35,16 @@ impl<P: Platform, T: Diff<P> + 'static, F: (Fn() -> T) + 'static> Diff<P> for Re
     }
 
     fn diff(self, state: &mut Self::State, cursor: &mut P::Cursor) {
-        cursor.enter_diff();
-        let new_state = state
-            .view_id
-            .as_current_reactive(|| (self.0)().init(cursor));
-        cursor.exit_diff();
-
+        let view_id = state.view_id;
         let mut data_cell = state.data_cell.borrow_mut();
         if let Some(data) = data_cell.as_mut() {
-            data.cursor = cursor.clone();
-            data.actual_state = Some(new_state);
+            if let Some(actual_state) = data.actual_state.as_mut() {
+                view_id.as_current_reactive(|| (self.0)().diff(actual_state, cursor));
+            } else {
+                panic!("No actual state");
+            }
+        } else {
+            panic!("No data cell");
         }
     }
 }

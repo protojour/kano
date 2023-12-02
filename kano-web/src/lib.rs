@@ -7,7 +7,7 @@ use anyhow::anyhow;
 use futures::{SinkExt, StreamExt};
 use kano::platform::{Platform, PlatformContext};
 use wasm_bindgen::prelude::*;
-use web_cursor::WebCursor;
+use web_cursor::{Position, WebCursor};
 use web_sys::{window, Document};
 
 mod diff;
@@ -62,10 +62,10 @@ impl Platform for Web {
     }
 
     fn run(view: impl kano::View<Self>, _context: PlatformContext) -> anyhow::Result<()> {
-        let mut cursor = WebCursor::Detached;
+        let mut cursor = WebCursor::new_detached();
         let state = view.init(&mut cursor);
 
-        let WebCursor::Node(node, _) = cursor else {
+        let Position::Node(node) = cursor.position else {
             return Err(anyhow!("No node rendered"));
         };
 

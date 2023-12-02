@@ -35,16 +35,10 @@ pub trait Cursor: Clone + Debug {
     fn text(&mut self, text: &str) -> Self::TextHandle;
     fn update_text(&mut self, text: &str);
 
-    // note: deprecated. Attributes are platform-specific.
-    // fn on_event(&mut self, event: OnEvent) -> Self::EventHandle;
-
     fn enter_children(&mut self);
     fn exit_children(&mut self);
     fn next_sibling(&mut self);
     fn remove(&mut self);
-
-    fn enter_diff(&mut self);
-    fn exit_diff(&mut self);
 
     fn replace(&mut self, func: impl FnOnce(&mut Self));
 }
@@ -89,8 +83,6 @@ pub(crate) mod test_platform {
         fn exit_children(&mut self) {}
         fn next_sibling(&mut self) {}
         fn remove(&mut self) {}
-        fn enter_diff(&mut self) {}
-        fn exit_diff(&mut self) {}
         fn replace(&mut self, _func: impl FnOnce(&mut Self)) {}
     }
 }

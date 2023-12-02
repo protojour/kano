@@ -26,6 +26,7 @@ impl<P: Platform, L: Diff<P>, R: Diff<P>> Diff<P> for Either<L, R> {
     }
 
     fn diff(self, state: &mut Self::State, cursor: &mut P::Cursor) {
+        crate::log("Either diff");
         match (&mut state.state, self) {
             (Either::Left(left_state), Either::Left(left)) => {
                 left.diff(left_state, cursor);
