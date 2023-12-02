@@ -1,4 +1,4 @@
-use kano::{let_props, view, Children, DeserializeAttribute, Props, View};
+use kano::{let_props, reactive::use_state, view, Children, DeserializeAttribute, Props, View};
 use kano_html::{attr::style, *};
 use kano_web::{
     web_component::{register_web_component, ComponentConfig, Shadow},
@@ -25,23 +25,26 @@ impl DeserializeAttribute for Attributes {
 fn test_comp(mut props: impl Props<Attributes>, children: impl Children<Web>) -> impl View<Web> {
     let_props!({ Attributes::ShowHeading(show_heading) } = props);
 
+    let style_select = use_state(|| false);
+
     let section_style = "
-        cursor: pointer;
         padding: 3px;
         margin: 3px;
-        position: relative;
         background-color: #a2a8d3;
-        text-decoration: none;
-        z-index: 1;
-        font-family: inherit;
+    ";
+
+    let other_section_style = "
+        padding: 3px;
+        margin: 3px;
+        background-color: #e7eaf6;
     ";
 
     view! {
-        <section style={section_style}>
+        <section style={if style_select.get() { other_section_style } else { section_style }}>
             if show_heading.is_some() {
                 <h1>"This is Kano Web Component!"</h1>
             }
-            <button>
+            <button on:click={move || style_select.toggle()}>
                 ..children
             </button>
         </section>

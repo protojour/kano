@@ -2,6 +2,8 @@ use std::any::Any;
 use std::{cell::RefCell, rc::Rc};
 
 use js_sys::Function;
+use kano::reactive::{use_state, State};
+use kano::view::Reactive;
 use kano::{DeserializeAttribute, Diff, View};
 use wasm_bindgen::closure::Closure;
 use wasm_bindgen::prelude::*;
@@ -46,12 +48,12 @@ impl Default for Superclass {
 
 type Props<A> = Vec<Option<A>>;
 type HydrateFn = Rc<dyn Fn(Rc<RefCell<ComponentHandle>>, HtmlElement, HtmlElement)>;
-type DiffFn = Rc<dyn Fn(Rc<RefCell<ComponentHandle>>)>;
+type PropsSignalCell = Rc<RefCell<Option<State<()>>>>;
 
 pub fn register_web_component<A, V, F>(func: F, config: ComponentConfig)
 where
     A: DeserializeAttribute,
-    V: View<Web>,
+    V: View<Web> + 'static,
     <V as Diff<Web>>::State: std::any::Any,
     F: (Fn(Props<A>, Slot) -> V) + Copy + 'static,
 {
@@ -62,8 +64,21 @@ where
                 kano::log(&format!("rust constructor anchor = {anchor:?}"));
 
                 let mut cursor = WebCursor::new_detached();
-                let props = read_props::<A>(&handle.borrow().properties);
-                let state = func(props, Slot).init(&mut cursor);
+
+                // The component is connected to the "props changed" event
+                // through the Reactive mechanism. This has the other good consequence
+                // that the components themselves can use signals at root level.
+                let state = Reactive({
+                    let handle = handle.clone();
+                    move || {
+                        connect_reactive_props_signal(handle.clone());
+                        // read the latest properties
+                        let props = read_props::<A>(&handle.borrow().properties);
+                        // inject the properties into the component
+                        func(props, Slot)
+                    }
+                })
+                .init(&mut cursor);
 
                 let Position::Node(node) = cursor.position else {
                     panic!("No node rendered");
@@ -80,38 +95,30 @@ where
                 handle.root_state = Some(Box::new(state));
                 handle.root_node = Some(node);
             }),
-            diff_fn: Rc::new(move |handle: Rc<RefCell<ComponentHandle>>| {
-                let mut handle = handle.borrow_mut();
-
-                let mut state = handle
-                    .root_state
-                    .take()
-                    .unwrap()
-                    .downcast::<<V as Diff<Web>>::State>()
-                    .unwrap();
-                let props = read_props::<A>(&handle.properties);
-
-                kano::log(&format!("Diffing with {:?}", handle.root_node));
-
-                let mut cursor = WebCursor {
-                    position: Position::Node(handle.root_node.clone().unwrap()),
-                };
-                func(props, Slot).diff(&mut state, &mut cursor);
-
-                handle.root_state = Some(Box::new(state));
-            }),
             observed_attributes: observed_attributes::<A>(),
         },
         config,
     );
 }
 
+fn connect_reactive_props_signal(handle: Rc<RefCell<ComponentHandle>>) {
+    // a signal indicating that the props have changed
+    let props_changed = use_state(|| ());
+    // register dependency on this signal
+    props_changed.get();
+    // "escape" the signal so it can be triggered from the framework code
+    {
+        let handle = handle.borrow_mut();
+        *handle.props_changed_cell.borrow_mut() = Some(props_changed);
+    }
+}
+
 pub struct ComponentHandle {
     lifecycle_state: LifecycleState,
     properties: ComponentProperties,
+    props_changed_cell: PropsSignalCell,
     root_state: Option<Box<dyn Any>>,
     root_node: Option<web_sys::Node>,
-    diff_fn: DiffFn,
 }
 
 #[derive(Clone, Copy)]
@@ -128,8 +135,9 @@ fn on_connected(handle: Rc<RefCell<ComponentHandle>>) {
     let lifecycle_state = handle.borrow().lifecycle_state;
 
     if let LifecycleState::ShadowAttributesDirty = lifecycle_state {
-        let diff_fn = handle.borrow().diff_fn.clone();
-        diff_fn(handle.clone());
+        let props_changed_cell = handle.borrow().props_changed_cell.clone();
+        let props_changed = props_changed_cell.borrow().unwrap();
+        props_changed.update(|_| ());
     }
 
     handle.borrow_mut().lifecycle_state = LifecycleState::Connected;
@@ -140,7 +148,7 @@ fn on_adopted(_handle: Rc<RefCell<ComponentHandle>>) {}
 fn on_attribute_changed(handle: Rc<RefCell<ComponentHandle>>, name: String, value: Option<String>) {
     kano::log(&format!("Attribute changed `{name}` to {value:?}"));
 
-    let mut diff_fn = None;
+    let mut should_update = false;
 
     {
         let mut handle = handle.borrow_mut();
@@ -153,7 +161,7 @@ fn on_attribute_changed(handle: Rc<RefCell<ComponentHandle>>, name: String, valu
         let next_state = match handle.lifecycle_state {
             LifecycleState::ShadowHydrated => LifecycleState::ShadowAttributesDirty,
             LifecycleState::Connected => {
-                diff_fn = Some(handle.diff_fn.clone());
+                should_update = true;
                 handle.lifecycle_state
             }
             _ => handle.lifecycle_state,
@@ -162,14 +170,15 @@ fn on_attribute_changed(handle: Rc<RefCell<ComponentHandle>>, name: String, valu
         handle.lifecycle_state = next_state;
     };
 
-    if let Some(diff_fn) = diff_fn {
-        diff_fn(handle);
+    if should_update {
+        let props_changed_cell = handle.borrow().props_changed_cell.clone();
+        let props_changed = props_changed_cell.borrow().unwrap();
+        props_changed.update(|_| ());
     }
 }
 
 struct ComponentClass {
     hydrate_fn: HydrateFn,
-    diff_fn: DiffFn,
     observed_attributes: Vec<&'static str>,
 }
 
@@ -182,7 +191,6 @@ fn observed_attributes<A: DeserializeAttribute>() -> Vec<&'static str> {
 fn register_inner(
     ComponentClass {
         hydrate_fn,
-        diff_fn,
         observed_attributes,
     }: ComponentClass,
     config: ComponentConfig,
@@ -191,8 +199,8 @@ fn register_inner(
         let handle = Rc::new(RefCell::new(ComponentHandle {
             lifecycle_state: LifecycleState::Allocated,
             properties: ComponentProperties::default(),
+            props_changed_cell: Rc::new(RefCell::new(None)),
             root_state: None,
-            diff_fn: diff_fn.clone(),
             root_node: None,
         }));
 
