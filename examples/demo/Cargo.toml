@@ -11,10 +11,10 @@ doc = false
 
 [features]
 tui = ["kano-tui", "kano-basic-components/tui"]
-web = ["kano-web", "kano-basic-components/web"]
+web = ["kano-web", "kano-basic-components/web", "kano-basic-components/web-routing"]
 
 [dependencies]
 kano = { path = "../../kano", features = ["routing"] }
 kano-tui = { path = "../../kano-tui", optional = true }
-kano-web = { path = "../../kano-web", optional = true }
+kano-web = { path = "../../kano-web", optional = true, features = ["routing"] }
 kano-basic-components = { path = "../../kano-basic-components" }

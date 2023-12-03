@@ -36,6 +36,17 @@ impl Platform for Web {
     fn init(signal_dispatch: Box<dyn Fn()>) -> PlatformContext {
         console_error_panic_hook::set_once();
 
+        #[cfg(feature = "routing")]
+        {
+            let location = window().unwrap().location();
+            let mut loc = location.pathname().unwrap();
+            if let Ok(hash) = location.hash() {
+                loc.push_str(&hash);
+            }
+
+            kano::history::push(loc);
+        }
+
         let (dispatch_tx, mut dispatch_rx) = futures::channel::mpsc::channel::<()>(1);
         wasm_bindgen_futures::spawn_local(async move {
             loop {

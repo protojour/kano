@@ -19,7 +19,7 @@ impl<P: Platform> Router<P> {
     pub fn at(&self, path: &str) -> Dyn<P> {
         self.inner
             .at(path)
-            .map(|a| (a.value)())
+            .map(|match_| (match_.value)())
             .unwrap_or_else(|_| (self.fallback_fn)())
     }
 }

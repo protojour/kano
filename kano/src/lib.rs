@@ -10,6 +10,8 @@ pub mod vdom;
 #[cfg(feature = "routing")]
 pub mod router;
 
+pub mod history;
+
 mod event;
 mod registry;
 mod signal;
@@ -24,7 +26,7 @@ pub use kano_macros::FromProperty;
 use platform::{Cursor, Platform, PlatformContext};
 use registry::REGISTRY;
 pub use style::*;
-use view::Func;
+use view::Reactive;
 
 /// Kano's core trait for view diffing.
 pub trait Diff<P: Platform> {
@@ -121,6 +123,7 @@ pub fn init<P: Platform>() -> Init<P> {
         let on_signal_tick = context.on_signal_tick.clone();
         move |registry| {
             registry.platform_on_signal_tick = Some(on_signal_tick);
+            registry.initialized = true;
         }
     });
 
@@ -131,11 +134,11 @@ pub fn init<P: Platform>() -> Init<P> {
 }
 
 impl<P: Platform> Init<P> {
-    pub fn run_app<V>(self, func: impl (FnOnce() -> V) + 'static) -> anyhow::Result<()>
+    pub fn run_app<V>(self, func: impl (Fn() -> V) + 'static) -> anyhow::Result<()>
     where
         V: View<P> + 'static,
     {
-        P::run(Func(func, ()), self.context)
+        P::run(Reactive(func), self.context)
     }
 }
 
@@ -187,14 +190,14 @@ macro_rules! platform_use {
 macro_rules! let_props {
     ({ $( $($seg:ident)::+ ($var:tt) $(,)?)+ } = $props:ident) => {
         $(
-            let_props!(let mut $var);
+            $crate::_let_props_helper!(let mut $var);
         )+
 
         for prop in $props.mut_iterator() {
             match prop.take() {
                 $(
                     Some($($seg)::+(binding)) => {
-                        let_props!($var = binding);
+                        $crate::_let_props_helper!($var = binding);
                     }
                 ),+
                 #[allow(unreachable_patterns)]
@@ -203,6 +206,10 @@ macro_rules! let_props {
         }
         drop($props);
     };
+}
+
+#[macro_export]
+macro_rules! _let_props_helper {
     (let mut $var:ident) => {
         let mut $var = None;
     };

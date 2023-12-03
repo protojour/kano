@@ -11,6 +11,7 @@ repository.workspace = true
 default = []
 tui = ["kano-tui"]
 web = ["kano-web", "kano-html"]
+web-routing = ["kano/routing"]
 
 [dependencies]
 kano = { path = "../kano" }

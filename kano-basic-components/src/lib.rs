@@ -8,6 +8,9 @@ pub mod web;
 
 /// Props for Kano Basic Components
 #[derive(kano::FromProperty)]
-pub enum KBCAttributes {
+pub enum KBCAttr {
     OnClick(kano::On<Click>),
+    To(To),
 }
+
+pub struct To(pub String);

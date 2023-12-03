@@ -4,15 +4,17 @@ use std::collections::{BTreeSet, HashMap, HashSet};
 use std::ops::AddAssign;
 use std::rc::Rc;
 
+use crate::history::{self, History};
 use crate::signal::Signal;
 use crate::view_id::ViewId;
 
 pub type ViewCallback = Rc<dyn Fn(ViewId) -> bool>;
 
-#[derive(Default)]
 pub(crate) struct Registry {
     next_view_id: u64,
     next_signal_id: u64,
+
+    pub initialized: bool,
 
     pub platform_on_signal_tick: Option<Rc<dyn Fn()>>,
     pub pending_signals: HashSet<Signal>,
@@ -27,6 +29,13 @@ pub(crate) struct Registry {
     pub reactive_entries: HashMap<ViewId, ReactiveEntry>,
     pub owned_signals_ordered: HashMap<ViewId, Vec<Signal>>,
     pub state_values: HashMap<Signal, Rc<RefCell<dyn Any>>>,
+
+    pub globals: Globals,
+}
+
+pub(crate) struct Globals {
+    #[cfg(feature = "routing")]
+    pub history: history::History,
 }
 
 pub(crate) struct ReactiveEntry {
@@ -35,10 +44,36 @@ pub(crate) struct ReactiveEntry {
 }
 
 thread_local! {
-    pub(crate) static REGISTRY: RefCell<Registry> = RefCell::new(Registry::default());
+    pub(crate) static REGISTRY: RefCell<Registry> = RefCell::new(Registry::new());
 }
 
 impl Registry {
+    fn new() -> Self {
+        let mut next_signal_id = 0;
+
+        let globals = Globals {
+            #[cfg(feature = "routing")]
+            history: History::new(Signal(fetch_add(&mut next_signal_id, 1))),
+        };
+
+        Self {
+            next_view_id: 0,
+            next_signal_id: 0,
+            initialized: false,
+            platform_on_signal_tick: Default::default(),
+            pending_signals: Default::default(),
+            subscriptions_by_signal: Default::default(),
+            subscriptions_by_view: Default::default(),
+            current_reactive_view: Default::default(),
+            current_func_view: Default::default(),
+            current_func_view_signal_tracker: Default::default(),
+            reactive_entries: Default::default(),
+            owned_signals_ordered: Default::default(),
+            state_values: Default::default(),
+            globals,
+        }
+    }
+
     pub fn alloc_view_id(&mut self) -> ViewId {
         ViewId(fetch_add(&mut self.next_view_id, 1))
     }
@@ -129,7 +164,7 @@ impl Registry {
 #[cfg(test)]
 impl Registry {
     pub fn reset(&mut self) {
-        *self = Self::default();
+        *self = Self::new();
     }
 
     pub fn peek_next_signal_id(&self) -> u64 {

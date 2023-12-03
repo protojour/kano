@@ -6,7 +6,7 @@ use kano_html::{
 };
 use kano_web::Web;
 
-use crate::KBCAttributes;
+use crate::{KBCAttr, To};
 
 pub fn layout(_: impl Props<Empty>, children: impl Children<Web>) -> impl View<Web> {
     view! {
@@ -26,11 +26,23 @@ pub fn strong(_: impl Props<Empty>, children: impl Children<Web>) -> impl View<W
     }
 }
 
-pub fn button(
-    mut props: impl Props<KBCAttributes>,
-    children: impl Children<Web>,
-) -> impl View<Web> {
-    let_props!({ KBCAttributes::OnClick(on_click) } = props);
+pub fn button(mut props: impl Props<KBCAttr>, children: impl Children<Web>) -> impl View<Web> {
+    let_props!({ KBCAttr::OnClick(on_click), KBCAttr::To(to) } = props);
+
+    #[cfg(feature = "web-routing")]
+    if let Some(To(location)) = to {
+        on_click = Some(kano::on::click(move || {
+            kano::history::push(location.clone());
+        }));
+    }
+
+    #[allow(unused_mut)]
+    let mut href: Option<kano_html::properties::Property> = None;
+
+    #[cfg(not(feature = "web-routing"))]
+    if let Some(To(location)) = to {
+        href = Some(kano_html::attr::href(location));
+    }
 
     let button_style = "
         border: 2px solid rgb(0, 70, 100);
@@ -43,7 +55,7 @@ pub fn button(
     ";
 
     view! {
-        <html::button class={["kbc_button"]} style={button_style} ..on_click>
+        <html::button class={["kbc_button"]} style={button_style} ..href ..on_click>
             ..children
         </html::button>
     }

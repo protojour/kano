@@ -2,6 +2,7 @@
 
 use kano::prelude::app::*;
 use kano::router::Router;
+use kano_basic_components::To;
 use todo::{add_todo, delete_todo, Todo};
 
 kano::define_platform!(AppPlatform, View);
@@ -13,18 +14,20 @@ fn main() {
     kano::init::<AppPlatform>().run_app(App).unwrap();
 }
 
+fn App() -> impl View {
+    kano::log("render App");
+    ROUTER.with(|router| router.at(&kano::history::current_location()))
+}
+
 thread_local! {
     static ROUTER: Router<AppPlatform> = Router::builder()
-    .route("/page0", Page0)
-    .route("/page1", || view!("Page 1"))
-    .or_else(|| view!("fallback"));
+    .route("/page1", || view! {
+        <layout>"This is page 1"</layout>
+    })
+    .or_else(StartPage);
 }
 
-fn App() -> impl View {
-    ROUTER.with(|router| router.at("/page0"))
-}
-
-fn Page0() -> impl View {
+fn StartPage() -> impl View {
     let clicks = use_state(|| 0);
     let show = use_state(|| true);
     let yes = use_state(|| false);
@@ -39,7 +42,9 @@ fn Page0() -> impl View {
 
     view! {
         <layout>
-            <paragraph>"Hello!"</paragraph>
+            <paragraph>
+                "Hello!"<button To={"/page1".into()}>"to Page 1"</button>
+            </paragraph>
             <paragraph>
                 <button
                     on:click={move || {

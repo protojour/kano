@@ -11,11 +11,15 @@ impl Signal {
     /// Send the signal
     pub(crate) fn send(self) {
         let tick_fn = REGISTRY.with_borrow_mut(|registry| {
-            if registry.pending_signals.is_empty() {
-                registry.pending_signals.insert(self);
-                registry.platform_on_signal_tick.clone()
+            if registry.initialized {
+                if registry.pending_signals.is_empty() {
+                    registry.pending_signals.insert(self);
+                    registry.platform_on_signal_tick.clone()
+                } else {
+                    registry.pending_signals.insert(self);
+                    None
+                }
             } else {
-                registry.pending_signals.insert(self);
                 None
             }
         });

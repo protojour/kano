@@ -33,6 +33,7 @@ impl kano::platform::Platform for Tui {
     type Cursor = TuiCursor;
 
     fn init(signal_dispatch: Box<dyn Fn()>) -> PlatformContext {
+        kano::history::push("".to_string());
         PlatformContext {
             on_signal_tick: Rc::new(|| {}),
             signal_dispatch,
@@ -53,11 +54,9 @@ impl kano::platform::Platform for Tui {
         let mut terminal = Terminal::new(CrosstermBackend::new(stdout()))?;
         terminal.clear()?;
 
-        let (mut cursor, empty_root) = TuiCursor::new_root();
+        let (mut cursor, root_node) = TuiCursor::new_root();
         let state = view.init(&mut cursor);
         std::mem::forget(state);
-
-        let root_node = empty_root.first_child().unwrap();
 
         let mut tui_state = TuiState {
             currently_focused: 0,
@@ -70,7 +69,8 @@ impl kano::platform::Platform for Tui {
 
             terminal.draw(|frame| {
                 let area = frame.size();
-                render_node(root_node.clone(), &mut tui_state, frame, area);
+                let view = root_node.first_child().unwrap();
+                render_node(view, &mut tui_state, frame, area);
             })?;
 
             if event::poll(std::time::Duration::from_millis(16))? {
@@ -93,6 +93,11 @@ impl kano::platform::Platform for Tui {
                             KeyCode::Char(' ') | KeyCode::Enter => {
                                 if let Some(handler) = tui_state.focused_event_handler.take() {
                                     handler.invoke();
+                                    (context.signal_dispatch)();
+                                }
+                            }
+                            KeyCode::Backspace => {
+                                if kano::history::pop() {
                                     (context.signal_dispatch)();
                                 }
                             }

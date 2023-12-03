@@ -1,6 +1,6 @@
 use std::any::Any;
 
-use crate::{prelude::platform::Platform, Diff, View};
+use crate::{platform::Cursor, prelude::platform::Platform, Diff, View};
 
 /// A type-erased View.
 pub struct Dyn<P> {
@@ -47,8 +47,13 @@ where
 
     fn diff(&mut self, state: &mut Box<dyn Any + 'static>, cursor: &mut <P as Platform>::Cursor) {
         let inner = self.0.take().unwrap();
-        let state = state.downcast_mut::<T::State>().unwrap();
-        inner.diff(state, cursor);
+        if let Some(state) = state.downcast_mut::<T::State>() {
+            inner.diff(state, cursor);
+        } else {
+            cursor.replace(|cursor| {
+                *state = Box::new(inner.init(cursor));
+            });
+        }
     }
 }
 
