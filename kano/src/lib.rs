@@ -7,6 +7,9 @@ pub mod view;
 #[cfg(feature = "vdom")]
 pub mod vdom;
 
+#[cfg(feature = "routing")]
+pub mod router;
+
 mod event;
 mod registry;
 mod signal;

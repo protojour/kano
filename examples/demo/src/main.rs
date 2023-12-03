@@ -1,6 +1,7 @@
 #![allow(non_snake_case)]
 
 use kano::prelude::app::*;
+use kano::router::Router;
 use todo::{add_todo, delete_todo, Todo};
 
 kano::define_platform!(AppPlatform, View);
@@ -12,7 +13,18 @@ fn main() {
     kano::init::<AppPlatform>().run_app(App).unwrap();
 }
 
+thread_local! {
+    static ROUTER: Router<AppPlatform> = Router::builder()
+    .route("/page0", Page0)
+    .route("/page1", || view!("Page 1"))
+    .or_else(|| view!("fallback"));
+}
+
 fn App() -> impl View {
+    ROUTER.with(|router| router.at("/page0"))
+}
+
+fn Page0() -> impl View {
     let clicks = use_state(|| 0);
     let show = use_state(|| true);
     let yes = use_state(|| false);

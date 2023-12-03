@@ -14,7 +14,7 @@ tui = ["kano-tui", "kano-basic-components/tui"]
 web = ["kano-web", "kano-basic-components/web"]
 
 [dependencies]
-kano.path = "../../kano"
+kano = { path = "../../kano", features = ["routing"] }
 kano-tui = { path = "../../kano-tui", optional = true }
 kano-web = { path = "../../kano-web", optional = true }
 kano-basic-components = { path = "../../kano-basic-components" }
