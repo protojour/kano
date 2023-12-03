@@ -6,7 +6,7 @@ use kano_web::{
 };
 
 enum Attributes {
-    ShowHeading(()),
+    ShowHeading(bool),
 }
 
 impl DeserializeAttribute for Attributes {
@@ -16,7 +16,7 @@ impl DeserializeAttribute for Attributes {
 
     fn deserialize(name: &str, _value: String) -> Option<Self> {
         match name {
-            "show_heading" => Some(Self::ShowHeading(())),
+            "show_heading" => Some(Self::ShowHeading(true)),
             _ => None,
         }
     }
@@ -41,7 +41,7 @@ fn test_comp(mut props: impl Props<Attributes>, children: impl Children<Web>) ->
 
     view! {
         <section style={if style_select.get() { other_section_style } else { section_style }}>
-            if show_heading.is_some() {
+            if show_heading.unwrap_or(false) {
                 <h1>"This is Kano Web Component!"</h1>
             }
             <button on:click={move || style_select.toggle()}>

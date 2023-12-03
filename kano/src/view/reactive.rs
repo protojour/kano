@@ -55,6 +55,22 @@ pub struct ReactiveState<P: Platform, T: Diff<P>> {
     view_id: ViewId,
     data_cell: Rc<RefCell<Option<Data<P, T>>>>,
 }
+impl<P: Platform, T: Diff<P> + 'static> ReactiveState<P, T> {
+    pub fn update_fn(&self) -> impl (Fn() -> bool) + Clone {
+        let view_id = self.view_id;
+        let callback = mk_reactive_callback(Rc::downgrade(&self.data_cell));
+        move || callback(view_id)
+    }
+}
+
+impl<P: Platform, T: Diff<P>> Clone for ReactiveState<P, T> {
+    fn clone(&self) -> Self {
+        Self {
+            view_id: self.view_id,
+            data_cell: self.data_cell.clone(),
+        }
+    }
+}
 
 struct Data<P: Platform, T: Diff<P>> {
     actual_state: Option<T::State>,

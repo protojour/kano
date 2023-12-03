@@ -2,7 +2,6 @@ use std::any::Any;
 use std::{cell::RefCell, rc::Rc};
 
 use js_sys::Function;
-use kano::reactive::{use_state, State};
 use kano::view::Reactive;
 use kano::{DeserializeAttribute, Diff, View};
 use wasm_bindgen::closure::Closure;
@@ -48,7 +47,6 @@ impl Default for Superclass {
 
 type Props<A> = Vec<Option<A>>;
 type HydrateFn = Rc<dyn Fn(Rc<RefCell<ComponentHandle>>, HtmlElement, HtmlElement)>;
-type PropsSignalCell = Rc<RefCell<Option<State<()>>>>;
 
 pub fn register_web_component<A, V, F>(func: F, config: ComponentConfig)
 where
@@ -65,18 +63,9 @@ where
 
                 let mut cursor = WebCursor::new_detached();
 
-                // The component is connected to the "props changed" event
-                // through the Reactive mechanism. This has the other good consequence
-                // that the components themselves can use signals at root level.
                 let state = Reactive({
                     let handle = handle.clone();
-                    move || {
-                        connect_reactive_props_signal(handle.clone());
-                        // read the latest properties
-                        let props = read_props::<A>(&handle.borrow().properties);
-                        // inject the properties into the component
-                        func(props, Slot)
-                    }
+                    move || func(read_props::<A>(&handle.borrow().properties), Slot)
                 })
                 .init(&mut cursor);
 
@@ -92,6 +81,7 @@ where
                 } else {
                     LifecycleState::Hydrated
                 };
+                handle.update_fn = Some(Rc::new(state.update_fn()));
                 handle.root_state = Some(Box::new(state));
                 handle.root_node = Some(node);
             }),
@@ -101,22 +91,10 @@ where
     );
 }
 
-fn connect_reactive_props_signal(handle: Rc<RefCell<ComponentHandle>>) {
-    // a signal indicating that the props have changed
-    let props_changed = use_state(|| ());
-    // register dependency on this signal
-    props_changed.get();
-    // "escape" the signal so it can be triggered from the framework code
-    {
-        let handle = handle.borrow_mut();
-        *handle.props_changed_cell.borrow_mut() = Some(props_changed);
-    }
-}
-
 pub struct ComponentHandle {
     lifecycle_state: LifecycleState,
     properties: ComponentProperties,
-    props_changed_cell: PropsSignalCell,
+    update_fn: Option<Rc<dyn Fn() -> bool>>,
     root_state: Option<Box<dyn Any>>,
     root_node: Option<web_sys::Node>,
 }
@@ -135,9 +113,8 @@ fn on_connected(handle: Rc<RefCell<ComponentHandle>>) {
     let lifecycle_state = handle.borrow().lifecycle_state;
 
     if let LifecycleState::ShadowAttributesDirty = lifecycle_state {
-        let props_changed_cell = handle.borrow().props_changed_cell.clone();
-        let props_changed = props_changed_cell.borrow().unwrap();
-        props_changed.update(|_| ());
+        let update_fn = handle.borrow().update_fn.clone().unwrap();
+        update_fn();
     }
 
     handle.borrow_mut().lifecycle_state = LifecycleState::Connected;
@@ -171,9 +148,8 @@ fn on_attribute_changed(handle: Rc<RefCell<ComponentHandle>>, name: String, valu
     };
 
     if should_update {
-        let props_changed_cell = handle.borrow().props_changed_cell.clone();
-        let props_changed = props_changed_cell.borrow().unwrap();
-        props_changed.update(|_| ());
+        let update_fn = handle.borrow().update_fn.clone().unwrap();
+        update_fn();
     }
 }
 
@@ -199,7 +175,7 @@ fn register_inner(
         let handle = Rc::new(RefCell::new(ComponentHandle {
             lifecycle_state: LifecycleState::Allocated,
             properties: ComponentProperties::default(),
-            props_changed_cell: Rc::new(RefCell::new(None)),
+            update_fn: None,
             root_state: None,
             root_node: None,
         }));
