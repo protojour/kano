@@ -12,6 +12,7 @@ use ratatui::{
     Frame,
 };
 use std::{
+    fs::OpenOptions,
     io::{self, stdout},
     panic,
     rc::Rc,
@@ -37,7 +38,21 @@ impl kano::platform::Platform for Tui {
         PlatformContext {
             on_signal_tick: Rc::new(|| {}),
             signal_dispatch,
-            logger: Rc::new(|_| {}),
+            logger: Rc::new(|line| {
+                // FIXME: Don't reinvent logging?
+                let mut file = OpenOptions::new()
+                    .write(true)
+                    .append(true)
+                    .create(true)
+                    .open(".kano_tui_log.txt")
+                    .unwrap();
+
+                use std::io::Write;
+
+                if let Err(e) = writeln!(file, "{line}") {
+                    eprintln!("Couldn't log line: {}", e);
+                }
+            }),
         }
     }
 
@@ -73,6 +88,8 @@ impl kano::platform::Platform for Tui {
                 render_node(view, &mut tui_state, frame, area);
             })?;
 
+            tui_state.on_post_frame();
+
             if event::poll(std::time::Duration::from_millis(16))? {
                 if let event::Event::Key(key) = event::read()? {
                     if key.kind == KeyEventKind::Press {
@@ -86,7 +103,9 @@ impl kano::platform::Platform for Tui {
                                 }
                             }
                             KeyCode::Down => {
-                                if tui_state.currently_focused < tui_state.focusable_counter - 1 {
+                                if tui_state.focusable_counter > 0
+                                    && tui_state.currently_focused < tui_state.focusable_counter - 1
+                                {
                                     tui_state.currently_focused += 1;
                                 }
                             }

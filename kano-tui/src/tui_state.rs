@@ -11,4 +11,10 @@ impl TuiState {
         self.focusable_counter = 0;
         self.focused_event_handler = None;
     }
+
+    pub fn on_post_frame(&mut self) {
+        if self.currently_focused >= self.focusable_counter {
+            self.currently_focused = 0;
+        }
+    }
 }

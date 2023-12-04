@@ -1,6 +1,6 @@
 use std::collections::{BTreeSet, HashMap, HashSet};
 
-use crate::registry::{ViewCallback, REGISTRY};
+use crate::registry::{ReactiveEntry, Registry, ViewCallback, REGISTRY};
 use crate::view_id::ViewId;
 
 /// The Id of a signal
@@ -60,6 +60,7 @@ fn broadcast(signals: HashSet<Signal>) {
             .flat_map(|subscriptions| subscriptions.iter().cloned())
             .collect();
 
+        let mut checked_parents: HashMap<ViewId, bool> = HashMap::default();
         let mut callbacks: HashMap<ViewId, ViewCallback> = Default::default();
 
         // The view_id_set is sorted, iterate over this _backwards_.
@@ -68,14 +69,12 @@ fn broadcast(signals: HashSet<Signal>) {
         for view_id in view_id_set.iter().rev() {
             let reactive_entry = registry.reactive_entries.get(view_id).unwrap();
 
-            if let Some(reactive_parent) = reactive_entry.reactive_parent {
-                // If the reactive parent is already in the view set,
-                // don't register the child callback: Updating a parent
-                // will implicitly update the child.
-                // This process will repeat itself for parents higher up.
-                if view_id_set.contains(&reactive_parent) {
-                    continue;
-                }
+            // If the reactive parent is already in the view set,
+            // don't register the child callback: Updating a parent
+            // will implicitly update the child.
+            // This process will repeat itself for parents higher up.
+            if !check_parents(reactive_entry, &view_id_set, &mut checked_parents, registry) {
+                continue;
             }
 
             callbacks.insert(*view_id, reactive_entry.callback.clone());
@@ -86,6 +85,31 @@ fn broadcast(signals: HashSet<Signal>) {
 
     for (view_id, callback) in callbacks_by_view_id {
         callback(view_id);
+    }
+}
+
+fn check_parents(
+    reactive_entry: &ReactiveEntry,
+    view_id_set: &BTreeSet<ViewId>,
+    checked_parents: &mut HashMap<ViewId, bool>,
+    registry: &Registry,
+) -> bool {
+    if let Some(reactive_parent) = reactive_entry.reactive_parent {
+        if view_id_set.contains(&reactive_parent) {
+            false
+        } else {
+            if let Some(parent_status) = checked_parents.get(&reactive_parent) {
+                *parent_status
+            } else {
+                let parent_entry = registry.reactive_entries.get(&reactive_parent).unwrap();
+
+                let status = check_parents(parent_entry, view_id_set, checked_parents, registry);
+                checked_parents.insert(reactive_parent, status);
+                status
+            }
+        }
+    } else {
+        true
     }
 }
 
@@ -142,6 +166,38 @@ mod tests {
             child0.as_current_reactive(|| {
                 signals[1].register_reactive_dependency();
             })
+        });
+        parent1.as_current_reactive(|| signals[2].register_reactive_dependency());
+
+        broadcast(HashSet::from(signals));
+
+        assert_eq!(
+            &*tester.notified_views.borrow(),
+            &BTreeSet::from([parent0, parent1]),
+            "Only the parents should be notified"
+        );
+    }
+
+    #[test]
+    fn broadcast_parent_child_deduplication_skip_one_level() {
+        REGISTRY.with_borrow_mut(Registry::reset);
+
+        let tester = BroadcastTester::new();
+        let parent0 = tester.add_reactive_view();
+        let child0 = parent0.as_current_reactive(|| tester.add_reactive_view());
+        let child1 = child0.as_current_reactive(|| tester.add_reactive_view());
+        let parent1 = tester.add_reactive_view();
+
+        let signals = [Signal(0), Signal(1), Signal(2)];
+
+        parent0.as_current_reactive(|| {
+            signals[0].register_reactive_dependency();
+
+            child0.as_current_reactive(|| {
+                child1.as_current_reactive(|| {
+                    signals[1].register_reactive_dependency();
+                });
+            });
         });
         parent1.as_current_reactive(|| signals[2].register_reactive_dependency());
 

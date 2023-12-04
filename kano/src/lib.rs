@@ -73,6 +73,7 @@ pub trait DeserializeAttribute: Sized + 'static {
 /// # Example
 ///
 /// ```rust
+/// use kano::*;
 /// fn component(_props: impl Props<Empty>) {}
 /// ```
 pub type Empty = Infallible;

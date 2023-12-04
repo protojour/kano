@@ -1,6 +1,7 @@
 use std::any::Any;
 use std::cell::RefCell;
 use std::collections::{BTreeSet, HashMap, HashSet};
+use std::fmt::Debug;
 use std::ops::AddAssign;
 use std::rc::Rc;
 
@@ -49,6 +50,7 @@ thread_local! {
 
 impl Registry {
     fn new() -> Self {
+        let next_view_id = 0;
         let mut next_signal_id = 0;
 
         let globals = Globals {
@@ -57,8 +59,8 @@ impl Registry {
         };
 
         Self {
-            next_view_id: 0,
-            next_signal_id: 0,
+            next_view_id,
+            next_signal_id,
             initialized: false,
             platform_on_signal_tick: Default::default(),
             pending_signals: Default::default(),
@@ -174,7 +176,7 @@ impl Registry {
 
 fn remove_set_entry<K, V>(from_map: &mut HashMap<K, BTreeSet<V>>, key: &K, value: &V)
 where
-    K: Eq + core::hash::Hash,
+    K: Eq + core::hash::Hash + Debug,
     V: Ord,
 {
     if let Some(entry_set) = from_map.get_mut(key) {
