@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use kano::{prelude::platform::*, Empty};
 use kano_tui::{
@@ -9,11 +9,9 @@ use kano_tui::{
 
 use crate::{KBCAttr, To};
 
-// These Rc's are always constant and could be saved in a thread local.
-
 pub fn layout(_: impl Props<Empty>, children: impl Children<Tui>) -> impl View<Tui> {
     Component {
-        data: Rc::new(ComponentData {
+        data: data("layout", || ComponentData {
             layout: Layout::Block,
             style: Default::default(),
         }),
@@ -24,7 +22,7 @@ pub fn layout(_: impl Props<Empty>, children: impl Children<Tui>) -> impl View<T
 
 pub fn paragraph(_: impl Props<Empty>, children: impl Children<Tui>) -> impl View<Tui> {
     Component {
-        data: Rc::new(ComponentData {
+        data: data("paragraph", || ComponentData {
             layout: Layout::Paragraph,
             style: Default::default(),
         }),
@@ -35,7 +33,7 @@ pub fn paragraph(_: impl Props<Empty>, children: impl Children<Tui>) -> impl Vie
 
 pub fn strong(_: impl Props<Empty>, children: impl Children<Tui>) -> impl View<Tui> {
     Component {
-        data: Rc::new(ComponentData {
+        data: data("strong", || ComponentData {
             layout: Layout::Inline,
             style: Style {
                 modifier: Some(StateKeyed::uniform(Modifier::BOLD | Modifier::ITALIC)),
@@ -57,7 +55,7 @@ pub fn button(mut props: impl Props<KBCAttr>, children: impl Children<Tui>) -> i
     }
 
     Component {
-        data: Rc::new(ComponentData {
+        data: data("button", || ComponentData {
             layout: Layout::Inline,
             style: Style {
                 modifier: Some(StateKeyed::uniform(Modifier::BOLD)),
@@ -106,7 +104,7 @@ pub fn button(mut props: impl Props<KBCAttr>, children: impl Children<Tui>) -> i
 
 pub fn unordered_list(_: impl Props<Empty>, children: impl Children<Tui>) -> impl View<Tui> {
     Component {
-        data: Rc::new(ComponentData {
+        data: data("unordered_list", || ComponentData {
             layout: Layout::Block,
             style: Style::default(),
         }),
@@ -117,7 +115,7 @@ pub fn unordered_list(_: impl Props<Empty>, children: impl Children<Tui>) -> imp
 
 pub fn list_item(_: impl Props<Empty>, children: impl Children<Tui>) -> impl View<Tui> {
     Component {
-        data: Rc::new(ComponentData {
+        data: data("list_item", || ComponentData {
             layout: Layout::Paragraph,
             style: Style {
                 prefix: Some((
@@ -133,4 +131,17 @@ pub fn list_item(_: impl Props<Empty>, children: impl Children<Tui>) -> impl Vie
         on_click: None,
         children,
     }
+}
+
+thread_local! {
+    static DATA_CACHE: RefCell<HashMap<&'static str, Rc<ComponentData>>> = RefCell::new(HashMap::new());
+}
+
+fn data(key: &'static str, producer: impl FnOnce() -> ComponentData) -> Rc<ComponentData> {
+    DATA_CACHE.with_borrow_mut(|cache| {
+        cache
+            .entry(key)
+            .or_insert_with(|| Rc::new(producer()))
+            .clone()
+    })
 }
