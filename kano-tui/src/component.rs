@@ -1,8 +1,9 @@
 use std::rc::Rc;
 
 use kano::{
+    attr::{Click, On},
     vdom::vnode::{VNode, VNodeRef},
-    Children, Click, On,
+    Children,
 };
 use ratatui::{
     style::{Color, Modifier},

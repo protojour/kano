@@ -37,7 +37,7 @@ pub fn view(node: Node) -> TokenStream {
                             AttrKey::On(ident) => {
                                 let span = ident.span();
                                 quote_spanned! {span=>
-                                    kano::on::#ident(
+                                    ::kano::property::on::#ident(
                                         #value
                                     )
                                 }
@@ -56,7 +56,7 @@ pub fn view(node: Node) -> TokenStream {
                 })
                 .collect();
             let attrs = quote_spanned! {span=>
-                [#(kano::FromProperty::from_property(#attrs)),*]
+                [#(::kano::FromProperty::from_property(#attrs)),*]
             };
 
             match gen_children(children) {
@@ -92,7 +92,7 @@ pub fn view(node: Node) -> TokenStream {
         Node::TextExpr(expr) => {
             let span = expr.span();
             quote_spanned! {span=>
-                kano::view::Reactive(move || #expr)
+                ::kano::view::Reactive(move || #expr)
             }
         }
         Node::Component(component) => {
@@ -101,14 +101,14 @@ pub fn view(node: Node) -> TokenStream {
             match component.attrs {
                 ComponentAttrs::Positional(positional) => {
                     quote_spanned! {span=>
-                        kano::view::Reactive(move ||
-                            kano::view::Func(#type_path, (#(#positional),*,))
+                        ::kano::view::Reactive(move ||
+                            ::kano::view::Func(#type_path, (#(#positional),*,))
                         )
                     }
                 }
                 ComponentAttrs::KeyValue(_) => {
                     quote_spanned! {span=>
-                        kano::view::Func(#type_path, ())
+                        ::kano::view::Func(#type_path, ())
                     }
                 }
             }
@@ -121,17 +121,17 @@ pub fn view(node: Node) -> TokenStream {
                 let view = view(arm.node);
                 if index == 0 {
                     quote_spanned! {span=>
-                        #pat => kano::view::Either::Left(#view),
+                        #pat => ::kano::view::Either::Left(#view),
                     }
                 } else {
                     quote_spanned! {span=>
-                        #pat => kano::view::Either::Right(#view),
+                        #pat => ::kano::view::Either::Right(#view),
                     }
                 }
             });
 
             quote_spanned! {span=>
-                kano::view::Reactive(move || {
+                ::kano::view::Reactive(move || {
                     match #expr {
                         #(#arms)*
                     }
@@ -149,7 +149,7 @@ pub fn view(node: Node) -> TokenStream {
             let child = view(*repeating_node);
 
             quote_spanned! {span=>
-                kano::view::seq_map(#expression, move |#pat| {
+                ::kano::view::seq_map(#expression, move |#pat| {
                     #child
                 })
             }

@@ -1,11 +1,11 @@
 use std::rc::Rc;
 
 use kano::{
+    attr::{Click, On},
     vdom::{
         vcursor::{Location, Mode, VCursor},
         vnode::VNodeRef,
     },
-    Click, On,
 };
 
 use crate::{

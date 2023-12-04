@@ -1,16 +1,8 @@
-use std::{fmt::Debug, rc::Rc};
+use std::{borrow::Cow, fmt::Debug, rc::Rc};
 
-pub mod on {
-    use super::*;
-
-    pub fn click(func: impl Fn() + 'static) -> On<Click> {
-        On::new(Click, func)
-    }
-
-    pub fn mouseover(func: impl Fn() + 'static) -> On<MouseOver> {
-        On::new(MouseOver, func)
-    }
-}
+/// This attributes represents the target of a hyperlink.
+#[derive(Clone, Debug)]
+pub struct To(pub Cow<'static, str>);
 
 #[derive(Clone, Copy, Debug)]
 pub struct Click;
@@ -37,11 +29,8 @@ impl<E: Debug> Debug for On<E> {
 }
 
 impl<E> On<E> {
-    fn new(event: E, func: impl Fn() + 'static) -> Self {
-        Self {
-            event,
-            func: Rc::new(func),
-        }
+    pub(crate) fn new(event: E, func: Rc<dyn Fn()>) -> Self {
+        Self { event, func }
     }
 
     pub fn event(&self) -> &E {
@@ -55,18 +44,12 @@ impl<E> On<E> {
 
 impl From<On<Click>> for On<Event> {
     fn from(value: On<Click>) -> Self {
-        Self {
-            event: Event::Click,
-            func: value.func,
-        }
+        Self::new(Event::Click, value.func)
     }
 }
 
 impl From<On<MouseOver>> for On<Event> {
     fn from(value: On<MouseOver>) -> Self {
-        Self {
-            event: Event::MouseOver,
-            func: value.func,
-        }
+        Self::new(Event::MouseOver, value.func)
     }
 }

@@ -1,3 +1,5 @@
+#![allow(dead_code, unused_imports, unused_variables)]
+
 use crate::{registry::REGISTRY, signal::Signal};
 
 pub fn current_location() -> String {

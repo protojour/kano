@@ -1,4 +1,4 @@
-use kano::{Click, On};
+use kano::attr::{Click, On};
 
 pub struct TuiState {
     pub currently_focused: usize,

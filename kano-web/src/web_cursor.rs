@@ -2,7 +2,7 @@ use gloo::events::EventListener;
 use js_sys::wasm_bindgen::*;
 use web_sys::{Element, EventTarget};
 
-use kano::{Event, On};
+use kano::attr::{Event, On};
 
 use crate::document;
 

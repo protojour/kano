@@ -1,6 +1,6 @@
 use std::{fmt::Debug, rc::Rc};
 
-use kano::{Click, On};
+use kano::attr::{Click, On};
 
 use crate::component::ComponentData;
 

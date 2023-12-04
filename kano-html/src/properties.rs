@@ -1,4 +1,4 @@
-use kano::{Click, MouseOver, On};
+use kano::attr::{Click, MouseOver, On};
 
 use std::borrow::Cow;
 

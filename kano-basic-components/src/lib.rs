@@ -1,4 +1,4 @@
-use kano::Click;
+use kano::attr::{Click, On, To};
 
 #[cfg(feature = "tui")]
 pub mod tui;
@@ -9,8 +9,6 @@ pub mod web;
 /// Props for Kano Basic Components
 #[derive(kano::FromProperty)]
 pub enum KBCAttr {
-    OnClick(kano::On<Click>),
+    OnClick(On<Click>),
     To(To),
 }
-
-pub struct To(pub String);

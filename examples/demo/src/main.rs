@@ -2,7 +2,6 @@
 
 use kano::prelude::app::*;
 use kano::router::Router;
-use kano_basic_components::To;
 use todo::{add_todo, delete_todo, Todo};
 
 kano::define_platform!(AppPlatform, View);
@@ -43,7 +42,7 @@ fn StartPage() -> impl View {
     view! {
         <layout>
             <paragraph>
-                "Hello!"<button To={"/page1".into()}>"to Page 1"</button>
+                "Hello!"<button to="/page1">"to Page 1"</button>
             </paragraph>
             <paragraph>
                 <button

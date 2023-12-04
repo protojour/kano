@@ -1,6 +1,9 @@
 //! Kano is a work-in-progress GUI application framework written for and in Rust.
+pub mod attr;
+pub mod history;
 pub mod platform;
 pub mod prelude;
+pub mod property;
 pub mod reactive;
 pub mod view;
 
@@ -10,22 +13,16 @@ pub mod vdom;
 #[cfg(feature = "routing")]
 pub mod router;
 
-pub mod history;
-
-mod event;
 mod registry;
 mod signal;
-mod style;
 mod view_id;
 
 use std::{cell::RefCell, convert::Infallible, marker::PhantomData, rc::Rc};
 
-pub use event::*;
 pub use kano_macros::view;
 pub use kano_macros::FromProperty;
 use platform::{Cursor, Platform, PlatformContext};
 use registry::REGISTRY;
-pub use style::*;
 use view::Reactive;
 
 /// Kano's core trait for view diffing.

@@ -1,4 +1,4 @@
-use kano::{prelude::platform::*, Empty};
+use kano::{attr::To, prelude::platform::*, Empty};
 use kano_html::{
     self as html,
     attr::{class, style},
@@ -6,7 +6,7 @@ use kano_html::{
 };
 use kano_web::Web;
 
-use crate::{KBCAttr, To};
+use crate::KBCAttr;
 
 pub fn layout(_: impl Props<Empty>, children: impl Children<Web>) -> impl View<Web> {
     view! {
@@ -31,8 +31,8 @@ pub fn button(mut props: impl Props<KBCAttr>, children: impl Children<Web>) -> i
 
     #[cfg(feature = "web-routing")]
     if let Some(To(location)) = to {
-        on_click = Some(kano::on::click(move || {
-            kano::history::push(location.clone());
+        on_click = Some(on::click(move || {
+            kano::history::push(location.clone().into_owned());
         }));
     }
 

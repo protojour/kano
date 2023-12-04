@@ -1,3 +1,5 @@
+#![allow(unused_imports, unused_mut, dead_code)]
+
 use std::any::Any;
 use std::cell::RefCell;
 use std::collections::{BTreeSet, HashMap, HashSet};

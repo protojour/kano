@@ -51,8 +51,8 @@ pub fn button(mut props: impl Props<KBCAttr>, children: impl Children<Tui>) -> i
     let_props!({ KBCAttr::OnClick(on_click), KBCAttr::To(to) } = props);
 
     if let Some(To(location)) = to {
-        on_click = Some(kano::on::click(move || {
-            kano::history::push(location.clone());
+        on_click = Some(on::click(move || {
+            kano::history::push(location.clone().into_owned());
         }));
     }
 
