@@ -1,14 +1,14 @@
 use kano::Props;
 
-use crate::{Element, HtmlAttributes};
+use crate::{HtmlAttribute, HtmlElement};
 
 macro_rules! define_element {
     (($ns:expr, $ty_name:ident, $name:ident, $dom_interface:ident)) => {
         /// The
         #[doc = concat!("`", stringify!($name), "`")]
         /// element.
-        pub const fn $name<T: Props<HtmlAttributes>, C>(props: T, children: C) -> Element<T, C> {
-            Element::new(stringify!($name), props, children)
+        pub const fn $name<T: Props<HtmlAttribute>, C>(props: T, children: C) -> HtmlElement<T, C> {
+            HtmlElement::new(stringify!($name), props, children)
         }
     };
 }

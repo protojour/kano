@@ -3,16 +3,16 @@ use std::collections::HashMap;
 use kano::{Children, Diff, Props, View};
 use kano_html::{
     properties::{Property, PropertyValue},
-    Element, HtmlAttributes,
+    HtmlAttribute, HtmlElement,
 };
 
 use crate::{web_cursor::WebCursor, Web};
 
-impl<T: Props<HtmlAttributes> + Diff<Web>, C: Children<Web>> Diff<Web> for Element<T, C> {
-    type State = State<T, C>;
+impl<A: Props<HtmlAttribute> + Diff<Web>, C: Children<Web>> Diff<Web> for HtmlElement<A, C> {
+    type State = State<A, C>;
 
     fn init(self, cursor: &mut WebCursor) -> Self::State {
-        let _ = cursor.element(self.name);
+        let _ = cursor.element(self.tag_name);
         let props = self.props.init(cursor);
         let children = self.children.init(cursor);
 
@@ -25,14 +25,14 @@ impl<T: Props<HtmlAttributes> + Diff<Web>, C: Children<Web>> Diff<Web> for Eleme
     }
 }
 
-impl<T: Props<HtmlAttributes> + Diff<Web>, C: Children<Web>> View<Web> for Element<T, C> {}
+impl<A: Props<HtmlAttribute> + Diff<Web>, C: Children<Web>> View<Web> for HtmlElement<A, C> {}
 
-pub struct State<T: Diff<Web>, C: Children<Web>> {
-    props: T::State,
+pub struct State<A: Diff<Web>, C: Children<Web>> {
+    props: A::State,
     children: C::State,
 }
 
-impl<const N: usize> Diff<Web> for [Option<HtmlAttributes>; N] {
+impl<const N: usize> Diff<Web> for [Option<HtmlAttribute>; N] {
     type State = (Self, HashMap<usize, gloo::events::EventListener>);
 
     fn init(self, cursor: &mut WebCursor) -> Self::State {
@@ -40,10 +40,10 @@ impl<const N: usize> Diff<Web> for [Option<HtmlAttributes>; N] {
 
         for (index, prop) in self.iter().enumerate() {
             match prop {
-                Some(HtmlAttributes::Event(on_event)) => {
+                Some(HtmlAttribute::Event(on_event)) => {
                     listeners.insert(index, cursor.on_event(on_event.clone()));
                 }
-                Some(HtmlAttributes::Attribute(property)) => {
+                Some(HtmlAttribute::Attribute(property)) => {
                     set_html_attribute(cursor.get_element(), property);
                 }
                 _ => {}
@@ -56,27 +56,24 @@ impl<const N: usize> Diff<Web> for [Option<HtmlAttributes>; N] {
     fn diff(self, (old_props, listeners): &mut Self::State, cursor: &mut WebCursor) {
         for (index, (new, state)) in self.into_iter().zip(old_props.iter_mut()).enumerate() {
             match (new, &state) {
-                (Some(HtmlAttributes::Event(on_event)), _) => {
+                (Some(HtmlAttribute::Event(on_event)), _) => {
                     listeners.insert(index, cursor.on_event(on_event.clone()));
                 }
-                (None, Some(HtmlAttributes::Event(_))) => {
+                (None, Some(HtmlAttribute::Event(_))) => {
                     // Listener was weirdly deleted
                     listeners.remove(&index);
                 }
-                (
-                    Some(HtmlAttributes::Attribute(property)),
-                    Some(HtmlAttributes::Attribute(old)),
-                ) => {
+                (Some(HtmlAttribute::Attribute(property)), Some(HtmlAttribute::Attribute(old))) => {
                     if &property != old {
                         set_html_attribute(cursor.get_element(), &property);
                     }
-                    *state = Some(HtmlAttributes::Attribute(property));
+                    *state = Some(HtmlAttribute::Attribute(property));
                 }
-                (Some(HtmlAttributes::Attribute(property)), None) => {
+                (Some(HtmlAttribute::Attribute(property)), None) => {
                     set_html_attribute(cursor.get_element(), &property);
-                    *state = Some(HtmlAttributes::Attribute(property));
+                    *state = Some(HtmlAttribute::Attribute(property));
                 }
-                (None, Some(HtmlAttributes::Attribute(prop))) => {
+                (None, Some(HtmlAttribute::Attribute(prop))) => {
                     cursor
                         .get_element()
                         .remove_attribute(prop.idl_name)

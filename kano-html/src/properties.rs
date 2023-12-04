@@ -2,15 +2,15 @@ use kano::attr::{Click, MouseOver, On};
 
 use std::borrow::Cow;
 
-use crate::HtmlAttributes;
+use crate::HtmlAttribute;
 
-impl kano::FromProperty<On<Click>> for HtmlAttributes {
+impl kano::FromProperty<On<Click>> for HtmlAttribute {
     fn from_property(property: On<Click>) -> Option<Self> {
         Some(Self::Event(property.into()))
     }
 }
 
-impl kano::FromProperty<On<MouseOver>> for HtmlAttributes {
+impl kano::FromProperty<On<MouseOver>> for HtmlAttribute {
     fn from_property(property: On<MouseOver>) -> Option<Self> {
         Some(Self::Event(property.into()))
     }
