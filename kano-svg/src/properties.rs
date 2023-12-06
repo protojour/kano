@@ -28,3 +28,9 @@ impl<const N: usize> From<[&'static str; N]> for Strings {
         Self(value.into_iter().map(Cow::Borrowed).collect())
     }
 }
+
+impl From<&'static str> for Strings {
+    fn from(value: &'static str) -> Self {
+        Self(vec![value.into()])
+    }
+}

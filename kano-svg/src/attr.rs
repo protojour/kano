@@ -37,8 +37,8 @@ macro_rules! define_attr {
         #[doc = concat!("`", stringify!($name), "`")]
         /// attribute.
         #[allow(non_snake_case)]
-        pub fn $ident(value: impl Into<Strings>) -> Property {
-            Property::new($idl, PropertyValue::SpaceSep(value.into().0))
+        pub fn $ident(value: impl Into<Strings>) -> SvgAttribute {
+            SvgAttribute(Property::new($idl, PropertyValue::SpaceSep(value.into().0)))
         }
     };
     (($ident:ident, $name:literal, $idl:literal, COMMA_SEP)) => {
@@ -46,8 +46,8 @@ macro_rules! define_attr {
         #[doc = concat!("`", stringify!($name), "`")]
         /// attribute.
         #[allow(non_snake_case)]
-        pub fn $ident(value: impl Into<Strings>) -> Property {
-            Property::new($idl, PropertyValue::CommaSep(value.into().0))
+        pub fn $ident(value: impl Into<Strings>) -> SvgAttribute {
+            SvgAttribute(Property::new($idl, PropertyValue::CommaSep(value.into().0)))
         }
     };
     (($ident:ident, $name:literal, $idl:literal, COMMA_SEP | STRING)) => {
