@@ -298,6 +298,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "kano-svg"
+version = "0.0.1"
+dependencies = [
+ "kano",
+]
+
+[[package]]
 name = "kano-tui"
 version = "0.0.1"
 dependencies = [
