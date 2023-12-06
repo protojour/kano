@@ -97,16 +97,14 @@ fn check_parents(
     if let Some(reactive_parent) = reactive_entry.reactive_parent {
         if view_id_set.contains(&reactive_parent) {
             false
+        } else if let Some(parent_status) = checked_parents.get(&reactive_parent) {
+            *parent_status
         } else {
-            if let Some(parent_status) = checked_parents.get(&reactive_parent) {
-                *parent_status
-            } else {
-                let parent_entry = registry.reactive_entries.get(&reactive_parent).unwrap();
+            let parent_entry = registry.reactive_entries.get(&reactive_parent).unwrap();
 
-                let status = check_parents(parent_entry, view_id_set, checked_parents, registry);
-                checked_parents.insert(reactive_parent, status);
-                status
-            }
+            let status = check_parents(parent_entry, view_id_set, checked_parents, registry);
+            checked_parents.insert(reactive_parent, status);
+            status
         }
     } else {
         true
