@@ -26,7 +26,7 @@ pub struct Component<C> {
     pub children: C,
 }
 
-impl<C: Children<Tui>> kano::Diff<Tui> for Component<C> {
+impl<C: Children<Tui>> kano::View<Tui> for Component<C> {
     type State = (Rc<ComponentData>, C::State);
 
     fn init(self, cursor: &mut TuiCursor) -> Self::State {
@@ -44,8 +44,6 @@ impl<C: Children<Tui>> kano::Diff<Tui> for Component<C> {
         self.children.diff(&mut state.1, cursor);
     }
 }
-
-impl<C: Children<Tui>> kano::View<Tui> for Component<C> {}
 
 #[derive(Clone, Debug)]
 pub struct ComponentData {

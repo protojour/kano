@@ -1,6 +1,6 @@
 use std::{marker::PhantomData, ops::Deref};
 
-use crate::{log, platform::Cursor, platform::Platform, reactive::Ref, Diff, View};
+use crate::{log, platform::Cursor, platform::Platform, reactive::Ref, View};
 
 pub trait Map<F>: Sized {
     type Seq;
@@ -30,7 +30,7 @@ pub fn seq_map<F, M: Map<F>>(seq: M, func: F) -> SeqMap<<M as Map<F>>::Seq, F> {
 
 pub struct SeqMap<S, F>(S, F);
 
-impl<P: Platform, M, T: Diff<P>, F: Fn(M) -> T> Diff<P> for SeqMap<Vec<M>, F> {
+impl<P: Platform, M, T: View<P>, F: Fn(M) -> T> View<P> for SeqMap<Vec<M>, F> {
     type State = Vec<T::State>;
 
     fn init(self, cursor: &mut <P as Platform>::Cursor) -> Self::State {
@@ -51,9 +51,7 @@ impl<P: Platform, M, T: Diff<P>, F: Fn(M) -> T> Diff<P> for SeqMap<Vec<M>, F> {
     }
 }
 
-impl<P: Platform, M: Clone + 'static, T: View<P>, F: Fn(M) -> T> View<P> for SeqMap<Vec<M>, F> {}
-
-impl<P: Platform, M: Clone + 'static, T: Diff<P>, F: Fn(M) -> T> Diff<P>
+impl<P: Platform, M: Clone + 'static, T: View<P>, F: Fn(M) -> T> View<P>
     for SeqMap<Ref<Vec<M>>, F>
 {
     type State = Vec<T::State>;
@@ -85,15 +83,10 @@ impl<P: Platform, M: Clone + 'static, T: Diff<P>, F: Fn(M) -> T> Diff<P>
     }
 }
 
-impl<P: Platform, M: Clone + 'static, T: View<P>, F: Fn(M) -> T> View<P>
-    for SeqMap<Ref<Vec<M>>, F>
-{
-}
-
 struct Differ<P>(PhantomData<P>);
 
 impl<P: Platform> Differ<P> {
-    fn apply_diff<T: Diff<P>, M, MI: Iterator<Item = M>, F: Fn(M) -> T>(
+    fn apply_diff<T: View<P>, M, MI: Iterator<Item = M>, F: Fn(M) -> T>(
         model_len: usize,
         model_iter: MI,
         state: &mut Vec<T::State>,

@@ -3,7 +3,7 @@ use std::{cell::RefCell, rc::Rc};
 
 use js_sys::Function;
 use kano::view::Reactive;
-use kano::{DeserializeAttribute, Diff, View};
+use kano::{DeserializeAttribute, View};
 use wasm_bindgen::closure::Closure;
 use wasm_bindgen::prelude::*;
 use web_sys::HtmlElement;
@@ -52,7 +52,7 @@ pub fn register_web_component<A, V, F>(func: F, config: ComponentConfig)
 where
     A: DeserializeAttribute,
     V: View<Web> + 'static,
-    <V as Diff<Web>>::State: std::any::Any,
+    <V as View<Web>>::State: std::any::Any,
     F: (Fn(Props<A>, Slot) -> V) + Copy + 'static,
 {
     let shadow = config.shadow.0;

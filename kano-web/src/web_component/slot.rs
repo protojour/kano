@@ -1,4 +1,4 @@
-use kano::{platform::Cursor, Children, Diff};
+use kano::{platform::Cursor, Children};
 
 use crate::{web_cursor::WebCursor, Web};
 
@@ -6,7 +6,7 @@ use crate::{web_cursor::WebCursor, Web};
 /// The slot's inner contents is outside Kano's control.
 pub struct Slot;
 
-impl Diff<Web> for Slot {
+impl Children<Web> for Slot {
     type State = ();
 
     fn init(self, cursor: &mut WebCursor) -> Self::State {
@@ -17,5 +17,3 @@ impl Diff<Web> for Slot {
 
     fn diff(self, _state: &mut Self::State, _cursor: &mut WebCursor) {}
 }
-
-impl Children<Web> for Slot {}

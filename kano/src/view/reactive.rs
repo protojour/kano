@@ -9,14 +9,14 @@ use crate::{
     platform::Platform,
     registry::{ViewCallback, REGISTRY},
     view_id::ViewId,
-    Diff, View,
+    View,
 };
 
 /// Reactive wraps a function `F` that produces something diffable,
 /// and automatically connects the signals used within the function to automatic updates.
 pub struct Reactive<F>(pub F);
 
-impl<P: Platform, T: Diff<P> + 'static, F: (Fn() -> T) + 'static> Diff<P> for Reactive<F> {
+impl<P: Platform, T: View<P> + 'static, F: (Fn() -> T) + 'static> View<P> for Reactive<F> {
     type State = ReactiveState<P, T>;
 
     fn init(self, cursor: &mut P::Cursor) -> Self::State {
@@ -49,13 +49,11 @@ impl<P: Platform, T: Diff<P> + 'static, F: (Fn() -> T) + 'static> Diff<P> for Re
     }
 }
 
-impl<P: Platform, T: Diff<P> + 'static, F: (Fn() -> T) + 'static> View<P> for Reactive<F> {}
-
-pub struct ReactiveState<P: Platform, T: Diff<P>> {
+pub struct ReactiveState<P: Platform, T: View<P>> {
     view_id: ViewId,
     data_cell: Rc<RefCell<Option<Data<P, T>>>>,
 }
-impl<P: Platform, T: Diff<P> + 'static> ReactiveState<P, T> {
+impl<P: Platform, T: View<P> + 'static> ReactiveState<P, T> {
     pub fn update_fn(&self) -> impl (Fn() -> bool) + Clone {
         let view_id = self.view_id;
         let callback = mk_reactive_callback(Rc::downgrade(&self.data_cell));
@@ -63,7 +61,7 @@ impl<P: Platform, T: Diff<P> + 'static> ReactiveState<P, T> {
     }
 }
 
-impl<P: Platform, T: Diff<P>> Clone for ReactiveState<P, T> {
+impl<P: Platform, T: View<P>> Clone for ReactiveState<P, T> {
     fn clone(&self) -> Self {
         Self {
             view_id: self.view_id,
@@ -72,13 +70,13 @@ impl<P: Platform, T: Diff<P>> Clone for ReactiveState<P, T> {
     }
 }
 
-struct Data<P: Platform, T: Diff<P>> {
+struct Data<P: Platform, T: View<P>> {
     actual_state: Option<T::State>,
     update_func: Box<dyn Fn(Option<T::State>, &mut P::Cursor) -> T::State>,
     cursor: P::Cursor,
 }
 
-impl<P: Platform, T: Diff<P>> Drop for ReactiveState<P, T> {
+impl<P: Platform, T: View<P>> Drop for ReactiveState<P, T> {
     fn drop(&mut self) {
         REGISTRY.with_borrow_mut(|registry| {
             registry.on_reactive_dropped(self.view_id);
@@ -87,7 +85,7 @@ impl<P: Platform, T: Diff<P>> Drop for ReactiveState<P, T> {
     }
 }
 
-fn mk_reactive_state<P: Platform, T: Diff<P> + 'static>(
+fn mk_reactive_state<P: Platform, T: View<P> + 'static>(
     update_func: Box<dyn Fn(Option<T::State>, &mut P::Cursor) -> T::State>,
     cursor: &mut P::Cursor,
 ) -> ReactiveState<P, T> {
@@ -117,7 +115,7 @@ fn mk_reactive_state<P: Platform, T: Diff<P> + 'static>(
     ReactiveState { view_id, data_cell }
 }
 
-fn mk_reactive_callback<P: Platform, T: Diff<P> + 'static>(
+fn mk_reactive_callback<P: Platform, T: View<P> + 'static>(
     weak_data_cell: Weak<RefCell<Option<Data<P, T>>>>,
 ) -> ViewCallback {
     Rc::new(move |view_id| {
@@ -150,7 +148,7 @@ mod tests {
         prelude::platform::use_state,
         registry::{Registry, REGISTRY},
         signal::Signal,
-        Diff,
+        View,
     };
 
     use super::Reactive;
@@ -161,14 +159,14 @@ mod tests {
 
         let test_sig = Signal(1337);
 
-        let state0 = <Reactive<_> as Diff<TestPlatform>>::init(
+        let state0 = <Reactive<_> as View<TestPlatform>>::init(
             Reactive(move || {
                 use_state(|| ()); // owned state
                 test_sig.register_reactive_dependency();
             }),
             &mut (),
         );
-        let _state1 = <Reactive<_> as Diff<TestPlatform>>::init(
+        let _state1 = <Reactive<_> as View<TestPlatform>>::init(
             Reactive(move || {
                 use_state(|| ()); // owned state
                 test_sig.register_reactive_dependency();
@@ -205,7 +203,7 @@ mod tests {
 
         let _state = {
             let call_count = call_count.clone();
-            <Reactive<_> as Diff<TestPlatform>>::init(
+            <Reactive<_> as View<TestPlatform>>::init(
                 Reactive(move || {
                     // A dependency on its own state
                     use_state(|| ()).get();

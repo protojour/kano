@@ -2,12 +2,12 @@ use crate::{
     platform::Platform,
     registry::{Registry, REGISTRY},
     view_id::ViewId,
-    Diff, View,
+    View,
 };
 
 pub struct Func<F, A>(pub F, pub A);
 
-impl<P: Platform, T: Diff<P>, F: (FnOnce() -> T) + 'static> Diff<P> for Func<F, ()> {
+impl<P: Platform, T: View<P>, F: (FnOnce() -> T) + 'static> View<P> for Func<F, ()> {
     type State = FuncState<P, T>;
 
     fn init(self, cursor: &mut P::Cursor) -> Self::State {
@@ -25,11 +25,9 @@ impl<P: Platform, T: Diff<P>, F: (FnOnce() -> T) + 'static> Diff<P> for Func<F, 
     }
 }
 
-impl<P: Platform, T: View<P>, F: (FnOnce() -> T) + 'static> View<P> for Func<F, ()> {}
-
 macro_rules! tuples {
     ($(($a:ident, $i:tt)),+) => {
-        impl<P: Platform, T: Diff<P>, $($a),+, F: (FnOnce($($a),+) -> T) + 'static>  Diff<P> for Func<F, ($($a),+,)> {
+        impl<P: Platform, T: View<P>, $($a),+, F: (FnOnce($($a),+) -> T) + 'static>  View<P> for Func<F, ($($a),+,)> {
             type State = FuncState<P, T>;
 
             fn init(self, cursor: &mut P::Cursor) -> Self::State {
@@ -46,8 +44,6 @@ macro_rules! tuples {
                 });
             }
         }
-
-        impl<P: Platform, T: View<P>, $($a),+, F: (FnOnce($($a),+) -> T) + 'static> View<P> for Func<F, ($($a),+,)> {}
     }
 }
 
@@ -67,12 +63,12 @@ tuples!(
     (A6, 6)
 );
 
-pub struct FuncState<P: Platform, T: Diff<P>> {
+pub struct FuncState<P: Platform, T: View<P>> {
     view_id: ViewId,
     state: T::State,
 }
 
-impl<P: Platform, T: Diff<P>> Drop for FuncState<P, T> {
+impl<P: Platform, T: View<P>> Drop for FuncState<P, T> {
     fn drop(&mut self) {
         REGISTRY.with_borrow_mut(|registry| {
             registry.on_view_dropped(self.view_id);
@@ -86,7 +82,7 @@ mod tests {
         platform::test_platform::TestPlatform,
         prelude::platform::use_state,
         registry::{Registry, REGISTRY},
-        Diff,
+        View,
     };
 
     use super::Func;
@@ -95,7 +91,7 @@ mod tests {
     fn state_gc() {
         REGISTRY.with_borrow_mut(Registry::reset);
 
-        let func_state = <Func<_, _> as Diff<TestPlatform>>::init(
+        let func_state = <Func<_, _> as View<TestPlatform>>::init(
             Func(
                 || {
                     use_state(|| 42);

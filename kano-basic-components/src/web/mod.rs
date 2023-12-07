@@ -1,4 +1,4 @@
-use kano::{attr::To, prelude::platform::*, Empty};
+use kano::{attr::To, prelude::platform::*, Children, Empty, View};
 use kano_html::{
     self as html,
     attr::{class, style},

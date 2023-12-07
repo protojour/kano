@@ -25,20 +25,26 @@ use platform::{Cursor, Platform, PlatformContext};
 use registry::REGISTRY;
 use view::Reactive;
 
-/// Kano's core trait for view diffing.
-pub trait Diff<P: Platform> {
+pub trait View<P: Platform> {
     type State;
 
-    // TODO: Should take renderer instance?
     fn init(self, cursor: &mut P::Cursor) -> Self::State;
     fn diff(self, state: &mut Self::State, cursor: &mut P::Cursor);
 }
 
-/// A marker trait for views.
-pub trait View<P: Platform>: Diff<P> {}
+pub trait Children<P: Platform> {
+    type State;
 
-/// A marker trait for the children of a view.
-pub trait Children<P: Platform>: Diff<P> {}
+    fn init(self, cursor: &mut P::Cursor) -> Self::State;
+    fn diff(self, state: &mut Self::State, cursor: &mut P::Cursor);
+}
+
+pub trait DiffProps<P: Platform> {
+    type State;
+
+    fn init(self, cursor: &mut P::Cursor) -> Self::State;
+    fn diff(self, state: &mut Self::State, cursor: &mut P::Cursor);
+}
 
 /// The Props trait marks properties passed into a view function.
 ///

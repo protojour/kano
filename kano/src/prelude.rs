@@ -12,5 +12,7 @@ pub mod app {
 /// Prelude for platforms that extend the app prelude, but extends it with platform-agnostic types.
 pub mod platform {
     pub use super::app::*;
-    pub use crate::{Children, Diff, Props, View};
+    pub use crate::Children;
+    pub use crate::Props;
+    pub use crate::View;
 }

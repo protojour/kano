@@ -1,14 +1,14 @@
-use kano::{platform::Platform, Children, Diff, View};
+use kano::{platform::Platform, Children, DiffProps, View};
 
 use crate::{
     properties::{Property, PropertyValue},
     SvgAttribute, SvgCursor, SvgElement, SvgProps,
 };
 
-impl<P: Platform, A, C: Children<P>> Diff<P> for SvgElement<A, C>
+impl<P: Platform, A, C: Children<P>> View<P> for SvgElement<A, C>
 where
     P::Cursor: SvgCursor,
-    SvgProps<A>: Diff<P>,
+    SvgProps<A>: DiffProps<P>,
 {
     type State = ElementState<P, A, C>;
 
@@ -26,23 +26,16 @@ where
     }
 }
 
-impl<P: Platform, A, C: Children<P>> View<P> for SvgElement<A, C>
-where
-    P::Cursor: SvgCursor,
-    SvgProps<A>: Diff<P>,
-{
-}
-
 pub struct ElementState<P: Platform, A, C: Children<P>>
 where
     P::Cursor: SvgCursor,
-    SvgProps<A>: Diff<P>,
+    SvgProps<A>: DiffProps<P>,
 {
-    props: <SvgProps<A> as Diff<P>>::State,
+    props: <SvgProps<A> as DiffProps<P>>::State,
     children: C::State,
 }
 
-impl<P: Platform, const N: usize> Diff<P> for SvgProps<[Option<SvgAttribute>; N]>
+impl<P: Platform, const N: usize> DiffProps<P> for SvgProps<[Option<SvgAttribute>; N]>
 where
     P::Cursor: SvgCursor,
 {

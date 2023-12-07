@@ -2,7 +2,7 @@
 
 use crate::{
     platform::{Cursor, Platform},
-    Diff, View,
+    View,
 };
 
 #[derive(Clone, Copy)]
@@ -11,7 +11,7 @@ pub enum Either<L, R> {
     Right(R),
 }
 
-impl<P: Platform, L: Diff<P>, R: Diff<P>> Diff<P> for Either<L, R> {
+impl<P: Platform, L: View<P>, R: View<P>> View<P> for Either<L, R> {
     type State = State<P, L, R>;
 
     fn init(self, cursor: &mut P::Cursor) -> Self::State {
@@ -43,8 +43,6 @@ impl<P: Platform, L: Diff<P>, R: Diff<P>> Diff<P> for Either<L, R> {
     }
 }
 
-pub struct State<P: Platform, L: Diff<P>, R: Diff<P>> {
+pub struct State<P: Platform, L: View<P>, R: View<P>> {
     state: Either<L::State, R::State>,
 }
-
-impl<P: Platform, L: View<P>, R: View<P>> View<P> for Either<L, R> {}

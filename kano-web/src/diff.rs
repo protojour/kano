@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use kano::{Children, Diff, Props, View};
+use kano::{Children, DiffProps, Props, View};
 use kano_html::{
     properties::{Property, PropertyValue},
     HtmlAttribute, HtmlElement,
@@ -8,7 +8,7 @@ use kano_html::{
 
 use crate::{web_cursor::WebCursor, Web};
 
-impl<A: Props<HtmlAttribute> + Diff<Web>, C: Children<Web>> Diff<Web> for HtmlElement<A, C> {
+impl<A: Props<HtmlAttribute> + DiffProps<Web>, C: Children<Web>> View<Web> for HtmlElement<A, C> {
     type State = State<A, C>;
 
     fn init(self, cursor: &mut WebCursor) -> Self::State {
@@ -25,14 +25,12 @@ impl<A: Props<HtmlAttribute> + Diff<Web>, C: Children<Web>> Diff<Web> for HtmlEl
     }
 }
 
-impl<A: Props<HtmlAttribute> + Diff<Web>, C: Children<Web>> View<Web> for HtmlElement<A, C> {}
-
-pub struct State<A: Diff<Web>, C: Children<Web>> {
+pub struct State<A: DiffProps<Web>, C: Children<Web>> {
     props: A::State,
     children: C::State,
 }
 
-impl<const N: usize> Diff<Web> for [Option<HtmlAttribute>; N] {
+impl<const N: usize> DiffProps<Web> for [Option<HtmlAttribute>; N] {
     type State = (Self, HashMap<usize, gloo::events::EventListener>);
 
     fn init(self, cursor: &mut WebCursor) -> Self::State {

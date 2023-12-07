@@ -1,6 +1,6 @@
 use std::any::Any;
 
-use crate::{platform::Cursor, prelude::platform::Platform, Diff, View};
+use crate::{platform::Cursor, prelude::platform::Platform, View};
 
 /// A type-erased View.
 pub struct Dyn<P> {
@@ -8,7 +8,7 @@ pub struct Dyn<P> {
 }
 
 impl<P: Platform> Dyn<P> {
-    pub fn new<T: Diff<P> + View<P> + 'static>(diff: T) -> Self {
+    pub fn new<T: View<P> + 'static>(diff: T) -> Self {
         Self {
             inner: Box::new(DynWrapper(Some(diff))),
         }
@@ -20,7 +20,7 @@ trait DynView<P: Platform> {
     fn diff(&mut self, state: &mut Box<dyn Any + 'static>, cursor: &mut <P as Platform>::Cursor);
 }
 
-impl<P: Platform> Diff<P> for Dyn<P> {
+impl<P: Platform> View<P> for Dyn<P> {
     type State = Box<dyn Any + 'static>;
 
     fn init(mut self, cursor: &mut <P as Platform>::Cursor) -> Box<dyn Any + 'static> {
@@ -32,13 +32,11 @@ impl<P: Platform> Diff<P> for Dyn<P> {
     }
 }
 
-impl<P: Platform> View<P> for Dyn<P> {}
-
 struct DynWrapper<T>(Option<T>);
 
-impl<P: Platform, T: Diff<P> + View<P>> DynView<P> for DynWrapper<T>
+impl<P: Platform, T: View<P> + View<P>> DynView<P> for DynWrapper<T>
 where
-    <T as Diff<P>>::State: 'static,
+    <T as View<P>>::State: 'static,
 {
     fn init(&mut self, cursor: &mut <P as Platform>::Cursor) -> Box<dyn Any + 'static> {
         let inner = self.0.take().unwrap();

@@ -1,8 +1,8 @@
-use crate::{Children, Cursor, Diff, Platform, View};
+use crate::{Children, Cursor, Platform, View};
 
 macro_rules! tuples {
     ($(($t:ident, $i:tt)),+) => {
-        impl<P: Platform, $($t: Diff<P>),+> Diff<P> for ($($t),+,) {
+        impl<P: Platform, $($t: View<P>),+> Children<P> for ($($t),+,) {
             type State = ($($t::State),+,);
 
             fn init(self, cursor: &mut P::Cursor) -> Self::State {
@@ -29,8 +29,6 @@ macro_rules! tuples {
             }
         }
 
-        impl<P: Platform, $($t: View<P>),+> Children<P> for ($($t),+,) {
-        }
     }
 }
 
