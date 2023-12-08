@@ -16,5 +16,4 @@ routing = ["matchit"]
 [dependencies]
 kano-macros = { version = "0.0.1", path = "../kano-macros" }
 anyhow = "1"
-futures = "0.3"
 matchit = { version = "0.7", optional = true }
