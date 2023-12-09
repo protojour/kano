@@ -40,6 +40,65 @@ pub trait SvgCursor: kano::platform::Cursor {
     fn remove_svg_attribute(&mut self, name: &str);
 }
 
+pub mod xmlns {
+    use std::borrow::Cow;
+
+    use crate::SvgAttribute;
+
+    #[derive(Clone, Debug)]
+    pub struct Ns(&'static str, pub Cow<'static, str>);
+
+    pub fn xlink(location: impl Into<Cow<'static, str>>) -> Ns {
+        Ns("xlink", location.into())
+    }
+
+    impl kano::FromProperty<Ns> for SvgAttribute {
+        fn from_property(_property: Ns) -> Option<Self> {
+            None
+        }
+    }
+}
+
+pub mod xml {
+    use std::borrow::Cow;
+
+    use crate::SvgAttribute;
+
+    #[derive(Clone, Debug)]
+    pub struct Space(pub Cow<'static, str>);
+
+    /// A xlink:href property.
+    pub fn space(location: impl Into<Cow<'static, str>>) -> Space {
+        Space(location.into())
+    }
+
+    impl kano::FromProperty<Space> for SvgAttribute {
+        fn from_property(_property: Space) -> Option<Self> {
+            None
+        }
+    }
+}
+
+pub mod xlink {
+    use std::borrow::Cow;
+
+    use crate::SvgAttribute;
+
+    #[derive(Clone, Debug)]
+    pub struct Href(pub Cow<'static, str>);
+
+    /// A xlink:href property.
+    pub fn href(location: impl Into<Cow<'static, str>>) -> Href {
+        Href(location.into())
+    }
+
+    impl kano::FromProperty<Href> for SvgAttribute {
+        fn from_property(_property: Href) -> Option<Self> {
+            None
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::{

@@ -47,7 +47,7 @@ fn StartPage() -> impl View {
             </paragraph>
             <paragraph>
                 <button
-                    on::click={move || {
+                    on:click={move || {
                         todos.update(|todos| {
                             add_todo(todos, None);
                         });
@@ -59,7 +59,7 @@ fn StartPage() -> impl View {
             <TodoList {todos} />
             <paragraph>
                 <button
-                    on::click={move || {
+                    on:click={move || {
                         clicks.update(|clicks| *clicks += 1);
                         show.toggle();
                     }}
@@ -67,7 +67,7 @@ fn StartPage() -> impl View {
                     "hide/show"
                 </button>
                 <button
-                    on::click={move || {
+                    on:click={move || {
                         clicks.update(|clicks| *clicks += 1);
                         yes.toggle();
                     }}
@@ -105,7 +105,7 @@ fn TodoList(todos: State<Vec<Todo>>) -> impl View {
             <list_item>
                 {text.clone()}
 
-                " ("<button on::click={move || delete(id)}>"x"</button>")"
+                " ("<button on:click={move || delete(id)}>"x"</button>")"
             </list_item>
         }
         </kbc::unordered_list>

@@ -114,7 +114,7 @@ define_elements!(
     (tref, "tref"),
     (tspan, "tspan"),
     (unknown, "unknown"),
-    (use_, "use"),
+    (r#use, "use"),
     (video, "video"),
     (view, "view"),
     (vkern, "vkern"),

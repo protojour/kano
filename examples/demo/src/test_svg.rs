@@ -1,5 +1,5 @@
 use kano::{platform::Platform, view, View};
-use kano_svg::{attr::*, svg};
+use kano_svg::{attr::*, *};
 
 /// Taken from https://commons.wikimedia.org/wiki/File:Test.svg
 pub fn _test_svg<P: Platform>() -> impl View<P>
@@ -14,14 +14,13 @@ where
             // xmlns="http://www.w3.org/2000/svg"
             // xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
             // xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
-            // xmlns:xlink="http://www.w3.org/1999/xlink"
+            xmlns:xlink="http://www.w3.org/1999/xlink"
         >
             <defs id="defs4">
                 <path id="box1" d="m0 0h77v210h-77z" stroke="#000" stroke_width="2"/>
                 <path id="box2" d="m0 0h77v60h-77z" stroke="#000" stroke_width="2"/>
             </defs>
             <path id="bg" d="m0 0h620v472h-620z" fill="#fff"/>
-            /*
             <g id="g9" transform="translate(2 1)">
                 <r#use id="use11" fill="#fff" xlink:href="#box1"/>
                 <r#use id="use13" x="77" fill="#ff0" xlink:href="#box1"/>
@@ -41,7 +40,7 @@ where
                 <r#use id="use57" x="385" fill="#fff" xlink:href="#box2"/>
                 <r#use id="use59" x="462" fill="#fff" xlink:href="#box2"/>
                 <r#use id="use61" x="539" fill="#fff" xlink:href="#box2"/>
-                <text id="green100" x="30" y="35" fill="#fff" font-family="DejaVu Sans, Arial, Helvetica" stroke-width="1" xml:space="preserve">0.59</text>
+                <text id="green100" x="30" y="35" fill="#fff" font_family="DejaVu Sans, Arial, Helvetica" stroke_width="1" xml:space="preserve">"0.59"</text>
             </g>
             <g id="g27" transform="translate(2 280)">
                 <r#use id="use29" fill="red" xlink:href="#box2"/>
@@ -52,7 +51,7 @@ where
                 <r#use id="use39" x="385" fill="red" xlink:href="#box2"/>
                 <r#use id="use41" x="462" fill="#fff" xlink:href="#box2"/>
                 <r#use id="use43" x="539" fill="#fff" xlink:href="#box2"/>
-                <text id="red100" x="20" y="35" fill="#fff" font-family="DejaVu Sans, Arial, Helvetica" stroke-width="1" xml:space="preserve">+0.30</text>
+                <text id="red100" x="20" y="35" fill="#fff" font_family="DejaVu Sans, Arial, Helvetica" stroke_width="1" xml:space="preserve">"+0.30"</text>
             </g>
             <g id="g63" transform="translate(2 340)">
                 <r#use id="use65" fill="#00f" xlink:href="#box2"/>
@@ -63,7 +62,7 @@ where
                 <r#use id="use75" x="385" fill="#fff" xlink:href="#box2"/>
                 <r#use id="use77" x="462" fill="#00f" xlink:href="#box2"/>
                 <r#use id="use79" x="539" fill="#fff" xlink:href="#box2"/>
-                <text id="blue100" x="20" y="35" fill="#fff" font-family="DejaVu Sans, Arial, Helvetica" stroke-width="1" xml:space="preserve">+0.11</text>
+                <text id="blue100" x="20" y="35" fill="#fff" font_family="DejaVu Sans, Arial, Helvetica" stroke_width="1" xml:space="preserve">"+0.11"</text>
             </g>
             <g id="g63" transform="translate(2 410)">
                 <r#use id="grey100" fill="#fff" xlink:href="#box2"/>
@@ -74,18 +73,17 @@ where
                 <r#use id="grey30" x="385" fill="#4d4d4d" xlink:href="#box2"/>
                 <r#use id="grey11" x="462" fill="#1c1c1c" xlink:href="#box2"/>
                 <r#use id="grey0" x="539" fill="#000" xlink:href="#box2"/>
-                <text id="txgrey100" x="20" y="35" font-family="DejaVu Sans, Arial, Helvetica" stroke-width="1" xml:space="preserve">100%</text>
-                <text id="txgrey89" x="102" y="35" font-family="DejaVu Sans, Arial, Helvetica" stroke-width="1" xml:space="preserve">89%</text>
-                <text id="txgrey70" x="179" y="35" font-family="DejaVu Sans, Arial, Helvetica" stroke-width="1" xml:space="preserve">70%</text>
-                <text id="txgrey59" x="256" y="35" font-family="DejaVu Sans, Arial, Helvetica" stroke-width="1" xml:space="preserve">59%</text>
-                <text id="txgrey41" x="333" y="35" fill="#fff" font-family="DejaVu Sans, Arial, Helvetica" stroke-width="1" xml:space="preserve">41%</text>
-                <text id="txgrey30" x="408" y="35" fill="#fff" font-family="DejaVu Sans, Arial, Helvetica" stroke-width="1" xml:space="preserve">30%</text>
-                <text id="txgrey11" x="487" y="35" fill="#fff" font-family="DejaVu Sans, Arial, Helvetica" stroke-width="1" xml:space="preserve">11%</text>
-                <text id="txgrey0" x="569" y="35" fill="#fff" font-family="DejaVu Sans, Arial, Helvetica" stroke-width="1" xml:space="preserve">0%</text>
+                <text id="txgrey100" x="20" y="35" font_family="DejaVu Sans, Arial, Helvetica" stroke_width="1" xml:space="preserve">"100%"</text>
+                <text id="txgrey89" x="102" y="35" font_family="DejaVu Sans, Arial, Helvetica" stroke_width="1" xml:space="preserve">"89%"</text>
+                <text id="txgrey70" x="179" y="35" font_family="DejaVu Sans, Arial, Helvetica" stroke_width="1" xml:space="preserve">"70%"</text>
+                <text id="txgrey59" x="256" y="35" font_family="DejaVu Sans, Arial, Helvetica" stroke_width="1" xml:space="preserve">"59%"</text>
+                <text id="txgrey41" x="333" y="35" fill="#fff" font_family="DejaVu Sans, Arial, Helvetica" stroke_width="1" xml:space="preserve">"41%"</text>
+                <text id="txgrey30" x="408" y="35" fill="#fff" font_family="DejaVu Sans, Arial, Helvetica" stroke_width="1" xml:space="preserve">"30%"</text>
+                <text id="txgrey11" x="487" y="35" fill="#fff" font_family="DejaVu Sans, Arial, Helvetica" stroke_width="1" xml:space="preserve">"11%"</text>
+                <text id="txgrey0" x="569" y="35" fill="#fff" font_family="DejaVu Sans, Arial, Helvetica" stroke_width="1" xml:space="preserve">"0%"</text>
             </g>
-            <text id="text3446-0" x="90" y="184" fill="#fff" font-size="180" font-family="DejaVu Sans, Arial, Helvetica" stroke-width="4" xml:space="preserve">TEST</text>
-            <text id="text3446" x="80" y="174" font-family="DejaVu Sans, Arial, Helvetica" stroke-width="4" xml:space="preserve"><tspan id="tspan3448" x="80" y="174" font-size="180">TEST</tspan></text>
-            */
+            <text id="text3446-0" x="90" y="184" fill="#fff" font_size="180" font_family="DejaVu Sans, Arial, Helvetica" stroke_width="4" xml:space="preserve">"TEST"</text>
+            <text id="text3446" x="80" y="174" font_family="DejaVu Sans, Arial, Helvetica" stroke_width="4" xml:space="preserve"><tspan id="tspan3448" x="80" y="174" font_size="180">"TEST"</tspan></text>
         </svg::svg>
     }
 }

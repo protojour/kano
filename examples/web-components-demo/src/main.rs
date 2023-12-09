@@ -45,7 +45,7 @@ fn test_comp(mut props: impl Props<Attributes>, children: impl Children<Web>) ->
             if show_heading.unwrap_or(false) {
                 <h1>"This is Kano Web Component!"</h1>
             }
-            <button on::click={move || style_select.toggle()}>
+            <button on:click={move || style_select.toggle()}>
                 ..children
             </button>
         </html::section>

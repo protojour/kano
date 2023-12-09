@@ -7,7 +7,10 @@
 
 use std::fmt::Display;
 
-use syn::parse::{Parse, ParseStream};
+use syn::{
+    parse::{Parse, ParseStream},
+    spanned::Spanned,
+};
 
 pub struct View {
     pub root_node: Node,
@@ -376,7 +379,7 @@ impl Parser {
                 continue;
             }
 
-            let key = input.parse()?;
+            let key = self.parse_attr_key(input)?;
             let value = if input.peek(syn::token::Eq) {
                 input.parse::<syn::token::Eq>()?;
                 self.parse_attr_value(input)?
@@ -537,6 +540,27 @@ impl Parser {
             in_token,
             expression,
             repeating_node,
+        })
+    }
+
+    fn parse_attr_key(&self, input: ParseStream) -> syn::Result<syn::Path> {
+        let mut segments: syn::punctuated::Punctuated<syn::PathSegment, syn::token::PathSep> =
+            Default::default();
+
+        let init: syn::PathSegment = input.parse()?;
+        segments.push(init);
+
+        while input.peek(syn::token::Colon) {
+            let colon: syn::token::Colon = input.parse().unwrap();
+            segments.push_punct(syn::token::PathSep(colon.span()));
+
+            let segment: syn::PathSegment = input.parse()?;
+            segments.push(segment);
+        }
+
+        Ok(syn::Path {
+            leading_colon: None,
+            segments,
         })
     }
 }
