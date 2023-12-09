@@ -181,17 +181,6 @@ macro_rules! define_platform {
 
 #[macro_export]
 macro_rules! platform_use {
-    ($lib:ident $($path:tt)*) => {
-        #[cfg(feature = "tui")]
-        use $lib::tui$($path)*;
-
-        #[cfg(feature = "web")]
-        use $lib::web$($path)*;
-    };
-}
-
-#[macro_export]
-macro_rules! platform_use2 {
     ($lib:ident as $ident:ident) => {
         #[cfg(feature = "tui")]
         use $lib::tui as $ident;

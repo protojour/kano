@@ -5,8 +5,7 @@ use kano::router::Router;
 use todo::{add_todo, delete_todo, Todo};
 
 kano::define_platform!(AppPlatform, View);
-kano::platform_use!(kano_basic_components::*);
-kano::platform_use2!(kano_basic_components as kbc);
+kano::platform_use!(kano_basic_components as kbc);
 
 mod test_svg;
 mod todo;
@@ -42,13 +41,13 @@ fn StartPage() -> impl View {
     });
 
     view! {
-        <layout>
+        <kbc::layout>
             <paragraph>
                 "Hello!"<button to="/page1">"to Page 1"</button>
             </paragraph>
             <paragraph>
                 <button
-                    on:click={move || {
+                    on::click={move || {
                         todos.update(|todos| {
                             add_todo(todos, None);
                         });
@@ -60,7 +59,7 @@ fn StartPage() -> impl View {
             <TodoList {todos} />
             <paragraph>
                 <button
-                    on:click={move || {
+                    on::click={move || {
                         clicks.update(|clicks| *clicks += 1);
                         show.toggle();
                     }}
@@ -68,7 +67,7 @@ fn StartPage() -> impl View {
                     "hide/show"
                 </button>
                 <button
-                    on:click={move || {
+                    on::click={move || {
                         clicks.update(|clicks| *clicks += 1);
                         yes.toggle();
                     }}
@@ -89,7 +88,7 @@ fn StartPage() -> impl View {
                     "no"
                 }
             </paragraph>
-        </layout>
+        </kbc::layout>
     }
 }
 
@@ -101,14 +100,14 @@ fn TodoList(todos: State<Vec<Todo>>) -> impl View {
     };
 
     view! {
-        <unordered_list>
+        <kbc::unordered_list>
         for Todo { id, text } in todos.get_ref() {
             <list_item>
                 {text.clone()}
 
-                " ("<button on:click={move || delete(id)}>"x"</button>")"
+                " ("<button on::click={move || delete(id)}>"x"</button>")"
             </list_item>
         }
-        </unordered_list>
+        </kbc::unordered_list>
     }
 }

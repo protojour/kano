@@ -1,9 +1,7 @@
-mod tag;
+pub mod html;
 
 pub mod attr;
 pub mod properties;
-
-pub use tag::*;
 
 #[derive(Clone, Copy)]
 pub struct HtmlElement<A, C> {

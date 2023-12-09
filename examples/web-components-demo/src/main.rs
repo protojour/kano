@@ -1,5 +1,6 @@
+use kano::property::on;
 use kano::{let_props, reactive::use_state, view, Children, DeserializeAttribute, Props, View};
-use kano_html::{attr::style, *};
+use kano_html::{attr::style, html};
 use kano_web::{
     web_component::{register_web_component, ComponentConfig, Shadow},
     Web,
@@ -40,14 +41,14 @@ fn test_comp(mut props: impl Props<Attributes>, children: impl Children<Web>) ->
     ";
 
     view! {
-        <section style={if style_select.get() { other_section_style } else { section_style }}>
+        <html::section style={if style_select.get() { other_section_style } else { section_style }}>
             if show_heading.unwrap_or(false) {
                 <h1>"This is Kano Web Component!"</h1>
             }
-            <button on:click={move || style_select.toggle()}>
+            <button on::click={move || style_select.toggle()}>
                 ..children
             </button>
-        </section>
+        </html::section>
     }
 }
 

@@ -1,18 +1,13 @@
 use kano::{platform::Platform, view, View};
-use kano_svg::{
-    attr::{d, fill, height, id, stroke, stroke_width, width},
-    svg::*,
-    SvgCursor,
-};
+use kano_svg::{attr::*, svg};
 
 /// Taken from https://commons.wikimedia.org/wiki/File:Test.svg
 pub fn _test_svg<P: Platform>() -> impl View<P>
 where
-    P::Cursor: SvgCursor,
+    P::Cursor: kano_svg::SvgCursor,
 {
     view! {
-        <svg
-            // kanons="kano_svg"
+        <svg::svg
             id="svg2"
             width="620"
             height="472"
@@ -91,6 +86,6 @@ where
             <text id="text3446-0" x="90" y="184" fill="#fff" font-size="180" font-family="DejaVu Sans, Arial, Helvetica" stroke-width="4" xml:space="preserve">TEST</text>
             <text id="text3446" x="80" y="174" font-family="DejaVu Sans, Arial, Helvetica" stroke-width="4" xml:space="preserve"><tspan id="tspan3448" x="80" y="174" font-size="180">TEST</tspan></text>
             */
-        </svg>
+        </svg::svg>
     }
 }

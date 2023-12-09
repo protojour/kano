@@ -1,22 +1,18 @@
 use kano::{attr::To, prelude::platform::*, Children, Empty, View};
-use kano_html::{
-    self as html,
-    attr::{class, style},
-    div, li, p, ul,
-};
+use kano_html::{attr::*, html};
 use kano_web::Web;
 
 use crate::KBCAttr;
 
 pub fn layout(_: impl Props<Empty>, children: impl Children<Web>) -> impl View<Web> {
     view! {
-        <div>..children</div>
+        <html::div>..children</html::div>
     }
 }
 
 pub fn paragraph(_: impl Props<Empty>, children: impl Children<Web>) -> impl View<Web> {
     view! {
-        <p>..children</p>
+        <html::p>..children</html::p>
     }
 }
 
@@ -63,12 +59,12 @@ pub fn button(mut props: impl Props<KBCAttr>, children: impl Children<Web>) -> i
 
 pub fn unordered_list(_: impl Props<Empty>, children: impl Children<Web>) -> impl View<Web> {
     view! {
-        <ul>..children</ul>
+        <html::ul>..children</html::ul>
     }
 }
 
 pub fn list_item(_: impl Props<Empty>, children: impl Children<Web>) -> impl View<Web> {
     view! {
-        <li>..children</li>
+        <html::li>..children</html::li>
     }
 }

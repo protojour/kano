@@ -9,6 +9,49 @@ use std::fmt::Display;
 
 use syn::parse::{Parse, ParseStream};
 
+pub struct View {
+    pub root_node: Node,
+    pub common_namespace: Option<syn::Path>,
+}
+
+impl Parse for View {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let root_node = Node::parse(input)?;
+        let common_namespace = match &root_node {
+            Node::Element(element) => {
+                if element.type_path.path.segments.len() > 1 {
+                    let mut prefix_segments: syn::punctuated::Punctuated<
+                        syn::PathSegment,
+                        syn::token::PathSep,
+                    > = Default::default();
+
+                    let mut iterator = element.type_path.path.segments.pairs().peekable();
+
+                    while let Some(pair) = iterator.next() {
+                        if iterator.peek().is_some() {
+                            prefix_segments.push((*pair.value()).clone());
+                            prefix_segments.push_punct(syn::token::PathSep::default());
+                        }
+                    }
+
+                    Some(syn::Path {
+                        leading_colon: element.type_path.path.leading_colon.clone(),
+                        segments: prefix_segments,
+                    })
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        };
+
+        Ok(Self {
+            root_node,
+            common_namespace,
+        })
+    }
+}
+
 pub struct Parser;
 
 impl Parser {}
@@ -49,14 +92,8 @@ pub enum Attr {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct KeyValueAttr {
-    pub key: AttrKey,
+    pub key: syn::Path,
     pub value: AttrValue,
-}
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub enum AttrKey {
-    Path(syn::Ident),
-    On(syn::Ident),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -339,23 +376,7 @@ impl Parser {
                 continue;
             }
 
-            let name = input.parse()?;
-            let key = if input.peek(syn::token::Colon) {
-                if name == "on" {
-                    let _ = input.parse::<syn::token::Colon>()?;
-                    let event = input.parse()?;
-
-                    AttrKey::On(event)
-                } else {
-                    return Err(syn::Error::new(
-                        input.span(),
-                        "Invalid attribute prefix".to_string(),
-                    ));
-                }
-            } else {
-                AttrKey::Path(name)
-            };
-
+            let key = input.parse()?;
             let value = if input.peek(syn::token::Eq) {
                 input.parse::<syn::token::Eq>()?;
                 self.parse_attr_value(input)?
@@ -524,6 +545,7 @@ impl Parser {
 mod tests {
     use super::*;
     use quote::quote;
+    use syn::parse_quote;
 
     fn html_parse(stream: proc_macro2::TokenStream) -> syn::Result<Node> {
         fn parse_html(input: ParseStream) -> syn::Result<Node> {
@@ -569,7 +591,7 @@ mod tests {
     #[allow(unused)]
     fn attr(name: &str, value: AttrValue) -> Attr {
         Attr::KeyValue(KeyValueAttr {
-            key: AttrKey::Path(quote::format_ident!("{}", name)),
+            key: parse_quote!(quote::format_ident!("{}", name)),
             value,
         })
     }
@@ -577,7 +599,7 @@ mod tests {
     #[allow(unused)]
     fn html_attr(tag: &str, name: &str, value: AttrValue) -> Attr {
         Attr::KeyValue(KeyValueAttr {
-            key: AttrKey::Path(quote::format_ident!("{name}")),
+            key: parse_quote!(quote::format_ident!("{name}")),
             value,
         })
     }
