@@ -23,11 +23,11 @@ impl ViewGen {
         match node {
             Node::None => quote!(()),
             Node::Element(Element {
-                type_path,
+                path,
                 attrs,
                 children,
             }) => {
-                let span = type_path.span();
+                let span = path.span();
                 let attrs: Vec<_> = attrs
                     .into_iter()
                     .map(|attr| match attr {
@@ -61,7 +61,7 @@ impl ViewGen {
                     [#(::kano::FromProperty::from_property(#attrs)),*]
                 };
 
-                let path = self.element_type_path(&type_path);
+                let path = self.element_path(&path);
 
                 match self.gen_children(children) {
                     Children::Listed(children) => {
@@ -100,19 +100,19 @@ impl ViewGen {
                 }
             }
             Node::Component(component) => {
-                let type_path = component.type_path;
-                let span = type_path.span();
+                let path = component.path;
+                let span = path.span();
                 match component.attrs {
                     ComponentAttrs::Positional(positional) => {
                         quote_spanned! {span=>
                             ::kano::view::Reactive(move ||
-                                ::kano::view::Func(#type_path, (#(#positional),*,))
+                                ::kano::view::Func(#path, (#(#positional),*,))
                             )
                         }
                     }
                     ComponentAttrs::KeyValue(_) => {
                         quote_spanned! {span=>
-                            ::kano::view::Func(#type_path, ())
+                            ::kano::view::Func(#path, ())
                         }
                     }
                 }
@@ -173,19 +173,19 @@ impl ViewGen {
         }
     }
 
-    fn element_type_path(&self, type_path: &syn::TypePath) -> TokenStream {
-        let span = type_path.span();
+    fn element_path(&self, path: &syn::Path) -> TokenStream {
+        let span = path.span();
 
-        if type_path.path.leading_colon.is_none()
-            && type_path.path.segments.len() == 1
+        if path.leading_colon.is_none()
+            && path.segments.len() == 1
             && self.common_namespace.is_some()
         {
-            let mut path = self.common_namespace.clone().unwrap();
+            let mut out_path = self.common_namespace.clone().unwrap();
 
-            path.segments.extend(type_path.path.segments.clone());
-            quote_spanned! {span=> #path }
+            out_path.segments.extend(path.segments.clone());
+            quote_spanned! {span=> #out_path }
         } else {
-            quote_spanned! {span=> #type_path }
+            quote_spanned! {span=> #path }
         }
     }
 }

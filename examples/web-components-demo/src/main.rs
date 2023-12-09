@@ -41,14 +41,14 @@ fn test_comp(mut props: impl Props<Attributes>, children: impl Children<Web>) ->
     ";
 
     view! {
-        <html::section style={if style_select.get() { other_section_style } else { section_style }}>
+        <html:section style={if style_select.get() { other_section_style } else { section_style }}>
             if show_heading.unwrap_or(false) {
                 <h1>"This is Kano Web Component!"</h1>
             }
             <button on:click={move || style_select.toggle()}>
                 ..children
             </button>
-        </html::section>
+        </html:section>
     }
 }
 

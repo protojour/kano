@@ -22,13 +22,13 @@ impl Parse for View {
         let root_node = Node::parse(input)?;
         let common_namespace = match &root_node {
             Node::Element(element) => {
-                if element.type_path.path.segments.len() > 1 {
+                if element.path.segments.len() > 1 {
                     let mut prefix_segments: syn::punctuated::Punctuated<
                         syn::PathSegment,
                         syn::token::PathSep,
                     > = Default::default();
 
-                    let mut iterator = element.type_path.path.segments.pairs().peekable();
+                    let mut iterator = element.path.segments.pairs().peekable();
 
                     while let Some(pair) = iterator.next() {
                         if iterator.peek().is_some() {
@@ -38,7 +38,7 @@ impl Parse for View {
                     }
 
                     Some(syn::Path {
-                        leading_colon: element.type_path.path.leading_colon.clone(),
+                        leading_colon: element.path.leading_colon.clone(),
                         segments: prefix_segments,
                     })
                 } else {
@@ -74,15 +74,15 @@ pub enum Node {
 
 #[derive(Eq, PartialEq, Debug)]
 pub enum TagName {
-    Element(syn::TypePath),
-    Component(syn::TypePath),
+    Element(syn::Path),
+    Component(syn::Path),
 }
 
 impl TagName {
-    fn type_path(&self) -> &syn::TypePath {
+    fn path(&self) -> &syn::Path {
         match self {
-            Self::Element(type_path) => type_path,
-            Self::Component(type_path) => type_path,
+            Self::Element(path) => path,
+            Self::Component(path) => path,
         }
     }
 }
@@ -118,14 +118,14 @@ impl Parse for Text {
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct Element {
-    pub type_path: syn::TypePath,
+    pub path: syn::Path,
     pub attrs: Vec<Attr>,
     pub children: Vec<Node>,
 }
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct Component {
-    pub type_path: syn::TypePath,
+    pub path: syn::Path,
     pub attrs: ComponentAttrs,
 }
 
@@ -156,9 +156,9 @@ pub struct For {
     pub repeating_node: Box<Node>,
 }
 
-struct DisplayTypePath<'a>(&'a syn::TypePath);
+struct DisplayPath<'a>(&'a syn::Path);
 
-impl<'a> Display for DisplayTypePath<'a> {
+impl<'a> Display for DisplayPath<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let path = &self.0;
         let tokens = quote::quote! {
@@ -169,31 +169,16 @@ impl<'a> Display for DisplayTypePath<'a> {
     }
 }
 
-pub fn parse_tag_name(input: ParseStream) -> Result<TagName, syn::Error> {
-    let type_path: syn::TypePath = input.parse()?;
-
-    let last_segment = type_path.path.segments.last().unwrap();
-
-    let ident_string = last_segment.ident.to_string();
-
-    if ident_string.as_str() < "a" {
-        // Component names start with an uppercase letter
-        Ok(TagName::Component(type_path))
-    } else {
-        Ok(TagName::Element(type_path))
-    }
-}
-
 enum TagWithAttrs {
-    Element(syn::TypePath, Vec<Attr>),
-    Component(syn::TypePath, ComponentAttrs),
+    Element(syn::Path, Vec<Attr>),
+    Component(syn::Path, ComponentAttrs),
 }
 
 impl TagWithAttrs {
-    fn type_path(&self) -> &syn::TypePath {
+    fn path(&self) -> &syn::Path {
         match self {
-            Self::Element(type_path, _) => type_path,
-            Self::Component(type_path, _) => type_path,
+            Self::Element(path, _) => path,
+            Self::Component(path, _) => path,
         }
     }
 }
@@ -289,13 +274,13 @@ impl Parser {
         input.parse::<syn::token::Slash>()?;
 
         let end_name = parse_tag_name(input)?;
-        if end_name.type_path() != tag_with_attrs.type_path() {
+        if end_name.path() != tag_with_attrs.path() {
             return Err(syn::Error::new(
                 input.span(),
                 format!(
                     "Unexpected closing name `{}`. Expected `{}`.",
-                    DisplayTypePath(end_name.type_path()),
-                    DisplayTypePath(tag_with_attrs.type_path()),
+                    DisplayPath(end_name.path()),
+                    DisplayPath(tag_with_attrs.path()),
                 ),
             ));
         }
@@ -310,14 +295,12 @@ impl Parser {
         children: Vec<Node>,
     ) -> syn::Result<Node> {
         match tag_with_attrs {
-            TagWithAttrs::Element(type_path, attrs) => Ok(Node::Element(Element {
-                type_path,
+            TagWithAttrs::Element(path, attrs) => Ok(Node::Element(Element {
+                path,
                 attrs,
                 children,
             })),
-            TagWithAttrs::Component(type_path, attrs) => {
-                Ok(Node::Component(Component { type_path, attrs }))
-            }
+            TagWithAttrs::Component(path, attrs) => Ok(Node::Component(Component { path, attrs })),
         }
     }
 
@@ -379,7 +362,7 @@ impl Parser {
                 continue;
             }
 
-            let key = self.parse_attr_key(input)?;
+            let key = parse_path(input)?;
             let value = if input.peek(syn::token::Eq) {
                 input.parse::<syn::token::Eq>()?;
                 self.parse_attr_value(input)?
@@ -542,27 +525,73 @@ impl Parser {
             repeating_node,
         })
     }
+}
 
-    fn parse_attr_key(&self, input: ParseStream) -> syn::Result<syn::Path> {
-        let mut segments: syn::punctuated::Punctuated<syn::PathSegment, syn::token::PathSep> =
-            Default::default();
+pub fn parse_tag_name(input: ParseStream) -> Result<TagName, syn::Error> {
+    let path = parse_path(input)?;
 
-        let init: syn::PathSegment = input.parse()?;
-        segments.push(init);
+    let last_segment = path.segments.last().unwrap();
 
-        while input.peek(syn::token::Colon) {
-            let colon: syn::token::Colon = input.parse().unwrap();
-            segments.push_punct(syn::token::PathSep(colon.span()));
+    let ident_string = last_segment.ident.to_string();
 
-            let segment: syn::PathSegment = input.parse()?;
-            segments.push(segment);
-        }
-
-        Ok(syn::Path {
-            leading_colon: None,
-            segments,
-        })
+    if ident_string.as_str() < "a" {
+        // Component names start with an uppercase letter
+        Ok(TagName::Component(path))
+    } else {
+        Ok(TagName::Element(path))
     }
+}
+
+fn parse_path(input: ParseStream) -> syn::Result<syn::Path> {
+    let mut segments: syn::punctuated::Punctuated<syn::PathSegment, syn::token::PathSep> =
+        Default::default();
+
+    segments.push(parse_path_segment(input)?);
+
+    while input.peek(syn::token::Colon) {
+        let colon: syn::token::Colon = input.parse().unwrap();
+        segments.push_punct(syn::token::PathSep(colon.span()));
+        segments.push(parse_path_segment(input)?);
+    }
+
+    Ok(syn::Path {
+        leading_colon: None,
+        segments,
+    })
+}
+
+fn parse_path_segment(input: ParseStream) -> syn::Result<syn::PathSegment> {
+    match input.parse::<syn::PathSegment>() {
+        Ok(segment) => Ok(segment),
+        Err(error) => {
+            if input.peek(syn::token::As) {
+                token_as_path_segment::<syn::token::As>(input, "as")
+            } else if input.peek(syn::token::Async) {
+                token_as_path_segment::<syn::token::Async>(input, "async")
+            } else if input.peek(syn::token::For) {
+                token_as_path_segment::<syn::token::For>(input, "for")
+            } else if input.peek(syn::token::Loop) {
+                token_as_path_segment::<syn::token::Loop>(input, "loop")
+            } else if input.peek(syn::token::Type) {
+                token_as_path_segment::<syn::token::Type>(input, "type")
+            } else if input.peek(syn::token::Use) {
+                token_as_path_segment::<syn::token::Use>(input, "use")
+            } else {
+                Err(error)
+            }
+        }
+    }
+}
+
+fn token_as_path_segment<T: syn::parse::Parse + syn::spanned::Spanned>(
+    input: ParseStream,
+    ident: &str,
+) -> syn::Result<syn::PathSegment> {
+    let token: T = input.parse().unwrap();
+    Ok(syn::PathSegment {
+        ident: syn::Ident::new_raw(ident, token.span()),
+        arguments: syn::PathArguments::None,
+    })
 }
 
 #[cfg(test)]
@@ -586,7 +615,7 @@ mod tests {
         let attrs = attrs_fn(&tag_name);
         let ident = quote::format_ident!("{tag_name}");
         Node::Element(Element {
-            type_path: syn::parse_quote! { #ident },
+            path: syn::parse_quote! { #ident },
             attrs,
             children,
         })
@@ -608,8 +637,8 @@ mod tests {
         Node::TextExpr(syn::parse_quote! { #ident })
     }
 
-    fn component(type_path: syn::TypePath, attrs: ComponentAttrs) -> Node {
-        Node::Component(Component { type_path, attrs })
+    fn component(path: syn::Path, attrs: ComponentAttrs) -> Node {
+        Node::Component(Component { path, attrs })
     }
 
     #[allow(unused)]

@@ -7,7 +7,7 @@ where
     P::Cursor: kano_svg::SvgCursor,
 {
     view! {
-        <svg::svg
+        <svg:svg
             id="svg2"
             width="620"
             height="472"
@@ -22,57 +22,57 @@ where
             </defs>
             <path id="bg" d="m0 0h620v472h-620z" fill="#fff"/>
             <g id="g9" transform="translate(2 1)">
-                <r#use id="use11" fill="#fff" xlink:href="#box1"/>
-                <r#use id="use13" x="77" fill="#ff0" xlink:href="#box1"/>
-                <r#use id="use15" x="154" fill="#0ff" xlink:href="#box1"/>
-                <r#use id="use17" x="231" fill="#0f0" xlink:href="#box1"/>
-                <r#use id="use19" x="308" fill="#f0f" xlink:href="#box1"/>
-                <r#use id="use21" x="385" fill="red" xlink:href="#box1"/>
-                <r#use id="use23" x="462" fill="#00f" xlink:href="#box1"/>
-                <r#use id="use25" x="539" xlink:href="#box1"/>
+                <use id="use11" fill="#fff" xlink:href="#box1"/>
+                <use id="use13" x="77" fill="#ff0" xlink:href="#box1"/>
+                <use id="use15" x="154" fill="#0ff" xlink:href="#box1"/>
+                <use id="use17" x="231" fill="#0f0" xlink:href="#box1"/>
+                <use id="use19" x="308" fill="#f0f" xlink:href="#box1"/>
+                <use id="use21" x="385" fill="red" xlink:href="#box1"/>
+                <use id="use23" x="462" fill="#00f" xlink:href="#box1"/>
+                <use id="use25" x="539" xlink:href="#box1"/>
             </g>
             <g id="g45" transform="translate(2 220)">
-                <r#use id="use47" fill="#0f0" xlink:href="#box2"/>
-                <r#use id="use49" x="77" fill="#0f0" xlink:href="#box2"/>
-                <r#use id="use51" x="154" fill="#0f0" xlink:href="#box2"/>
-                <r#use id="use53" x="231" fill="#0f0" xlink:href="#box2"/>
-                <r#use id="use55" x="308" fill="#fff" xlink:href="#box2"/>
-                <r#use id="use57" x="385" fill="#fff" xlink:href="#box2"/>
-                <r#use id="use59" x="462" fill="#fff" xlink:href="#box2"/>
-                <r#use id="use61" x="539" fill="#fff" xlink:href="#box2"/>
+                <use id="use47" fill="#0f0" xlink:href="#box2"/>
+                <use id="use49" x="77" fill="#0f0" xlink:href="#box2"/>
+                <use id="use51" x="154" fill="#0f0" xlink:href="#box2"/>
+                <use id="use53" x="231" fill="#0f0" xlink:href="#box2"/>
+                <use id="use55" x="308" fill="#fff" xlink:href="#box2"/>
+                <use id="use57" x="385" fill="#fff" xlink:href="#box2"/>
+                <use id="use59" x="462" fill="#fff" xlink:href="#box2"/>
+                <use id="use61" x="539" fill="#fff" xlink:href="#box2"/>
                 <text id="green100" x="30" y="35" fill="#fff" font_family="DejaVu Sans, Arial, Helvetica" stroke_width="1" xml:space="preserve">"0.59"</text>
             </g>
             <g id="g27" transform="translate(2 280)">
-                <r#use id="use29" fill="red" xlink:href="#box2"/>
-                <r#use id="use31" x="77" fill="red" xlink:href="#box2"/>
-                <r#use id="use33" x="154" fill="#fff" xlink:href="#box2"/>
-                <r#use id="use35" x="231" fill="#fff" xlink:href="#box2"/>
-                <r#use id="use37" x="308" fill="red" xlink:href="#box2"/>
-                <r#use id="use39" x="385" fill="red" xlink:href="#box2"/>
-                <r#use id="use41" x="462" fill="#fff" xlink:href="#box2"/>
-                <r#use id="use43" x="539" fill="#fff" xlink:href="#box2"/>
+                <use id="use29" fill="red" xlink:href="#box2"/>
+                <use id="use31" x="77" fill="red" xlink:href="#box2"/>
+                <use id="use33" x="154" fill="#fff" xlink:href="#box2"/>
+                <use id="use35" x="231" fill="#fff" xlink:href="#box2"/>
+                <use id="use37" x="308" fill="red" xlink:href="#box2"/>
+                <use id="use39" x="385" fill="red" xlink:href="#box2"/>
+                <use id="use41" x="462" fill="#fff" xlink:href="#box2"/>
+                <use id="use43" x="539" fill="#fff" xlink:href="#box2"/>
                 <text id="red100" x="20" y="35" fill="#fff" font_family="DejaVu Sans, Arial, Helvetica" stroke_width="1" xml:space="preserve">"+0.30"</text>
             </g>
             <g id="g63" transform="translate(2 340)">
-                <r#use id="use65" fill="#00f" xlink:href="#box2"/>
-                <r#use id="use67" x="77" fill="#fff" xlink:href="#box2"/>
-                <r#use id="use69" x="154" fill="#00f" xlink:href="#box2"/>
-                <r#use id="use71" x="231" fill="#fff" xlink:href="#box2"/>
-                <r#use id="use73" x="308" fill="#00f" xlink:href="#box2"/>
-                <r#use id="use75" x="385" fill="#fff" xlink:href="#box2"/>
-                <r#use id="use77" x="462" fill="#00f" xlink:href="#box2"/>
-                <r#use id="use79" x="539" fill="#fff" xlink:href="#box2"/>
+                <use id="use65" fill="#00f" xlink:href="#box2"/>
+                <use id="use67" x="77" fill="#fff" xlink:href="#box2"/>
+                <use id="use69" x="154" fill="#00f" xlink:href="#box2"/>
+                <use id="use71" x="231" fill="#fff" xlink:href="#box2"/>
+                <use id="use73" x="308" fill="#00f" xlink:href="#box2"/>
+                <use id="use75" x="385" fill="#fff" xlink:href="#box2"/>
+                <use id="use77" x="462" fill="#00f" xlink:href="#box2"/>
+                <use id="use79" x="539" fill="#fff" xlink:href="#box2"/>
                 <text id="blue100" x="20" y="35" fill="#fff" font_family="DejaVu Sans, Arial, Helvetica" stroke_width="1" xml:space="preserve">"+0.11"</text>
             </g>
             <g id="g63" transform="translate(2 410)">
-                <r#use id="grey100" fill="#fff" xlink:href="#box2"/>
-                <r#use id="grey89" x="77" fill="#e3e3e3" xlink:href="#box2"/>
-                <r#use id="grey70" x="154" fill="#b2b2b2" xlink:href="#box2"/>
-                <r#use id="grey59" x="231" fill="#969696" xlink:href="#box2"/>
-                <r#use id="grey41" x="308" fill="#696969" xlink:href="#box2"/>
-                <r#use id="grey30" x="385" fill="#4d4d4d" xlink:href="#box2"/>
-                <r#use id="grey11" x="462" fill="#1c1c1c" xlink:href="#box2"/>
-                <r#use id="grey0" x="539" fill="#000" xlink:href="#box2"/>
+                <use id="grey100" fill="#fff" xlink:href="#box2"/>
+                <use id="grey89" x="77" fill="#e3e3e3" xlink:href="#box2"/>
+                <use id="grey70" x="154" fill="#b2b2b2" xlink:href="#box2"/>
+                <use id="grey59" x="231" fill="#969696" xlink:href="#box2"/>
+                <use id="grey41" x="308" fill="#696969" xlink:href="#box2"/>
+                <use id="grey30" x="385" fill="#4d4d4d" xlink:href="#box2"/>
+                <use id="grey11" x="462" fill="#1c1c1c" xlink:href="#box2"/>
+                <use id="grey0" x="539" fill="#000" xlink:href="#box2"/>
                 <text id="txgrey100" x="20" y="35" font_family="DejaVu Sans, Arial, Helvetica" stroke_width="1" xml:space="preserve">"100%"</text>
                 <text id="txgrey89" x="102" y="35" font_family="DejaVu Sans, Arial, Helvetica" stroke_width="1" xml:space="preserve">"89%"</text>
                 <text id="txgrey70" x="179" y="35" font_family="DejaVu Sans, Arial, Helvetica" stroke_width="1" xml:space="preserve">"70%"</text>
@@ -84,6 +84,6 @@ where
             </g>
             <text id="text3446-0" x="90" y="184" fill="#fff" font_size="180" font_family="DejaVu Sans, Arial, Helvetica" stroke_width="4" xml:space="preserve">"TEST"</text>
             <text id="text3446" x="80" y="174" font_family="DejaVu Sans, Arial, Helvetica" stroke_width="4" xml:space="preserve"><tspan id="tspan3448" x="80" y="174" font_size="180">"TEST"</tspan></text>
-        </svg::svg>
+        </svg:svg>
     }
 }

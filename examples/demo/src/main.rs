@@ -22,7 +22,7 @@ fn App() -> impl View {
 thread_local! {
     static ROUTER: Router<AppPlatform> = Router::builder()
     .route("/page1", || view! {
-        <kbc::layout>"This is page 1"</kbc::layout>
+        <kbc:layout>"This is page 1"</kbc:layout>
     })
     .or_else(StartPage);
 }
@@ -41,7 +41,7 @@ fn StartPage() -> impl View {
     });
 
     view! {
-        <kbc::layout>
+        <kbc:layout>
             <paragraph>
                 "Hello!"<button to="/page1">"to Page 1"</button>
             </paragraph>
@@ -88,7 +88,7 @@ fn StartPage() -> impl View {
                     "no"
                 }
             </paragraph>
-        </kbc::layout>
+        </kbc:layout>
     }
 }
 
@@ -100,7 +100,7 @@ fn TodoList(todos: State<Vec<Todo>>) -> impl View {
     };
 
     view! {
-        <kbc::unordered_list>
+        <kbc:unordered_list>
         for Todo { id, text } in todos.get_ref() {
             <list_item>
                 {text.clone()}
@@ -108,6 +108,6 @@ fn TodoList(todos: State<Vec<Todo>>) -> impl View {
                 " ("<button on:click={move || delete(id)}>"x"</button>")"
             </list_item>
         }
-        </kbc::unordered_list>
+        </kbc:unordered_list>
     }
 }

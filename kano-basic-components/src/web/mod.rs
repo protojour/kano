@@ -6,19 +6,19 @@ use crate::KBCAttr;
 
 pub fn layout(_: impl Props<Empty>, children: impl Children<Web>) -> impl View<Web> {
     view! {
-        <html::div>..children</html::div>
+        <html:div>..children</html:div>
     }
 }
 
 pub fn paragraph(_: impl Props<Empty>, children: impl Children<Web>) -> impl View<Web> {
     view! {
-        <html::p>..children</html::p>
+        <html:p>..children</html:p>
     }
 }
 
 pub fn strong(_: impl Props<Empty>, children: impl Children<Web>) -> impl View<Web> {
     view! {
-        <html::strong>..children</html::strong>
+        <html:strong>..children</html:strong>
     }
 }
 
@@ -51,20 +51,20 @@ pub fn button(mut props: impl Props<KBCAttr>, children: impl Children<Web>) -> i
     ";
 
     view! {
-        <html::button class={["kbc_button"]} style={button_style} ..href ..on_click>
+        <html:button class={["kbc_button"]} style={button_style} ..href ..on_click>
             ..children
-        </html::button>
+        </html:button>
     }
 }
 
 pub fn unordered_list(_: impl Props<Empty>, children: impl Children<Web>) -> impl View<Web> {
     view! {
-        <html::ul>..children</html::ul>
+        <html:ul>..children</html:ul>
     }
 }
 
 pub fn list_item(_: impl Props<Empty>, children: impl Children<Web>) -> impl View<Web> {
     view! {
-        <html::li>..children</html::li>
+        <html:li>..children</html:li>
     }
 }
