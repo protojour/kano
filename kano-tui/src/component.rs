@@ -56,6 +56,7 @@ pub enum Layout {
     Block,
     Paragraph,
     Inline,
+    Svg,
 }
 
 #[derive(Clone, Copy)]
@@ -169,6 +170,10 @@ impl<'t, 's> Collector<'t, 's> {
                         }
                     }
                     Layout::Inline => {}
+                    Layout::Svg => {
+                        self.spans.push(Span::styled("🖼️", tui_style));
+                        return;
+                    }
                 }
 
                 let mut unfocus = false;

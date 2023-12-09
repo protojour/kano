@@ -9,7 +9,7 @@ use kano::{
 };
 
 use crate::{
-    component::ComponentData,
+    component::{ComponentData, Layout, Style},
     node_data::{NodeData, NodeKind},
 };
 
@@ -117,4 +117,22 @@ impl kano::platform::Cursor for TuiCursor {
 
         self.vcursor.replace(root_ref.first_child().unwrap());
     }
+}
+
+impl kano_svg::SvgCursor for TuiCursor {
+    fn svg_element(&mut self, _tag_name: &'static str) {
+        // TODO: Not finished
+        self.set_component(Rc::new(ComponentData {
+            layout: Layout::Svg,
+            style: Style::default(),
+        }));
+    }
+
+    fn set_svg_attribute(&mut self, _name: &str, _value: &str) {}
+
+    fn remove_svg_attribute(&mut self, _name: &str) {}
+
+    fn set_xml_attribute(&mut self, _namespace: &str, _name: &str, _value: &str) {}
+
+    fn remove_xml_attribute(&mut self, _namespace: &str, _name: &str) {}
 }

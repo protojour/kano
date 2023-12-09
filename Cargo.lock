@@ -311,6 +311,7 @@ dependencies = [
  "anyhow",
  "crossterm",
  "kano",
+ "kano-svg",
  "ratatui",
 ]
 
