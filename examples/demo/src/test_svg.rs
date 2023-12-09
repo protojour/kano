@@ -2,7 +2,7 @@ use kano::{platform::Platform, view, View};
 use kano_svg::{attr::*, *};
 
 /// Taken from https://commons.wikimedia.org/wiki/File:Test.svg
-pub fn _test_svg<P: Platform>() -> impl View<P>
+pub fn TestSvg<P: Platform>() -> impl View<P>
 where
     P::Cursor: kano_svg::SvgCursor,
 {

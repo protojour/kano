@@ -12,8 +12,6 @@ impl<P: Platform> View<P> for () {
 impl<P: Platform> Children<P> for () {
     type State = ();
 
-    fn init(self, cursor: &mut P::Cursor) {
-        cursor.empty();
-    }
+    fn init(self, _cursor: &mut P::Cursor) {}
     fn diff(self, _: &mut Self::State, _cursor: &mut P::Cursor) {}
 }

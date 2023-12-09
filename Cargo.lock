@@ -325,6 +325,7 @@ dependencies = [
  "js-sys",
  "kano",
  "kano-html",
+ "kano-svg",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",

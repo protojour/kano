@@ -12,7 +12,7 @@ macro_rules! define_element {
             props: T,
             children: C,
         ) -> SvgElement<T, C> {
-            SvgElement::new(stringify!($name), props, children)
+            SvgElement::new($tag_name, props, children)
         }
     };
 }

@@ -10,8 +10,7 @@ macro_rules! define_attr {
         /// SVG attribute.
         #[allow(non_snake_case)]
         pub fn $ident(value: impl Into<Cow<'static, str>>) -> SvgAttribute {
-            // Property::new($idl, PropertyValue::String(value.into()))
-            SvgAttribute(Property::new($idl, PropertyValue::String(value.into())))
+            SvgAttribute::Svg(Property::new($name, PropertyValue::String(value.into())))
         }
     };
     (($ident:ident, $name:literal, $idl:literal, NUMBER)) => {
@@ -20,7 +19,7 @@ macro_rules! define_attr {
         /// attribute.
         #[allow(non_snake_case)]
         pub fn $ident(value: i32) -> SvgAttribute {
-            SvgAttribute(Property::new($idl, PropertyValue::Number(value)))
+            SvgAttribute::Svg(Property::new($name, PropertyValue::Number(value)))
         }
     };
     (($ident:ident, $name:literal, $idl:literal, BOOL)) => {
@@ -29,7 +28,7 @@ macro_rules! define_attr {
         /// attribute.
         #[allow(non_snake_case)]
         pub fn $ident(value: bool) -> SvgAttribute {
-            SvgAttribute(Property::new($idl, PropertyValue::Bool(value)))
+            SvgAttribute::Svg(Property::new($name, PropertyValue::Bool(value)))
         }
     };
     (($ident:ident, $name:literal, $idl:literal, SPACE_SEP)) => {
@@ -38,7 +37,10 @@ macro_rules! define_attr {
         /// attribute.
         #[allow(non_snake_case)]
         pub fn $ident(value: impl Into<Strings>) -> SvgAttribute {
-            SvgAttribute(Property::new($idl, PropertyValue::SpaceSep(value.into().0)))
+            SvgAttribute::Svg(Property::new(
+                $name,
+                PropertyValue::SpaceSep(value.into().0),
+            ))
         }
     };
     (($ident:ident, $name:literal, $idl:literal, COMMA_SEP)) => {
@@ -47,7 +49,10 @@ macro_rules! define_attr {
         /// attribute.
         #[allow(non_snake_case)]
         pub fn $ident(value: impl Into<Strings>) -> SvgAttribute {
-            SvgAttribute(Property::new($idl, PropertyValue::CommaSep(value.into().0)))
+            SvgAttribute::Svg(Property::new(
+                $name,
+                PropertyValue::CommaSep(value.into().0),
+            ))
         }
     };
     (($ident:ident, $name:literal, $idl:literal, COMMA_SEP | STRING)) => {

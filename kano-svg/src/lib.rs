@@ -4,7 +4,7 @@ pub mod svg;
 
 mod diff;
 
-use properties::Property;
+use properties::{Property, XmlProperty};
 
 #[derive(Clone, Copy)]
 pub struct SvgElement<A, C> {
@@ -23,7 +23,10 @@ impl<A, C> SvgElement<A, C> {
     }
 }
 
-pub struct SvgAttribute(Property);
+pub enum SvgAttribute {
+    Svg(Property),
+    Xml(XmlProperty),
+}
 
 #[derive(Clone, Copy)]
 pub struct SvgProps<A>(pub A);
@@ -38,6 +41,8 @@ pub trait SvgCursor: kano::platform::Cursor {
     fn svg_element(&mut self, tag_name: &'static str);
     fn set_svg_attribute(&mut self, name: &str, value: &str);
     fn remove_svg_attribute(&mut self, name: &str);
+    fn set_xml_attribute(&mut self, namespace: &str, name: &str, value: &str);
+    fn remove_xml_attribute(&mut self, namespace: &str, name: &str);
 }
 
 pub mod xmlns {
@@ -65,11 +70,11 @@ pub mod xml {
     use crate::SvgAttribute;
 
     #[derive(Clone, Debug)]
-    pub struct Space(pub Cow<'static, str>);
+    pub struct Space;
 
     /// A xlink:href property.
-    pub fn space(location: impl Into<Cow<'static, str>>) -> Space {
-        Space(location.into())
+    pub fn space(_location: impl Into<Cow<'static, str>>) -> Space {
+        Space
     }
 
     impl kano::FromProperty<Space> for SvgAttribute {
@@ -82,7 +87,10 @@ pub mod xml {
 pub mod xlink {
     use std::borrow::Cow;
 
-    use crate::SvgAttribute;
+    use crate::{
+        properties::{XmlNamespace, XmlProperty},
+        SvgAttribute,
+    };
 
     #[derive(Clone, Debug)]
     pub struct Href(pub Cow<'static, str>);
@@ -93,8 +101,12 @@ pub mod xlink {
     }
 
     impl kano::FromProperty<Href> for SvgAttribute {
-        fn from_property(_property: Href) -> Option<Self> {
-            None
+        fn from_property(property: Href) -> Option<Self> {
+            Some(SvgAttribute::Xml(XmlProperty {
+                namespace: XmlNamespace::Xlink,
+                name: "href",
+                value: property.0,
+            }))
         }
     }
 }

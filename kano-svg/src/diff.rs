@@ -43,8 +43,18 @@ where
 
     fn init(self, cursor: &mut P::Cursor) -> Self::State {
         for attr in self.0.iter() {
-            if let Some(SvgAttribute(property)) = attr {
-                set_svg_attribute(cursor, property);
+            match attr {
+                Some(SvgAttribute::Svg(property)) => {
+                    set_svg_attribute(cursor, property);
+                }
+                Some(SvgAttribute::Xml(property)) => {
+                    cursor.set_xml_attribute(
+                        property.namespace.url(),
+                        property.name,
+                        &property.value,
+                    );
+                }
+                _ => {}
             }
         }
 
@@ -54,25 +64,36 @@ where
     fn diff(self, old_props: &mut Self::State, cursor: &mut P::Cursor) {
         for (new, old) in self.0.into_iter().zip(&mut old_props.0) {
             match (new, old) {
-                (Some(SvgAttribute(new)), None) => {
+                (Some(SvgAttribute::Svg(new)), None) => {
                     set_svg_attribute(cursor, &new);
                 }
-                (Some(SvgAttribute(new)), Some(SvgAttribute(old))) => {
+                (Some(SvgAttribute::Svg(new)), Some(SvgAttribute::Svg(old))) => {
                     if new != *old {
                         set_svg_attribute(cursor, &new);
                     }
                 }
-                (None, Some(SvgAttribute(old))) => {
-                    cursor.remove_svg_attribute(old.idl_name);
+                (None, Some(SvgAttribute::Svg(old))) => {
+                    cursor.remove_svg_attribute(old.name);
                 }
-                (None, None) => {}
+                (Some(SvgAttribute::Xml(new)), None) => {
+                    cursor.set_xml_attribute(new.namespace.url(), new.name, &new.value);
+                }
+                (Some(SvgAttribute::Xml(new)), Some(SvgAttribute::Xml(old))) => {
+                    if new != *old {
+                        cursor.set_xml_attribute(new.namespace.url(), new.name, &new.value);
+                    }
+                }
+                (None, Some(SvgAttribute::Xml(old))) => {
+                    cursor.remove_xml_attribute(old.namespace.url(), old.name);
+                }
+                _ => {}
             }
         }
     }
 }
 
 fn set_svg_attribute(cursor: &mut impl SvgCursor, property: &Property) {
-    let name = property.idl_name;
+    let name = property.name;
     match &property.value {
         PropertyValue::String(string) => {
             cursor.set_svg_attribute(name, string);

@@ -94,10 +94,10 @@ impl kano::platform::Cursor for WebCursor {
         match &mut self.position {
             Position::Node(node) => {
                 if let Some(child) = node.first_child() {
-                    // log(&format!("enter child: had child {child:?}"));
+                    // kano::log(&format!("enter children: had child {child:?}"));
                     self.position = Position::Node(child);
                 } else if let Some(element) = node.dyn_ref::<web_sys::Element>() {
-                    // log(&format!("enter child: had no children"));
+                    // kano::log(&format!("enter children: had no children"));
                     self.position = Position::AfterLastChild(element.clone());
                 } else {
                     panic!();
@@ -195,6 +195,35 @@ impl kano::platform::Cursor for WebCursor {
             }
             _ => panic!(),
         }
+    }
+}
+
+impl kano_svg::SvgCursor for WebCursor {
+    fn svg_element(&mut self, tag_name: &'static str) {
+        let element = document()
+            .create_element_ns(Some("http://www.w3.org/2000/svg"), tag_name)
+            .unwrap();
+        self.append_node(&element);
+    }
+
+    fn set_svg_attribute(&mut self, name: &str, value: &str) {
+        self.get_element().set_attribute(name, value).unwrap();
+    }
+
+    fn remove_svg_attribute(&mut self, name: &str) {
+        self.get_element().remove_attribute(name).unwrap();
+    }
+
+    fn set_xml_attribute(&mut self, namespace: &str, name: &str, value: &str) {
+        self.get_element()
+            .set_attribute_ns(Some(namespace), name, value)
+            .unwrap();
+    }
+
+    fn remove_xml_attribute(&mut self, namespace: &str, name: &str) {
+        self.get_element()
+            .remove_attribute_ns(Some(namespace), name)
+            .unwrap();
     }
 }
 

@@ -2,13 +2,13 @@ use std::borrow::Cow;
 
 #[derive(PartialEq)]
 pub struct Property {
-    pub idl_name: &'static str,
-    pub value: PropertyValue,
+    pub(crate) name: &'static str,
+    pub(crate) value: PropertyValue,
 }
 
 impl Property {
-    pub const fn new(idl_name: &'static str, value: PropertyValue) -> Self {
-        Self { idl_name, value }
+    pub const fn new(name: &'static str, value: PropertyValue) -> Self {
+        Self { name, value }
     }
 }
 
@@ -32,5 +32,25 @@ impl<const N: usize> From<[&'static str; N]> for Strings {
 impl From<&'static str> for Strings {
     fn from(value: &'static str) -> Self {
         Self(vec![value.into()])
+    }
+}
+
+#[derive(PartialEq)]
+pub struct XmlProperty {
+    pub(crate) namespace: XmlNamespace,
+    pub(crate) name: &'static str,
+    pub(crate) value: Cow<'static, str>,
+}
+
+#[derive(Clone, Copy, PartialEq)]
+pub(crate) enum XmlNamespace {
+    Xlink,
+}
+
+impl XmlNamespace {
+    pub fn url(&self) -> &'static str {
+        match self {
+            Self::Xlink => "http://www.w3.org/1999/xlink",
+        }
     }
 }

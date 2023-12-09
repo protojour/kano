@@ -24,6 +24,9 @@ thread_local! {
     .route("/page1", || view! {
         <kbc:layout>"This is page 1"</kbc:layout>
     })
+    .route("/svg", || view! {
+        <test_svg:TestSvg />
+    })
     .or_else(StartPage);
 }
 
@@ -43,7 +46,9 @@ fn StartPage() -> impl View {
     view! {
         <kbc:layout>
             <paragraph>
-                "Hello!"<button to="/page1">"to Page 1"</button>
+                "Hello!"
+                <button to="/page1">"to Page 1"</button>
+                <button to="/svg">"Test SVG"</button>
             </paragraph>
             <paragraph>
                 <button
