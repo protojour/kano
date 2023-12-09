@@ -17,4 +17,5 @@ web = ["kano-web", "kano-basic-components/web", "kano-basic-components/web-routi
 kano = { path = "../../kano", features = ["routing"] }
 kano-tui = { path = "../../kano-tui", optional = true }
 kano-web = { path = "../../kano-web", optional = true, features = ["routing"] }
+kano-svg = { path = "../../kano-svg" }
 kano-basic-components = { path = "../../kano-basic-components" }

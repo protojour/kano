@@ -191,6 +191,17 @@ macro_rules! platform_use {
 }
 
 #[macro_export]
+macro_rules! platform_use2 {
+    ($lib:ident as $ident:ident) => {
+        #[cfg(feature = "tui")]
+        use $lib::tui as $ident;
+
+        #[cfg(feature = "web")]
+        use $lib::web as $ident;
+    };
+}
+
+#[macro_export]
 macro_rules! let_props {
     ({ $( $($seg:ident)::+ ($var:tt) $(,)?)+ } = $props:ident) => {
         $(

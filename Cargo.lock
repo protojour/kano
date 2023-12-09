@@ -103,6 +103,7 @@ version = "0.0.1"
 dependencies = [
  "kano",
  "kano-basic-components",
+ "kano-svg",
  "kano-tui",
  "kano-web",
 ]

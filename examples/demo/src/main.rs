@@ -6,7 +6,9 @@ use todo::{add_todo, delete_todo, Todo};
 
 kano::define_platform!(AppPlatform, View);
 kano::platform_use!(kano_basic_components::*);
+kano::platform_use2!(kano_basic_components as kbc);
 
+mod test_svg;
 mod todo;
 
 fn main() {
@@ -21,7 +23,7 @@ fn App() -> impl View {
 thread_local! {
     static ROUTER: Router<AppPlatform> = Router::builder()
     .route("/page1", || view! {
-        <layout>"This is page 1"</layout>
+        <kbc::layout>"This is page 1"</kbc::layout>
     })
     .or_else(StartPage);
 }
