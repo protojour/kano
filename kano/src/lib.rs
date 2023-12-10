@@ -124,6 +124,8 @@ pub fn init<P: Platform>() -> Init<P> {
         }),
     });
 
+    let history_api = context.history_api.clone();
+
     LOGGER.with_borrow_mut({
         let context_logger = context.logger.clone();
         |logger| {
@@ -135,6 +137,7 @@ pub fn init<P: Platform>() -> Init<P> {
         let on_signal_tick = context.on_signal_tick.clone();
         move |registry| {
             registry.platform_on_signal_tick = Some(on_signal_tick);
+            registry.globals.history_api = history_api;
             registry.initialized = true;
         }
     });

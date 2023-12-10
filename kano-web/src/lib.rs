@@ -5,6 +5,7 @@ use std::rc::Rc;
 
 use anyhow::anyhow;
 use futures::{SinkExt, StreamExt};
+use gloo::events::EventListener;
 use kano::platform::{Platform, PlatformContext, PlatformInit};
 use wasm_bindgen::prelude::*;
 use web_cursor::{Position, WebCursor};
@@ -47,6 +48,8 @@ impl Platform for Web {
             }
         });
 
+        let history_refresh = init.history_refresh;
+
         PlatformContext {
             on_signal_tick: Rc::new(move || {
                 let mut tx = dispatch_tx.clone();
@@ -58,14 +61,10 @@ impl Platform for Web {
             logger: Rc::new(|s| {
                 js::log(s);
             }),
-            history_api: Rc::new({
-                let location = window().unwrap().location();
-                let mut loc = location.pathname().unwrap();
-                if let Ok(hash) = location.hash() {
-                    loc.push_str(&hash);
-                }
-
-                kano::history::HistoryState::new(loc)
+            history_api: Rc::new(WebHistory {
+                popstate_listener: EventListener::new(&window().unwrap(), "popstate", move |_| {
+                    history_refresh();
+                }),
             }),
         }
     }
@@ -96,4 +95,45 @@ impl Platform for Web {
 
 fn document() -> Document {
     window().unwrap().document().unwrap()
+}
+
+struct WebHistory {
+    #[allow(dead_code)]
+    popstate_listener: EventListener,
+}
+
+impl kano::history::HistoryAPI for WebHistory {
+    fn current(&self) -> String {
+        #[cfg(feature = "routing")]
+        {
+            let location = window().unwrap().location();
+            location.pathname().unwrap()
+        }
+
+        #[cfg(not(feature = "routing"))]
+        String::new()
+    }
+
+    #[allow(unused_variables)]
+    fn push(&self, location: String) {
+        #[cfg(feature = "routing")]
+        {
+            let history = window().unwrap().history().unwrap();
+            history
+                .push_state_with_url(&JsValue::null(), "", Some(&location))
+                .unwrap();
+        }
+    }
+
+    fn pop(&self) -> bool {
+        #[cfg(feature = "routing")]
+        {
+            let history = window().unwrap().history().unwrap();
+            history.back().unwrap();
+            true
+        }
+
+        #[cfg(not(feature = "routing"))]
+        false
+    }
 }

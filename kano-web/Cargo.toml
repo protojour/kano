@@ -10,7 +10,7 @@ repository.workspace = true
 
 [features]
 web-component = []
-routing = ["kano/routing", "web-sys/Location"]
+routing = ["kano/routing", "web-sys/Location", "web-sys/History"]
 
 [dependencies]
 kano = { version = "0.0.1", path = "../kano" }
