@@ -19,6 +19,7 @@ mod view_id;
 
 use std::{cell::RefCell, convert::Infallible, marker::PhantomData, rc::Rc};
 
+pub use kano_macros::svg_view;
 pub use kano_macros::view;
 pub use kano_macros::FromProperty;
 use platform::PlatformInit;
