@@ -5,7 +5,7 @@ use std::rc::Rc;
 
 use anyhow::anyhow;
 use futures::{SinkExt, StreamExt};
-use kano::platform::{Platform, PlatformContext};
+use kano::platform::{Platform, PlatformContext, PlatformInit};
 use wasm_bindgen::prelude::*;
 use web_cursor::{Position, WebCursor};
 use web_sys::{window, Document};
@@ -33,25 +33,14 @@ pub struct Web {}
 impl Platform for Web {
     type Cursor = WebCursor;
 
-    fn init(signal_dispatch: Box<dyn Fn()>) -> PlatformContext {
+    fn init(init: PlatformInit) -> PlatformContext {
         console_error_panic_hook::set_once();
-
-        #[cfg(feature = "routing")]
-        {
-            let location = window().unwrap().location();
-            let mut loc = location.pathname().unwrap();
-            if let Ok(hash) = location.hash() {
-                loc.push_str(&hash);
-            }
-
-            kano::history::push(loc);
-        }
 
         let (dispatch_tx, mut dispatch_rx) = futures::channel::mpsc::channel::<()>(1);
         wasm_bindgen_futures::spawn_local(async move {
             loop {
                 if let Some(()) = dispatch_rx.next().await {
-                    signal_dispatch();
+                    (init.signal_dispatch)();
                 } else {
                     panic!("signal connection lost");
                 }
@@ -68,6 +57,15 @@ impl Platform for Web {
             signal_dispatch: Box::new(|| {}),
             logger: Rc::new(|s| {
                 js::log(s);
+            }),
+            history_api: Rc::new({
+                let location = window().unwrap().location();
+                let mut loc = location.pathname().unwrap();
+                if let Ok(hash) = location.hash() {
+                    loc.push_str(&hash);
+                }
+
+                kano::history::HistoryState::new(loc)
             }),
         }
     }

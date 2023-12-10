@@ -4,7 +4,10 @@ use crossterm::{
     terminal::{self, EnterAlternateScreen, LeaveAlternateScreen},
     ExecutableCommand,
 };
-use kano::{platform::PlatformContext, vdom::vnode::VNodeRef};
+use kano::{
+    platform::{PlatformContext, PlatformInit},
+    vdom::vnode::VNodeRef,
+};
 use node_data::{NodeData, NodeKind};
 use ratatui::{
     prelude::{CrosstermBackend, Terminal},
@@ -33,11 +36,10 @@ pub struct Tui;
 impl kano::platform::Platform for Tui {
     type Cursor = TuiCursor;
 
-    fn init(signal_dispatch: Box<dyn Fn()>) -> PlatformContext {
-        kano::history::push("".to_string());
+    fn init(init: PlatformInit) -> PlatformContext {
         PlatformContext {
             on_signal_tick: Rc::new(|| {}),
-            signal_dispatch,
+            signal_dispatch: init.signal_dispatch,
             logger: Rc::new(|line| {
                 // FIXME: Don't reinvent logging?
                 let mut file = OpenOptions::new()
@@ -53,6 +55,7 @@ impl kano::platform::Platform for Tui {
                     eprintln!("Couldn't log line: {}", e);
                 }
             }),
+            history_api: Rc::new(kano::history::HistoryState::new("".to_string())),
         }
     }
 

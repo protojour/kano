@@ -7,7 +7,7 @@ use std::fmt::Debug;
 use std::ops::AddAssign;
 use std::rc::Rc;
 
-use crate::history::{self, History};
+use crate::history::{self, History, HistoryAPI, HistoryState};
 use crate::signal::Signal;
 use crate::view_id::ViewId;
 
@@ -37,8 +37,8 @@ pub(crate) struct Registry {
 }
 
 pub(crate) struct Globals {
-    #[cfg(feature = "routing")]
-    pub history: history::History,
+    pub history_api: Rc<dyn HistoryAPI>,
+    pub history_signal: Signal,
 }
 
 pub(crate) struct ReactiveEntry {
@@ -55,9 +55,11 @@ impl Registry {
         let next_view_id = 0;
         let mut next_signal_id = 0;
 
+        let history_signal = Signal(fetch_add(&mut next_signal_id, 1));
+
         let globals = Globals {
-            #[cfg(feature = "routing")]
-            history: History::new(Signal(fetch_add(&mut next_signal_id, 1))),
+            history_api: Rc::new(HistoryState::new("".to_string())),
+            history_signal,
         };
 
         Self {

@@ -21,6 +21,7 @@ use std::{cell::RefCell, convert::Infallible, marker::PhantomData, rc::Rc};
 
 pub use kano_macros::view;
 pub use kano_macros::FromProperty;
+use platform::PlatformInit;
 use platform::{Cursor, Platform, PlatformContext};
 use registry::REGISTRY;
 use view::Reactive;
@@ -114,7 +115,14 @@ thread_local! {
 }
 
 pub fn init<P: Platform>() -> Init<P> {
-    let context = P::init(Box::new(signal::dispatch_pending_signals));
+    let history_signal = REGISTRY.with_borrow(|registry| registry.globals.history_signal);
+
+    let context = P::init(PlatformInit {
+        signal_dispatch: Box::new(signal::dispatch_pending_signals),
+        history_refresh: Rc::new(move || {
+            history_signal.send();
+        }),
+    });
 
     LOGGER.with_borrow_mut({
         let context_logger = context.logger.clone();
