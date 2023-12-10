@@ -1,3 +1,4 @@
+mod constant;
 mod dynamic;
 mod either;
 mod func;
@@ -7,6 +8,7 @@ mod text;
 mod tuple;
 mod unit;
 
+pub use constant::Const;
 pub use dynamic::Dyn;
 pub use either::Either;
 pub use func::Func;

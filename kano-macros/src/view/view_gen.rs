@@ -4,25 +4,42 @@ use syn::spanned::Spanned;
 
 use crate::view::ast::{AttrValue, ComponentAttrs};
 
-use super::ast::{Attr, Element, For, Match, Node, View};
+use super::ast::{Attr, Element, For, Match, Node, NodeKind, View};
 
 pub fn view(view: View) -> TokenStream {
     let gen = ViewGen {
         common_namespace: view.common_namespace,
     };
 
-    gen.node(view.root_node)
+    gen.node(view.root_node, Const::No)
 }
 
 struct ViewGen {
     common_namespace: Option<syn::Path>,
 }
 
+#[derive(Clone, Copy)]
+enum Const {
+    No,
+    Current,
+    Parent,
+}
+
 impl ViewGen {
-    fn node(&self, node: Node) -> TokenStream {
-        match node {
-            Node::None => quote!(()),
-            Node::Element(Element {
+    fn node(&self, node: Node, mut constant: Const) -> TokenStream {
+        match (constant, node.constant) {
+            (Const::No, true) => {
+                constant = Const::Current;
+            }
+            (Const::Current, _) => {
+                constant = Const::Parent;
+            }
+            _ => {}
+        }
+
+        match node.kind {
+            NodeKind::None => quote!(()),
+            NodeKind::Element(Element {
                 path,
                 attrs,
                 children,
@@ -63,7 +80,7 @@ impl ViewGen {
 
                 let path = self.element_path(&path);
 
-                match self.gen_children(children) {
+                let view = match self.gen_children(children, constant) {
                     Children::Listed(children) => {
                         quote_spanned! {span=>
                             #path(#attrs, (
@@ -76,30 +93,36 @@ impl ViewGen {
                             #path(#attrs, #ident)
                         }
                     }
+                };
+
+                if matches!(constant, Const::Current) {
+                    quote_spanned! { span=> ::kano::view::Const(#view) }
+                } else {
+                    view
                 }
             }
-            Node::Fragment(_frag) => {
+            NodeKind::Fragment(_frag) => {
                 quote!(())
             }
-            Node::Spread(ident) => {
+            NodeKind::Spread(ident) => {
                 quote! {
                     #ident
                 }
             }
-            Node::Text(text) => {
+            NodeKind::Text(text) => {
                 let span = text.0.span();
                 let literal = text.0.into_token_stream();
                 quote_spanned! {span=>
                     #literal
                 }
             }
-            Node::TextExpr(expr) => {
+            NodeKind::TextExpr(expr) => {
                 let span = expr.span();
                 quote_spanned! {span=>
                     ::kano::view::Reactive(move || #expr)
                 }
             }
-            Node::Component(component) => {
+            NodeKind::Component(component) => {
                 let path = component.path;
                 let span = path.span();
                 match component.attrs {
@@ -117,12 +140,12 @@ impl ViewGen {
                     }
                 }
             }
-            Node::Match(Match { expr, arms }) => {
+            NodeKind::Match(Match { expr, arms }) => {
                 let span = expr.span();
                 let arms = arms.into_iter().enumerate().map(|(index, arm)| {
                     let pat = arm.pat;
                     let span = pat.span();
-                    let view = self.node(arm.node);
+                    let view = self.node(arm.node, constant);
                     if index == 0 {
                         quote_spanned! {span=>
                             #pat => ::kano::view::Either::Left(#view),
@@ -142,7 +165,7 @@ impl ViewGen {
                     })
                 }
             }
-            Node::For(For {
+            NodeKind::For(For {
                 for_token,
                 pat,
                 in_token: _,
@@ -150,7 +173,7 @@ impl ViewGen {
                 repeating_node,
             }) => {
                 let span = for_token.span;
-                let child = self.node(*repeating_node);
+                let child = self.node(*repeating_node, constant);
 
                 quote_spanned! {span=>
                     ::kano::view::seq_map(#expression, move |#pat| {
@@ -161,15 +184,20 @@ impl ViewGen {
         }
     }
 
-    fn gen_children(&self, nodes: Vec<Node>) -> Children {
+    fn gen_children(&self, nodes: Vec<Node>, constant: Const) -> Children {
         if nodes.len() == 1 {
             let node = nodes.into_iter().next().unwrap();
-            match node {
-                Node::Spread(ident) => Children::Spread(ident),
-                _ => Children::Listed(vec![self.node(node)]),
+            match node.kind {
+                NodeKind::Spread(ident) => Children::Spread(ident),
+                _ => Children::Listed(vec![self.node(node, constant)]),
             }
         } else {
-            Children::Listed(nodes.into_iter().map(|node| self.node(node)).collect())
+            Children::Listed(
+                nodes
+                    .into_iter()
+                    .map(|node| self.node(node, constant))
+                    .collect(),
+            )
         }
     }
 

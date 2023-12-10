@@ -20,8 +20,8 @@ pub struct View {
 impl Parse for View {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         let root_node = Node::parse(input)?;
-        let common_namespace = match &root_node {
-            Node::Element(element) => {
+        let common_namespace = match &root_node.kind {
+            NodeKind::Element(element) => {
                 if element.path.segments.len() > 1 {
                     let mut prefix_segments: syn::punctuated::Punctuated<
                         syn::PathSegment,
@@ -57,10 +57,14 @@ impl Parse for View {
 
 pub struct Parser;
 
-impl Parser {}
+#[derive(Debug, Eq, PartialEq)]
+pub struct Node {
+    pub kind: NodeKind,
+    pub constant: bool,
+}
 
 #[derive(Debug, Eq, PartialEq)]
-pub enum Node {
+pub enum NodeKind {
     None,
     Element(Element),
     Fragment(Vec<Node>),
@@ -201,7 +205,10 @@ impl Parser {
         if nodes.len() == 1 {
             Ok(nodes.into_iter().next().unwrap())
         } else {
-            Ok(Node::Fragment(nodes))
+            Ok(Node {
+                constant: all_nodes_constant(&nodes),
+                kind: NodeKind::Fragment(nodes),
+            })
         }
     }
 
@@ -211,25 +218,40 @@ impl Parser {
         }
 
         if let Ok(text) = input.parse::<Text>() {
-            return Ok(Node::Text(text));
+            return Ok(Node {
+                constant: true,
+                kind: NodeKind::Text(text),
+            });
         }
 
         if input.peek(syn::token::DotDot) {
             let _dot_dot: syn::token::DotDot = input.parse()?;
             let ident = input.parse()?;
-            return Ok(Node::Spread(ident));
+            return Ok(Node {
+                kind: NodeKind::Spread(ident),
+                constant: false,
+            });
         }
 
         if input.peek(syn::token::If) {
-            return Ok(Node::Match(self.parse_if(input)?));
+            return Ok(Node {
+                kind: NodeKind::Match(self.parse_if(input)?),
+                constant: false,
+            });
         }
 
         if input.peek(syn::token::Match) {
-            return Ok(Node::Match(self.parse_match(input)?));
+            return Ok(Node {
+                kind: NodeKind::Match(self.parse_match(input)?),
+                constant: false,
+            });
         }
 
         if input.peek(syn::token::For) {
-            return Ok(Node::For(self.parse_for(input)?));
+            return Ok(Node {
+                kind: NodeKind::For(self.parse_for(input)?),
+                constant: false,
+            });
         }
 
         // Fallback: evaluate expression in {}
@@ -239,7 +261,10 @@ impl Parser {
 
         let expr: syn::Expr = content.parse()?;
 
-        Ok(Node::TextExpr(expr))
+        Ok(Node {
+            kind: NodeKind::TextExpr(expr),
+            constant: false,
+        })
     }
 
     fn parse_element_or_fragment(&self, input: ParseStream) -> syn::Result<Node> {
@@ -253,7 +278,10 @@ impl Parser {
             input.parse::<syn::token::Slash>()?;
             input.parse::<syn::token::Gt>()?;
 
-            return Ok(Node::Fragment(nodes));
+            return Ok(Node {
+                constant: all_nodes_constant(&nodes),
+                kind: NodeKind::Fragment(nodes),
+            });
         }
 
         let tag_with_attrs = self.parse_tag_then_attrs(input)?;
@@ -295,12 +323,18 @@ impl Parser {
         children: Vec<Node>,
     ) -> syn::Result<Node> {
         match tag_with_attrs {
-            TagWithAttrs::Element(path, attrs) => Ok(Node::Element(Element {
-                path,
-                attrs,
-                children,
-            })),
-            TagWithAttrs::Component(path, attrs) => Ok(Node::Component(Component { path, attrs })),
+            TagWithAttrs::Element(path, attrs) => Ok(Node {
+                constant: is_element_constant(&children, &attrs),
+                kind: NodeKind::Element(Element {
+                    path,
+                    attrs,
+                    children,
+                }),
+            }),
+            TagWithAttrs::Component(path, attrs) => Ok(Node {
+                constant: is_component_constant(&children, &attrs),
+                kind: NodeKind::Component(Component { path, attrs }),
+            }),
         }
     }
 
@@ -415,7 +449,10 @@ impl Parser {
         if nodes.len() == 1 {
             Ok(nodes.into_iter().next().unwrap())
         } else {
-            Ok(Node::Fragment(nodes))
+            Ok(Node {
+                constant: all_nodes_constant(&nodes),
+                kind: NodeKind::Fragment(nodes),
+            })
         }
     }
 
@@ -428,7 +465,10 @@ impl Parser {
         let else_branch = if input.peek(syn::token::Else) {
             self.parse_else(input)?
         } else {
-            Node::None
+            Node {
+                constant: true,
+                kind: NodeKind::None,
+            }
         };
 
         match expr {
@@ -470,7 +510,10 @@ impl Parser {
         let lookahead = input.lookahead1();
 
         if input.peek(syn::token::If) {
-            Ok(Node::Match(self.parse_if(input)?))
+            Ok(Node {
+                kind: NodeKind::Match(self.parse_if(input)?),
+                constant: false,
+            })
         } else if input.peek(syn::token::Brace) {
             self.parse_braced_fragment(input)
         } else {
@@ -594,6 +637,30 @@ fn token_as_path_segment<T: syn::parse::Parse + syn::spanned::Spanned>(
     })
 }
 
+fn is_element_constant(nodes: &[Node], attrs: &[Attr]) -> bool {
+    all_nodes_constant(nodes)
+        && attrs.iter().all(|attr| match attr {
+            Attr::KeyValue(key_value) => key_value_attr_constant(key_value),
+            Attr::Implicit(_) => false,
+        })
+}
+
+fn is_component_constant(children: &[Node], attrs: &ComponentAttrs) -> bool {
+    all_nodes_constant(children)
+        && match attrs {
+            ComponentAttrs::Positional(_) => false,
+            ComponentAttrs::KeyValue(attrs) => attrs.iter().all(key_value_attr_constant),
+        }
+}
+
+fn key_value_attr_constant(attr: &KeyValueAttr) -> bool {
+    matches!(attr.value, AttrValue::ImplicitTrue | AttrValue::Literal(_))
+}
+
+fn all_nodes_constant(nodes: &[Node]) -> bool {
+    nodes.iter().all(|node| node.constant)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -614,31 +681,46 @@ mod tests {
     {
         let attrs = attrs_fn(&tag_name);
         let ident = quote::format_ident!("{tag_name}");
-        Node::Element(Element {
-            path: syn::parse_quote! { #ident },
-            attrs,
-            children,
-        })
+        Node {
+            kind: NodeKind::Element(Element {
+                path: syn::parse_quote! { #ident },
+                attrs,
+                children,
+            }),
+            constant: false,
+        }
     }
 
     fn fragment(nodes: Vec<Node>) -> Node {
-        Node::Fragment(nodes)
+        Node {
+            kind: NodeKind::Fragment(nodes),
+            constant: false,
+        }
     }
 
     fn text(text: &str) -> Node {
-        Node::Text(Text(syn::LitStr::new(
-            text,
-            proc_macro2::Span::mixed_site(),
-        )))
+        Node {
+            kind: NodeKind::Text(Text(syn::LitStr::new(
+                text,
+                proc_macro2::Span::mixed_site(),
+            ))),
+            constant: true,
+        }
     }
 
     fn text_var(name: &str) -> Node {
         let ident = quote::format_ident!("{}", name);
-        Node::TextExpr(syn::parse_quote! { #ident })
+        Node {
+            kind: NodeKind::TextExpr(syn::parse_quote! { #ident }),
+            constant: false,
+        }
     }
 
     fn component(path: syn::Path, attrs: ComponentAttrs) -> Node {
-        Node::Component(Component { path, attrs })
+        Node {
+            kind: NodeKind::Component(Component { path, attrs }),
+            constant: false,
+        }
     }
 
     #[allow(unused)]
@@ -809,22 +891,25 @@ mod tests {
             html_element(
                 "div",
                 |_| vec![],
-                vec![Node::Match(Match {
-                    expr: syn::parse_quote! { something },
-                    arms: vec![
-                        MatchArm {
-                            pat: syn::parse_quote! { true },
-                            node: fragment(vec![
-                                html_element("p", |_| vec![], vec![]),
-                                html_element("span", |_| vec![], vec![])
-                            ])
-                        },
-                        MatchArm {
-                            pat: syn::parse_quote! { false },
-                            node: fragment(vec![]),
-                        }
-                    ],
-                })]
+                vec![Node {
+                    kind: NodeKind::Match(Match {
+                        expr: syn::parse_quote! { something },
+                        arms: vec![
+                            MatchArm {
+                                pat: syn::parse_quote! { true },
+                                node: fragment(vec![
+                                    html_element("p", |_| vec![], vec![]),
+                                    html_element("span", |_| vec![], vec![])
+                                ])
+                            },
+                            MatchArm {
+                                pat: syn::parse_quote! { false },
+                                node: fragment(vec![]),
+                            }
+                        ],
+                    }),
+                    constant: false,
+                }]
             )
         );
     }
@@ -844,19 +929,22 @@ mod tests {
             html_element(
                 "div",
                 |_| vec![],
-                vec![Node::Match(Match {
-                    expr: syn::parse_quote! { maybe },
-                    arms: vec![
-                        MatchArm {
-                            pat: syn::parse_quote! { Some(for_sure) },
-                            node: html_element("p", |_| vec![], vec![text_var("for_sure")])
-                        },
-                        MatchArm {
-                            pat: syn::parse_quote! { _ },
-                            node: fragment(vec![]),
-                        }
-                    ],
-                })]
+                vec![Node {
+                    kind: NodeKind::Match(Match {
+                        expr: syn::parse_quote! { maybe },
+                        arms: vec![
+                            MatchArm {
+                                pat: syn::parse_quote! { Some(for_sure) },
+                                node: html_element("p", |_| vec![], vec![text_var("for_sure")])
+                            },
+                            MatchArm {
+                                pat: syn::parse_quote! { _ },
+                                node: fragment(vec![]),
+                            }
+                        ],
+                    }),
+                    constant: false,
+                }]
             )
         );
     }
@@ -876,17 +964,20 @@ mod tests {
             html_element(
                 "ul",
                 |_| vec![],
-                vec![Node::For(For {
-                    for_token: syn::parse_quote! { for },
-                    pat: syn::parse_quote! { item },
-                    in_token: syn::parse_quote! { in },
-                    expression: syn::parse_quote! { items },
-                    repeating_node: Box::new(html_element(
-                        "li",
-                        |_| vec![],
-                        vec![text_var("item")]
-                    )),
-                })]
+                vec![Node {
+                    kind: NodeKind::For(For {
+                        for_token: syn::parse_quote! { for },
+                        pat: syn::parse_quote! { item },
+                        in_token: syn::parse_quote! { in },
+                        expression: syn::parse_quote! { items },
+                        repeating_node: Box::new(html_element(
+                            "li",
+                            |_| vec![],
+                            vec![text_var("item")]
+                        )),
+                    }),
+                    constant: false,
+                }]
             )
         );
     }
