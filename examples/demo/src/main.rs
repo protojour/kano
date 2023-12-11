@@ -1,7 +1,6 @@
 #![allow(non_snake_case)]
 
-use kano::prelude::app::*;
-use kano::router::Router;
+use kano::{prelude::app::*, router::Router};
 use todo::{add_todo, delete_todo, Todo};
 
 kano::define_platform!(AppPlatform, View);
@@ -116,10 +115,7 @@ fn TodoList(todos: State<Vec<Todo>>) -> impl View {
     }
 }
 
-pub fn TestSvg<P: Platform>() -> impl kano::View<P>
-where
-    P::Cursor: kano_svg::SvgCursor,
-{
+pub fn TestSvg<P, M: kano_svg::SvgMarkup<P>>() -> impl kano::View<P, M> {
     // Source: https://commons.wikimedia.org/wiki/File:Test.svg
     kano::svg_view!("resources/test.svg")
 }

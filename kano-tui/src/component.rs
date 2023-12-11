@@ -26,7 +26,7 @@ pub struct Component<C> {
     pub children: C,
 }
 
-impl<C: Children<Tui>> kano::View<Tui> for Component<C> {
+impl<C: Children<Tui, Tui>> kano::View<Tui, Tui> for Component<C> {
     type State = (Rc<ComponentData>, C::State);
 
     fn init(self, cursor: &mut TuiCursor) -> Self::State {

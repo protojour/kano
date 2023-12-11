@@ -6,7 +6,11 @@ use std::rc::Rc;
 use anyhow::anyhow;
 use futures::{SinkExt, StreamExt};
 use gloo::events::EventListener;
-use kano::platform::{Platform, PlatformContext, PlatformInit};
+use kano::{
+    markup::Markup,
+    platform::{Platform, PlatformContext, PlatformInit},
+};
+use kano_svg::Svg1_1;
 use wasm_bindgen::prelude::*;
 use web_cursor::{Position, WebCursor};
 use web_sys::{window, Document};
@@ -16,6 +20,8 @@ mod web_cursor;
 
 #[cfg(feature = "web-component")]
 pub mod web_component;
+
+pub use kano_html::Html5;
 
 mod js {
     use super::*;
@@ -31,8 +37,16 @@ mod js {
 
 pub struct Web {}
 
-impl Platform for Web {
+impl Markup<Web> for Html5 {
     type Cursor = WebCursor;
+}
+
+impl Markup<Web> for Svg1_1 {
+    type Cursor = WebCursor;
+}
+
+impl Platform for Web {
+    type Markup = Html5;
 
     fn init(init: PlatformInit) -> PlatformContext {
         console_error_panic_hook::set_once();
@@ -69,7 +83,7 @@ impl Platform for Web {
         }
     }
 
-    fn run(view: impl kano::View<Self>, _context: PlatformContext) -> anyhow::Result<()> {
+    fn run(view: impl kano::View<Self, Html5>, _context: PlatformContext) -> anyhow::Result<()> {
         let mut cursor = WebCursor::new_detached();
         let state = view.init(&mut cursor);
 

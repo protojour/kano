@@ -1,28 +1,34 @@
 use kano::{attr::To, prelude::platform::*, Children, Empty, View};
-use kano_html::{attr::*, html};
+use kano_html::{attr::*, html, Html5};
 use kano_web::Web;
 
 use crate::KBCAttr;
 
-pub fn layout(_: impl Props<Empty>, children: impl Children<Web>) -> impl View<Web> {
+pub fn layout(_: impl Props<Empty>, children: impl Children<Web, Html5>) -> impl View<Web, Html5> {
     view! {
         <html:div>..children</html:div>
     }
 }
 
-pub fn paragraph(_: impl Props<Empty>, children: impl Children<Web>) -> impl View<Web> {
+pub fn paragraph(
+    _: impl Props<Empty>,
+    children: impl Children<Web, Html5>,
+) -> impl View<Web, Html5> {
     view! {
         <html:p>..children</html:p>
     }
 }
 
-pub fn strong(_: impl Props<Empty>, children: impl Children<Web>) -> impl View<Web> {
+pub fn strong(_: impl Props<Empty>, children: impl Children<Web, Html5>) -> impl View<Web, Html5> {
     view! {
         <html:strong>..children</html:strong>
     }
 }
 
-pub fn button(mut props: impl Props<KBCAttr>, children: impl Children<Web>) -> impl View<Web> {
+pub fn button(
+    mut props: impl Props<KBCAttr>,
+    children: impl Children<Web, Html5>,
+) -> impl View<Web, Html5> {
     let_props!({ KBCAttr::OnClick(on_click), KBCAttr::To(to) } = props);
 
     #[cfg(feature = "web-routing")]
@@ -57,13 +63,19 @@ pub fn button(mut props: impl Props<KBCAttr>, children: impl Children<Web>) -> i
     }
 }
 
-pub fn unordered_list(_: impl Props<Empty>, children: impl Children<Web>) -> impl View<Web> {
+pub fn unordered_list(
+    _: impl Props<Empty>,
+    children: impl Children<Web, Html5>,
+) -> impl View<Web, Html5> {
     view! {
         <html:ul>..children</html:ul>
     }
 }
 
-pub fn list_item(_: impl Props<Empty>, children: impl Children<Web>) -> impl View<Web> {
+pub fn list_item(
+    _: impl Props<Empty>,
+    children: impl Children<Web, Html5>,
+) -> impl View<Web, Html5> {
     view! {
         <html:li>..children</html:li>
     }

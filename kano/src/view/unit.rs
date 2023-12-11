@@ -1,17 +1,20 @@
-use crate::{platform::Cursor, Children, Platform, View};
+use crate::{
+    markup::{Cursor, Markup},
+    Children, View,
+};
 
-impl<P: Platform> View<P> for () {
+impl<P, M: Markup<P>> View<P, M> for () {
     type State = ();
 
-    fn init(self, cursor: &mut P::Cursor) {
+    fn init(self, cursor: &mut M::Cursor) {
         cursor.empty();
     }
-    fn diff(self, _: &mut Self::State, _cursor: &mut P::Cursor) {}
+    fn diff(self, _: &mut Self::State, _cursor: &mut M::Cursor) {}
 }
 
-impl<P: Platform> Children<P> for () {
+impl<P, M: Markup<P>> Children<P, M> for () {
     type State = ();
 
-    fn init(self, _cursor: &mut P::Cursor) {}
-    fn diff(self, _: &mut Self::State, _cursor: &mut P::Cursor) {}
+    fn init(self, _cursor: &mut M::Cursor) {}
+    fn diff(self, _: &mut Self::State, _cursor: &mut M::Cursor) {}
 }

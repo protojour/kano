@@ -25,3 +25,6 @@ pub enum HtmlAttribute {
     Attribute(properties::Property),
     Event(kano::attr::On<kano::attr::Event>),
 }
+
+/// The Html5 markup language.
+pub struct Html5;

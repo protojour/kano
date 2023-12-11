@@ -1,6 +1,6 @@
 use std::{marker::PhantomData, ops::Deref};
 
-use crate::{log, platform::Cursor, platform::Platform, reactive::Ref, View};
+use crate::{log, markup::Cursor, markup::Markup, reactive::Ref, View};
 
 pub trait Map<F>: Sized {
     type Seq;
@@ -8,32 +8,37 @@ pub trait Map<F>: Sized {
     fn seq_map(self, func: F) -> SeqMap<Self::Seq, F>;
 }
 
-impl<M, T, F: Fn(M) -> T> Map<F> for Vec<M> {
-    type Seq = Vec<M>;
+impl<T, V, F: Fn(T) -> V> Map<F> for Vec<T> {
+    type Seq = Vec<T>;
 
     fn seq_map(self, func: F) -> SeqMap<Self::Seq, F> {
         SeqMap(self, func)
     }
 }
 
-impl<M, T, F: Fn(M) -> T> Map<F> for Ref<Vec<M>> {
-    type Seq = Ref<Vec<M>>;
+impl<T, V, F: Fn(T) -> V> Map<F> for Ref<Vec<T>> {
+    type Seq = Ref<Vec<T>>;
 
     fn seq_map(self, func: F) -> SeqMap<Self::Seq, F> {
         SeqMap(self, func)
     }
 }
 
-pub fn seq_map<F, M: Map<F>>(seq: M, func: F) -> SeqMap<<M as Map<F>>::Seq, F> {
+pub fn seq_map<F, S: Map<F>>(seq: S, func: F) -> SeqMap<<S as Map<F>>::Seq, F> {
     seq.seq_map(func)
 }
 
 pub struct SeqMap<S, F>(S, F);
 
-impl<P: Platform, M, T: View<P>, F: Fn(M) -> T> View<P> for SeqMap<Vec<M>, F> {
-    type State = Vec<T::State>;
+impl<P, M, V, T, F> View<P, M> for SeqMap<Vec<T>, F>
+where
+    M: Markup<P>,
+    V: View<P, M>,
+    F: Fn(T) -> V,
+{
+    type State = Vec<V::State>;
 
-    fn init(self, cursor: &mut <P as Platform>::Cursor) -> Self::State {
+    fn init(self, cursor: &mut M::Cursor) -> Self::State {
         let SeqMap(vec, func) = self;
         let mut state = Vec::with_capacity(vec.len());
 
@@ -44,19 +49,23 @@ impl<P: Platform, M, T: View<P>, F: Fn(M) -> T> View<P> for SeqMap<Vec<M>, F> {
         state
     }
 
-    fn diff(self, state: &mut Self::State, cursor: &mut <P as Platform>::Cursor) {
+    fn diff(self, state: &mut Self::State, cursor: &mut M::Cursor) {
         let SeqMap(model, func) = self;
 
-        Differ::<P>::apply_diff(model.len(), model.into_iter(), state, func, cursor);
+        Differ::<P, M>::apply_diff(model.len(), model.into_iter(), state, func, cursor);
     }
 }
 
-impl<P: Platform, M: Clone + 'static, T: View<P>, F: Fn(M) -> T> View<P>
-    for SeqMap<Ref<Vec<M>>, F>
+impl<P, M, V, T, F> View<P, M> for SeqMap<Ref<Vec<T>>, F>
+where
+    M: Markup<P>,
+    V: View<P, M>,
+    T: Clone + 'static,
+    F: Fn(T) -> V,
 {
-    type State = Vec<T::State>;
+    type State = Vec<V::State>;
 
-    fn init(self, cursor: &mut <P as Platform>::Cursor) -> Self::State {
+    fn init(self, cursor: &mut M::Cursor) -> Self::State {
         let model_borrow = self.0.borrow();
         let model = model_borrow.deref();
 
@@ -69,11 +78,11 @@ impl<P: Platform, M: Clone + 'static, T: View<P>, F: Fn(M) -> T> View<P>
         state
     }
 
-    fn diff(self, state: &mut Self::State, cursor: &mut <P as Platform>::Cursor) {
+    fn diff(self, state: &mut Self::State, cursor: &mut M::Cursor) {
         let SeqMap(model, func) = self;
         let model = model.borrow();
 
-        Differ::<P>::apply_diff(
+        Differ::<P, M>::apply_diff(
             model.len(),
             model.iter(),
             state,
@@ -83,16 +92,20 @@ impl<P: Platform, M: Clone + 'static, T: View<P>, F: Fn(M) -> T> View<P>
     }
 }
 
-struct Differ<P>(PhantomData<P>);
+struct Differ<P, S>(PhantomData<P>, PhantomData<S>);
 
-impl<P: Platform> Differ<P> {
-    fn apply_diff<T: View<P>, M, MI: Iterator<Item = M>, F: Fn(M) -> T>(
+impl<P, M: Markup<P>> Differ<P, M> {
+    fn apply_diff<V, T, TI, F>(
         model_len: usize,
-        model_iter: MI,
-        state: &mut Vec<T::State>,
+        model_iter: TI,
+        state: &mut Vec<V::State>,
         func: F,
-        cursor: &mut <P as Platform>::Cursor,
-    ) {
+        cursor: &mut M::Cursor,
+    ) where
+        V: View<P, M>,
+        TI: Iterator<Item = T>,
+        F: Fn(T) -> V,
+    {
         log(&format!(
             "apply_diff model.len = {model_len} state.len = {}",
             state.len()

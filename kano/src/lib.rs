@@ -1,6 +1,7 @@
 //! Kano is a work-in-progress GUI application framework written for and in Rust.
 pub mod attr;
 pub mod history;
+pub mod markup;
 pub mod platform;
 pub mod prelude;
 pub mod property;
@@ -22,30 +23,32 @@ use std::{cell::RefCell, convert::Infallible, marker::PhantomData, rc::Rc};
 pub use kano_macros::svg_view;
 pub use kano_macros::view;
 pub use kano_macros::FromProperty;
-use platform::PlatformInit;
-use platform::{Cursor, Platform, PlatformContext};
+use platform::{Platform, PlatformContext, PlatformInit};
 use registry::REGISTRY;
 use view::Reactive;
 
-pub trait View<P: Platform> {
+/// A view is a UI node on a platform `P` defined by a markup language `M`.
+pub trait View<P, M: markup::Markup<P>> {
     type State;
 
-    fn init(self, cursor: &mut P::Cursor) -> Self::State;
-    fn diff(self, state: &mut Self::State, cursor: &mut P::Cursor);
+    fn init(self, cursor: &mut M::Cursor) -> Self::State;
+    fn diff(self, state: &mut Self::State, cursor: &mut M::Cursor);
 }
 
-pub trait Children<P: Platform> {
+/// The children of a [View] on a platform `P` defined by a markup language `M`.
+pub trait Children<P, M: markup::Markup<P>> {
     type State;
 
-    fn init(self, cursor: &mut P::Cursor) -> Self::State;
-    fn diff(self, state: &mut Self::State, cursor: &mut P::Cursor);
+    fn init(self, cursor: &mut M::Cursor) -> Self::State;
+    fn diff(self, state: &mut Self::State, cursor: &mut M::Cursor);
 }
 
-pub trait DiffProps<P: Platform> {
+/// Perform diffing of a [View]'s properties on a platform `P` defined by a markup language `M`.
+pub trait DiffProps<P, M: markup::Markup<P>> {
     type State;
 
-    fn init(self, cursor: &mut P::Cursor) -> Self::State;
-    fn diff(self, state: &mut Self::State, cursor: &mut P::Cursor);
+    fn init(self, cursor: &mut M::Cursor) -> Self::State;
+    fn diff(self, state: &mut Self::State, cursor: &mut M::Cursor);
 }
 
 /// The Props trait marks properties passed into a view function.
@@ -152,7 +155,7 @@ pub fn init<P: Platform>() -> Init<P> {
 impl<P: Platform> Init<P> {
     pub fn run_app<V>(self, func: impl (Fn() -> V) + 'static) -> anyhow::Result<()>
     where
-        V: View<P> + 'static,
+        V: View<P, P::Markup> + 'static,
     {
         P::run(Reactive(func), self.context)
     }
@@ -173,10 +176,10 @@ macro_rules! define_platform {
 
         /// The concrete view trait for this application.
         #[cfg(feature = "tui")]
-        pub trait $view: kano::View<kano_tui::Tui> {}
+        pub trait $view: kano::View<kano_tui::Tui, kano_tui::Tui> {}
 
         #[cfg(feature = "tui")]
-        impl<V: kano::View<kano_tui::Tui>> $view for V {}
+        impl<V: kano::View<kano_tui::Tui, kano_tui::Tui>> $view for V {}
 
         /// Type alias for the current platform.
         #[cfg(feature = "web")]
@@ -184,10 +187,10 @@ macro_rules! define_platform {
 
         /// The concrete view trait for this application.
         #[cfg(feature = "web")]
-        pub trait $view: kano::View<kano_web::Web> {}
+        pub trait $view: kano::View<kano_web::Web, kano_web::Html5> {}
 
         #[cfg(feature = "web")]
-        impl<V: kano::View<kano_web::Web>> $view for V {}
+        impl<V: kano::View<kano_web::Web, kano_web::Html5>> $view for V {}
     };
 }
 

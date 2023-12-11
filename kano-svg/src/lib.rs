@@ -23,6 +23,23 @@ impl<A, C> SvgElement<A, C> {
     }
 }
 
+#[derive(Clone, Copy)]
+pub struct SvgRootElement<A, C> {
+    pub tag_name: &'static str,
+    pub props: SvgProps<A>,
+    pub children: C,
+}
+
+impl<A, C> SvgRootElement<A, C> {
+    pub const fn new(tag_name: &'static str, props: A, children: C) -> Self {
+        Self {
+            tag_name,
+            props: SvgProps(props),
+            children,
+        }
+    }
+}
+
 pub enum SvgAttribute {
     Svg(Property),
     Xml(XmlProperty),
@@ -37,13 +54,17 @@ impl kano::FromProperty<SvgAttribute> for SvgAttribute {
     }
 }
 
-pub trait SvgCursor: kano::platform::Cursor {
-    fn svg_element(&mut self, tag_name: &'static str);
-    fn set_svg_attribute(&mut self, name: &str, value: &str);
-    fn remove_svg_attribute(&mut self, name: &str);
-    fn set_xml_attribute(&mut self, namespace: &str, name: &str, value: &str);
-    fn remove_xml_attribute(&mut self, namespace: &str, name: &str);
+/// An extension trait for SVG markup.
+pub trait SvgMarkup<P>: kano::markup::Markup<P> {
+    fn svg_element(tag_name: &'static str, cursor: &mut Self::Cursor);
+    fn set_svg_attribute(name: &str, value: &str, cursor: &mut Self::Cursor);
+    fn remove_svg_attribute(name: &str, cursor: &mut Self::Cursor);
+    fn set_xml_attribute(namespace: &str, name: &str, value: &str, cursor: &mut Self::Cursor);
+    fn remove_xml_attribute(namespace: &str, name: &str, cursor: &mut Self::Cursor);
 }
+
+/// The SVG 1.1 markup language/XML schema/specification.
+pub struct Svg1_1;
 
 pub mod xmlns {
     use std::borrow::Cow;
@@ -116,14 +137,11 @@ mod tests {
     use crate::{
         attr::{class, d, height, id, viewBox, width},
         svg::*,
-        SvgCursor,
+        SvgMarkup,
     };
     use kano::{platform::Platform, view, View};
 
-    pub fn _test_svg<P: Platform>() -> impl View<P>
-    where
-        P::Cursor: SvgCursor,
-    {
+    pub fn _test_svg<P: Platform, M: SvgMarkup<P>>() -> impl View<P, M> {
         view! {
             <svg id="icon" /*xmlns="http://www.w3.org/2000/svg"*/ width="32" height="32" viewBox="0 0 32 32">
                 <defs>

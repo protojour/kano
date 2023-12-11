@@ -1,10 +1,11 @@
 use gloo::events::EventListener;
 use js_sys::wasm_bindgen::*;
+use kano_svg::SvgMarkup;
 use web_sys::{Element, EventTarget};
 
 use kano::attr::{Event, On};
 
-use crate::document;
+use crate::{document, Html5, Svg1_1, Web};
 
 #[derive(Clone, Debug)]
 pub struct WebCursor {
@@ -60,7 +61,7 @@ impl WebCursor {
     }
 }
 
-impl kano::platform::Cursor for WebCursor {
+impl kano::markup::Cursor for WebCursor {
     type TextHandle = web_sys::Node;
     type EventHandle = gloo::events::EventListener;
 
@@ -198,30 +199,64 @@ impl kano::platform::Cursor for WebCursor {
     }
 }
 
-impl kano_svg::SvgCursor for WebCursor {
-    fn svg_element(&mut self, tag_name: &'static str) {
+impl SvgMarkup<Web> for Svg1_1 {
+    fn svg_element(tag_name: &'static str, cursor: &mut Self::Cursor) {
         let element = document()
             .create_element_ns(Some("http://www.w3.org/2000/svg"), tag_name)
             .unwrap();
-        self.append_node(&element);
+        cursor.append_node(&element);
     }
 
-    fn set_svg_attribute(&mut self, name: &str, value: &str) {
-        self.get_element().set_attribute(name, value).unwrap();
+    fn set_svg_attribute(name: &str, value: &str, cursor: &mut Self::Cursor) {
+        cursor.get_element().set_attribute(name, value).unwrap();
     }
 
-    fn remove_svg_attribute(&mut self, name: &str) {
-        self.get_element().remove_attribute(name).unwrap();
+    fn remove_svg_attribute(name: &str, cursor: &mut Self::Cursor) {
+        cursor.get_element().remove_attribute(name).unwrap();
     }
 
-    fn set_xml_attribute(&mut self, namespace: &str, name: &str, value: &str) {
-        self.get_element()
+    fn set_xml_attribute(namespace: &str, name: &str, value: &str, cursor: &mut Self::Cursor) {
+        cursor
+            .get_element()
             .set_attribute_ns(Some(namespace), name, value)
             .unwrap();
     }
 
-    fn remove_xml_attribute(&mut self, namespace: &str, name: &str) {
-        self.get_element()
+    fn remove_xml_attribute(namespace: &str, name: &str, cursor: &mut Self::Cursor) {
+        cursor
+            .get_element()
+            .remove_attribute_ns(Some(namespace), name)
+            .unwrap();
+    }
+}
+
+// FIXME: Should dynamically transition into this instead
+impl SvgMarkup<Web> for Html5 {
+    fn svg_element(tag_name: &'static str, cursor: &mut Self::Cursor) {
+        let element = document()
+            .create_element_ns(Some("http://www.w3.org/2000/svg"), tag_name)
+            .unwrap();
+        cursor.append_node(&element);
+    }
+
+    fn set_svg_attribute(name: &str, value: &str, cursor: &mut Self::Cursor) {
+        cursor.get_element().set_attribute(name, value).unwrap();
+    }
+
+    fn remove_svg_attribute(name: &str, cursor: &mut Self::Cursor) {
+        cursor.get_element().remove_attribute(name).unwrap();
+    }
+
+    fn set_xml_attribute(namespace: &str, name: &str, value: &str, cursor: &mut Self::Cursor) {
+        cursor
+            .get_element()
+            .set_attribute_ns(Some(namespace), name, value)
+            .unwrap();
+    }
+
+    fn remove_xml_attribute(namespace: &str, name: &str, cursor: &mut Self::Cursor) {
+        cursor
+            .get_element()
             .remove_attribute_ns(Some(namespace), name)
             .unwrap();
     }

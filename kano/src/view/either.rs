@@ -1,7 +1,7 @@
 //! Just a test for reactivity
 
 use crate::{
-    platform::{Cursor, Platform},
+    markup::{Cursor, Markup},
     View,
 };
 
@@ -11,10 +11,15 @@ pub enum Either<L, R> {
     Right(R),
 }
 
-impl<P: Platform, L: View<P>, R: View<P>> View<P> for Either<L, R> {
-    type State = State<P, L, R>;
+impl<P, M, L, R> View<P, M> for Either<L, R>
+where
+    M: Markup<P>,
+    L: View<P, M>,
+    R: View<P, M>,
+{
+    type State = State<P, M, L, R>;
 
-    fn init(self, cursor: &mut P::Cursor) -> Self::State {
+    fn init(self, cursor: &mut M::Cursor) -> Self::State {
         match self {
             Self::Left(left) => State {
                 state: Either::Left(left.init(cursor)),
@@ -25,7 +30,7 @@ impl<P: Platform, L: View<P>, R: View<P>> View<P> for Either<L, R> {
         }
     }
 
-    fn diff(self, state: &mut Self::State, cursor: &mut P::Cursor) {
+    fn diff(self, state: &mut Self::State, cursor: &mut M::Cursor) {
         match (&mut state.state, self) {
             (Either::Left(left_state), Either::Left(left)) => {
                 left.diff(left_state, cursor);
@@ -43,6 +48,6 @@ impl<P: Platform, L: View<P>, R: View<P>> View<P> for Either<L, R> {
     }
 }
 
-pub struct State<P: Platform, L: View<P>, R: View<P>> {
+pub struct State<P, M: Markup<P>, L: View<P, M>, R: View<P, M>> {
     state: Either<L::State, R::State>,
 }

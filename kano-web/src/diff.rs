@@ -6,9 +6,11 @@ use kano_html::{
     HtmlAttribute, HtmlElement,
 };
 
-use crate::{web_cursor::WebCursor, Web};
+use crate::{web_cursor::WebCursor, Html5, Web};
 
-impl<A: Props<HtmlAttribute> + DiffProps<Web>, C: Children<Web>> View<Web> for HtmlElement<A, C> {
+impl<A: Props<HtmlAttribute> + DiffProps<Web, Html5>, C: Children<Web, Html5>> View<Web, Html5>
+    for HtmlElement<A, C>
+{
     type State = State<A, C>;
 
     fn init(self, cursor: &mut WebCursor) -> Self::State {
@@ -25,12 +27,12 @@ impl<A: Props<HtmlAttribute> + DiffProps<Web>, C: Children<Web>> View<Web> for H
     }
 }
 
-pub struct State<A: DiffProps<Web>, C: Children<Web>> {
+pub struct State<A: DiffProps<Web, Html5>, C: Children<Web, Html5>> {
     props: A::State,
     children: C::State,
 }
 
-impl<const N: usize> DiffProps<Web> for [Option<HtmlAttribute>; N] {
+impl<const N: usize> DiffProps<Web, Html5> for [Option<HtmlAttribute>; N] {
     type State = (Self, HashMap<usize, gloo::events::EventListener>);
 
     fn init(self, cursor: &mut WebCursor) -> Self::State {

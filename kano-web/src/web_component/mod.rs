@@ -9,7 +9,7 @@ use wasm_bindgen::prelude::*;
 use web_sys::HtmlElement;
 
 use crate::web_cursor::Position;
-use crate::{Web, WebCursor};
+use crate::{Html5, Web, WebCursor};
 
 use self::properties::{read_props, ComponentProperties};
 use self::slot::Slot;
@@ -51,8 +51,8 @@ type HydrateFn = Rc<dyn Fn(Rc<RefCell<ComponentHandle>>, HtmlElement, HtmlElemen
 pub fn register_web_component<A, V, F>(func: F, config: ComponentConfig)
 where
     A: DeserializeAttribute,
-    V: View<Web> + 'static,
-    <V as View<Web>>::State: std::any::Any,
+    V: View<Web, Html5> + 'static,
+    <V as View<Web, Html5>>::State: std::any::Any,
     F: (Fn(Props<A>, Slot) -> V) + Copy + 'static,
 {
     let shadow = config.shadow.0;

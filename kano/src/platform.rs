@@ -1,14 +1,19 @@
-use std::{fmt::Debug, rc::Rc};
+use std::rc::Rc;
 
-use crate::{history::HistoryAPI, View};
+use crate::{history::HistoryAPI, markup::Markup, View};
 
+/// An underlying platform for Kano to run on.
 pub trait Platform: Sized + 'static {
-    type Cursor: Cursor;
+    /// The root markup language on this platform.
+    type Markup: Markup<Self>;
 
+    /// Initialize the platform.
     fn init(init: PlatformInit) -> PlatformContext;
 
+    /// Run an application on the platform.
+    ///
     /// This function _may_ block indefinitely, depending on the platform.
-    fn run(view: impl View<Self>, context: PlatformContext) -> anyhow::Result<()>;
+    fn run(view: impl View<Self, Self::Markup>, context: PlatformContext) -> anyhow::Result<()>;
 
     fn spawn_task(task: impl std::future::Future<Output = ()> + 'static);
 }
@@ -29,38 +34,19 @@ pub struct PlatformContext {
     pub history_api: Rc<dyn HistoryAPI>,
 }
 
-/// A cursor used to traverse the UI tree on a given platform.
-pub trait Cursor: Clone + Debug {
-    type TextHandle: 'static;
-    type EventHandle: 'static;
-
-    fn from_text_handle(handle: &Self::TextHandle) -> Self;
-
-    fn empty(&mut self);
-
-    fn text(&mut self, text: &str) -> Self::TextHandle;
-    fn update_text(&mut self, text: &str);
-
-    fn enter_children(&mut self);
-    fn exit_children(&mut self);
-    fn next_sibling(&mut self);
-    fn remove(&mut self);
-
-    fn replace(&mut self, func: impl FnOnce(&mut Self));
-}
-
 #[cfg(test)]
 pub(crate) mod test_platform {
     use std::rc::Rc;
 
     use crate::{history::HistoryState, View};
 
-    use super::{Cursor, PlatformContext, PlatformInit};
+    use super::{PlatformContext, PlatformInit};
+    use crate::markup::{Cursor, Markup};
 
     pub struct TestPlatform;
 
     impl super::Platform for TestPlatform {
-        type Cursor = ();
+        type Markup = ();
 
         fn init(init: PlatformInit) -> PlatformContext {
             PlatformContext {
@@ -71,11 +57,15 @@ pub(crate) mod test_platform {
             }
         }
 
-        fn run(_view: impl View<Self>, _context: PlatformContext) -> anyhow::Result<()> {
+        fn run(_view: impl View<Self, ()>, _context: PlatformContext) -> anyhow::Result<()> {
             Ok(())
         }
 
         fn spawn_task(_task: impl std::future::Future<Output = ()> + 'static) {}
+    }
+
+    impl Markup<TestPlatform> for () {
+        type Cursor = ();
     }
 
     impl Cursor for () {

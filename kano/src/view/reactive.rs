@@ -6,7 +6,7 @@ use std::{
 };
 
 use crate::{
-    platform::Platform,
+    markup::Markup,
     registry::{ViewCallback, REGISTRY},
     view_id::ViewId,
     View,
@@ -16,10 +16,16 @@ use crate::{
 /// and automatically connects the signals used within the function to automatic updates.
 pub struct Reactive<F>(pub F);
 
-impl<P: Platform, T: View<P> + 'static, F: (Fn() -> T) + 'static> View<P> for Reactive<F> {
-    type State = ReactiveState<P, T>;
+impl<P, M, V, F> View<P, M> for Reactive<F>
+where
+    P: 'static,
+    M: Markup<P>,
+    V: View<P, M> + 'static,
+    F: (Fn() -> V) + 'static,
+{
+    type State = ReactiveState<P, M, V>;
 
-    fn init(self, cursor: &mut P::Cursor) -> Self::State {
+    fn init(self, cursor: &mut M::Cursor) -> Self::State {
         let func = self.0;
         mk_reactive_state(
             Box::new(move |prev_state, cursor| {
@@ -34,7 +40,7 @@ impl<P: Platform, T: View<P> + 'static, F: (Fn() -> T) + 'static> View<P> for Re
         )
     }
 
-    fn diff(self, state: &mut Self::State, cursor: &mut P::Cursor) {
+    fn diff(self, state: &mut Self::State, cursor: &mut M::Cursor) {
         let view_id = state.view_id;
         let mut data_cell = state.data_cell.borrow_mut();
         if let Some(data) = data_cell.as_mut() {
@@ -49,11 +55,16 @@ impl<P: Platform, T: View<P> + 'static, F: (Fn() -> T) + 'static> View<P> for Re
     }
 }
 
-pub struct ReactiveState<P: Platform, T: View<P>> {
+pub struct ReactiveState<P, M: Markup<P>, V: View<P, M>> {
     view_id: ViewId,
-    data_cell: Rc<RefCell<Option<Data<P, T>>>>,
+    data_cell: Rc<RefCell<Option<Data<P, M, V>>>>,
 }
-impl<P: Platform, T: View<P> + 'static> ReactiveState<P, T> {
+impl<P, M, V> ReactiveState<P, M, V>
+where
+    P: 'static,
+    M: Markup<P>,
+    V: View<P, M> + 'static,
+{
     pub fn update_fn(&self) -> impl (Fn() -> bool) + Clone {
         let view_id = self.view_id;
         let callback = mk_reactive_callback(Rc::downgrade(&self.data_cell));
@@ -61,7 +72,11 @@ impl<P: Platform, T: View<P> + 'static> ReactiveState<P, T> {
     }
 }
 
-impl<P: Platform, T: View<P>> Clone for ReactiveState<P, T> {
+impl<P, M, V> Clone for ReactiveState<P, M, V>
+where
+    M: Markup<P>,
+    V: View<P, M>,
+{
     fn clone(&self) -> Self {
         Self {
             view_id: self.view_id,
@@ -70,13 +85,21 @@ impl<P: Platform, T: View<P>> Clone for ReactiveState<P, T> {
     }
 }
 
-struct Data<P: Platform, T: View<P>> {
-    actual_state: Option<T::State>,
-    update_func: Box<dyn Fn(Option<T::State>, &mut P::Cursor) -> T::State>,
-    cursor: P::Cursor,
+struct Data<P, M, V>
+where
+    M: Markup<P>,
+    V: View<P, M>,
+{
+    actual_state: Option<V::State>,
+    update_func: Box<dyn Fn(Option<V::State>, &mut M::Cursor) -> V::State>,
+    cursor: M::Cursor,
 }
 
-impl<P: Platform, T: View<P>> Drop for ReactiveState<P, T> {
+impl<P, M, V> Drop for ReactiveState<P, M, V>
+where
+    M: Markup<P>,
+    V: View<P, M>,
+{
     fn drop(&mut self) {
         REGISTRY.with_borrow_mut(|registry| {
             registry.on_reactive_dropped(self.view_id);
@@ -85,15 +108,20 @@ impl<P: Platform, T: View<P>> Drop for ReactiveState<P, T> {
     }
 }
 
-fn mk_reactive_state<P: Platform, T: View<P> + 'static>(
-    update_func: Box<dyn Fn(Option<T::State>, &mut P::Cursor) -> T::State>,
-    cursor: &mut P::Cursor,
-) -> ReactiveState<P, T> {
+fn mk_reactive_state<P, M, V>(
+    update_func: Box<dyn Fn(Option<V::State>, &mut M::Cursor) -> V::State>,
+    cursor: &mut M::Cursor,
+) -> ReactiveState<P, M, V>
+where
+    P: 'static,
+    M: Markup<P>,
+    V: View<P, M> + 'static,
+{
     let (view_id, data_cell) = REGISTRY.with_borrow_mut(|registry| {
         let view_id = registry.alloc_view_id();
 
         // Initialize this to None..
-        let data_cell: Rc<RefCell<Option<Data<P, T>>>> = Rc::new(RefCell::new(None));
+        let data_cell: Rc<RefCell<Option<Data<P, M, V>>>> = Rc::new(RefCell::new(None));
 
         // ..so we can make a weak reference to the cell
         // for the reactive callback (it should not own the view).
@@ -115,9 +143,14 @@ fn mk_reactive_state<P: Platform, T: View<P> + 'static>(
     ReactiveState { view_id, data_cell }
 }
 
-fn mk_reactive_callback<P: Platform, T: View<P> + 'static>(
-    weak_data_cell: Weak<RefCell<Option<Data<P, T>>>>,
-) -> ViewCallback {
+fn mk_reactive_callback<P, M, V>(
+    weak_data_cell: Weak<RefCell<Option<Data<P, M, V>>>>,
+) -> ViewCallback
+where
+    P: 'static,
+    M: Markup<P>,
+    V: View<P, M> + 'static,
+{
     Rc::new(move |view_id| {
         let Some(strong_data_cell) = weak_data_cell.upgrade() else {
             return false;
@@ -159,14 +192,14 @@ mod tests {
 
         let test_sig = Signal(1337);
 
-        let state0 = <Reactive<_> as View<TestPlatform>>::init(
+        let state0 = <Reactive<_> as View<TestPlatform, ()>>::init(
             Reactive(move || {
                 use_state(|| ()); // owned state
                 test_sig.register_reactive_dependency();
             }),
             &mut (),
         );
-        let _state1 = <Reactive<_> as View<TestPlatform>>::init(
+        let _state1 = <Reactive<_> as View<TestPlatform, ()>>::init(
             Reactive(move || {
                 use_state(|| ()); // owned state
                 test_sig.register_reactive_dependency();
@@ -198,12 +231,13 @@ mod tests {
     #[test]
     fn signal_reuse() {
         REGISTRY.with_borrow_mut(Registry::reset);
+        let signal_origin = REGISTRY.with_borrow(|reg| reg.peek_next_signal_id());
 
         let call_count = Rc::new(RefCell::new(0));
 
         let _state = {
             let call_count = call_count.clone();
-            <Reactive<_> as View<TestPlatform>>::init(
+            <Reactive<_> as View<TestPlatform, ()>>::init(
                 Reactive(move || {
                     // A dependency on its own state
                     use_state(|| ()).get();
@@ -218,7 +252,7 @@ mod tests {
 
         let (view_id, callback) = REGISTRY.with_borrow(|registry| {
             assert_eq!(
-                registry.peek_next_signal_id(),
+                registry.peek_next_signal_id() - signal_origin,
                 1,
                 "One signal has been allocated"
             );
@@ -234,7 +268,7 @@ mod tests {
 
         REGISTRY.with_borrow(|registry| {
             assert_eq!(
-                registry.peek_next_signal_id(),
+                registry.peek_next_signal_id() - signal_origin,
                 1,
                 "No signal has been allocated after callback invoke"
             );

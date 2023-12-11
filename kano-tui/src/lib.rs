@@ -5,6 +5,7 @@ use crossterm::{
     ExecutableCommand,
 };
 use kano::{
+    markup::Markup,
     platform::{PlatformContext, PlatformInit},
     vdom::vnode::VNodeRef,
 };
@@ -33,8 +34,12 @@ mod tui_state;
 
 pub struct Tui;
 
-impl kano::platform::Platform for Tui {
+impl Markup<Tui> for Tui {
     type Cursor = TuiCursor;
+}
+
+impl kano::platform::Platform for Tui {
+    type Markup = Self;
 
     fn init(init: PlatformInit) -> PlatformContext {
         PlatformContext {
@@ -59,7 +64,7 @@ impl kano::platform::Platform for Tui {
         }
     }
 
-    fn run(view: impl kano::View<Self>, context: PlatformContext) -> anyhow::Result<()> {
+    fn run(view: impl kano::View<Self, Self>, context: PlatformContext) -> anyhow::Result<()> {
         stdout().execute(EnterAlternateScreen)?;
         terminal::enable_raw_mode()?;
 

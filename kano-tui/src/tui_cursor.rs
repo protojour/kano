@@ -7,10 +7,12 @@ use kano::{
         vnode::VNodeRef,
     },
 };
+use kano_svg::SvgMarkup;
 
 use crate::{
     component::{ComponentData, Layout, Style},
     node_data::{NodeData, NodeKind},
+    Tui,
 };
 
 type NodeRef = VNodeRef<NodeData>;
@@ -60,7 +62,7 @@ impl Drop for TuiEventHandle {
     }
 }
 
-impl kano::platform::Cursor for TuiCursor {
+impl kano::markup::Cursor for TuiCursor {
     type TextHandle = NodeRef;
     type EventHandle = TuiEventHandle;
 
@@ -119,20 +121,20 @@ impl kano::platform::Cursor for TuiCursor {
     }
 }
 
-impl kano_svg::SvgCursor for TuiCursor {
-    fn svg_element(&mut self, _tag_name: &'static str) {
+impl SvgMarkup<Tui> for Tui {
+    fn svg_element(_tag_name: &'static str, cursor: &mut Self::Cursor) {
         // TODO: Not finished
-        self.set_component(Rc::new(ComponentData {
+        cursor.set_component(Rc::new(ComponentData {
             layout: Layout::Svg,
             style: Style::default(),
         }));
     }
 
-    fn set_svg_attribute(&mut self, _name: &str, _value: &str) {}
+    fn set_svg_attribute(_name: &str, _value: &str, _cursor: &mut Self::Cursor) {}
 
-    fn remove_svg_attribute(&mut self, _name: &str) {}
+    fn remove_svg_attribute(_name: &str, _cursor: &mut Self::Cursor) {}
 
-    fn set_xml_attribute(&mut self, _namespace: &str, _name: &str, _value: &str) {}
+    fn set_xml_attribute(_namespace: &str, _name: &str, _value: &str, _cursor: &mut Self::Cursor) {}
 
-    fn remove_xml_attribute(&mut self, _namespace: &str, _name: &str) {}
+    fn remove_xml_attribute(_namespace: &str, _name: &str, _cursor: &mut Self::Cursor) {}
 }
