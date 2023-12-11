@@ -7,7 +7,6 @@ use todo::{add_todo, delete_todo, Todo};
 kano::define_platform!(AppPlatform, View);
 kano::platform_use!(kano_basic_components as kbc);
 
-mod test_svg;
 mod todo;
 
 fn main() {
@@ -25,7 +24,7 @@ thread_local! {
         <kbc:layout>"This is page 1"</kbc:layout>
     })
     .route("/svg", || view! {
-        <test_svg:TestSvg />
+        <TestSvg />
     })
     .or_else(StartPage);
 }
@@ -115,4 +114,12 @@ fn TodoList(todos: State<Vec<Todo>>) -> impl View {
         }
         </kbc:unordered_list>
     }
+}
+
+pub fn TestSvg<P: Platform>() -> impl kano::View<P>
+where
+    P::Cursor: kano_svg::SvgCursor,
+{
+    // Source: https://commons.wikimedia.org/wiki/File:Test.svg
+    kano::svg_view!("resources/test.svg")
 }
