@@ -7,16 +7,14 @@ mod diff;
 use properties::{Property, XmlProperty};
 
 #[derive(Clone, Copy)]
-pub struct SvgElement<A, C> {
-    pub tag_name: &'static str,
+pub struct SvgRootElement<A, C> {
     pub props: SvgProps<A>,
     pub children: C,
 }
 
-impl<A, C> SvgElement<A, C> {
-    pub const fn new(tag_name: &'static str, props: A, children: C) -> Self {
+impl<A, C> SvgRootElement<A, C> {
+    pub const fn new(props: A, children: C) -> Self {
         Self {
-            tag_name,
             props: SvgProps(props),
             children,
         }
@@ -24,13 +22,13 @@ impl<A, C> SvgElement<A, C> {
 }
 
 #[derive(Clone, Copy)]
-pub struct SvgRootElement<A, C> {
+pub struct SvgElement<A, C> {
     pub tag_name: &'static str,
     pub props: SvgProps<A>,
     pub children: C,
 }
 
-impl<A, C> SvgRootElement<A, C> {
+impl<A, C> SvgElement<A, C> {
     pub const fn new(tag_name: &'static str, props: A, children: C) -> Self {
         Self {
             tag_name,
@@ -137,12 +135,12 @@ mod tests {
     use crate::{
         attr::{class, d, height, id, viewBox, width},
         svg::*,
-        SvgMarkup,
     };
-    use kano::{platform::Platform, view, View};
+    use kano::view;
 
-    pub fn _test_svg<P: Platform, M: SvgMarkup<P>>() -> impl View<P, M> {
-        view! {
+    #[test]
+    pub fn test_svg() {
+        let _ = view! {
             <svg id="icon" /*xmlns="http://www.w3.org/2000/svg"*/ width="32" height="32" viewBox="0 0 32 32">
                 <defs>
                     <style>".cls-1 { fill: none; }"</style>
@@ -151,6 +149,6 @@ mod tests {
                 <path d="M28,24H24V22h4V6H4V22H8v2H4a2.0021,2.0021,0,0,1-2-2V6A2.0021,2.0021,0,0,1,4,4H28a2.0021,2.0021,0,0,1,2,2V22A2.0021,2.0021,0,0,1,28,24Z"/>
                 <rect id="_Transparent_Rectangle_" /*data_name="&lt;Transparent Rectangle&gt;"*/ class="cls-1" width="32" height="32"/>
             </svg>
-        }
+        };
     }
 }

@@ -1,6 +1,11 @@
 use kano::Props;
 
-use crate::{SvgAttribute, SvgElement};
+use crate::{SvgAttribute, SvgElement, SvgRootElement};
+
+/// The `svg` SVG element.
+pub const fn svg<T: Props<SvgAttribute>, C>(props: T, children: C) -> SvgRootElement<T, C> {
+    SvgRootElement::new(props, children)
+}
 
 macro_rules! define_element {
     (($fn_name:ident, $tag_name:literal)) => {
@@ -103,7 +108,6 @@ define_elements!(
     (solidColor, "solidColor"),
     (stop, "stop"),
     (style, "style"),
-    (svg, "svg"),
     (switch, "switch"),
     (symbol, "symbol"),
     (tbreak, "tbreak"),

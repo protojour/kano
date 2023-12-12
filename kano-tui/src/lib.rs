@@ -9,6 +9,7 @@ use kano::{
     platform::{PlatformContext, PlatformInit},
     vdom::vnode::VNodeRef,
 };
+use kano_svg::Svg1_1;
 use node_data::{NodeData, NodeKind};
 use ratatui::{
     prelude::{CrosstermBackend, Terminal},
@@ -32,14 +33,22 @@ pub use ratatui;
 mod tui_cursor;
 mod tui_state;
 
+/// The TUI platform.
 pub struct Tui;
 
-impl Markup<Tui> for Tui {
+/// The TUI "markup language".
+pub struct Tml;
+
+impl Markup<Tui> for Tml {
+    type Cursor = TuiCursor;
+}
+
+impl Markup<Tui> for Svg1_1 {
     type Cursor = TuiCursor;
 }
 
 impl kano::platform::Platform for Tui {
-    type Markup = Self;
+    type Markup = Tml;
 
     fn init(init: PlatformInit) -> PlatformContext {
         PlatformContext {
@@ -64,7 +73,7 @@ impl kano::platform::Platform for Tui {
         }
     }
 
-    fn run(view: impl kano::View<Self, Self>, context: PlatformContext) -> anyhow::Result<()> {
+    fn run(view: impl kano::View<Self, Tml>, context: PlatformContext) -> anyhow::Result<()> {
         stdout().execute(EnterAlternateScreen)?;
         terminal::enable_raw_mode()?;
 

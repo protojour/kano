@@ -4,12 +4,12 @@ use kano::{prelude::platform::*, Empty};
 use kano_tui::{
     component::{Component, ComponentData, Layout, StateKeyed, Style},
     ratatui::style::{Color, Modifier},
-    Tui,
+    Tml, Tui,
 };
 
 use crate::{KBCAttr, To};
 
-pub fn layout(_: impl Props<Empty>, children: impl Children<Tui, Tui>) -> impl View<Tui, Tui> {
+pub fn layout(_: impl Props<Empty>, children: impl Children<Tui, Tml>) -> impl View<Tui, Tml> {
     Component {
         data: data("layout", || ComponentData {
             layout: Layout::Block,
@@ -20,7 +20,7 @@ pub fn layout(_: impl Props<Empty>, children: impl Children<Tui, Tui>) -> impl V
     }
 }
 
-pub fn paragraph(_: impl Props<Empty>, children: impl Children<Tui, Tui>) -> impl View<Tui, Tui> {
+pub fn paragraph(_: impl Props<Empty>, children: impl Children<Tui, Tml>) -> impl View<Tui, Tml> {
     Component {
         data: data("paragraph", || ComponentData {
             layout: Layout::Paragraph,
@@ -31,7 +31,7 @@ pub fn paragraph(_: impl Props<Empty>, children: impl Children<Tui, Tui>) -> imp
     }
 }
 
-pub fn strong(_: impl Props<Empty>, children: impl Children<Tui, Tui>) -> impl View<Tui, Tui> {
+pub fn strong(_: impl Props<Empty>, children: impl Children<Tui, Tml>) -> impl View<Tui, Tml> {
     Component {
         data: data("strong", || ComponentData {
             layout: Layout::Inline,
@@ -47,8 +47,8 @@ pub fn strong(_: impl Props<Empty>, children: impl Children<Tui, Tui>) -> impl V
 
 pub fn button(
     mut props: impl Props<KBCAttr>,
-    children: impl Children<Tui, Tui>,
-) -> impl View<Tui, Tui> {
+    children: impl Children<Tui, Tml>,
+) -> impl View<Tui, Tml> {
     let_props!({ KBCAttr::OnClick(on_click), KBCAttr::To(to) } = props);
 
     if let Some(To(location)) = to {
@@ -107,8 +107,8 @@ pub fn button(
 
 pub fn unordered_list(
     _: impl Props<Empty>,
-    children: impl Children<Tui, Tui>,
-) -> impl View<Tui, Tui> {
+    children: impl Children<Tui, Tml>,
+) -> impl View<Tui, Tml> {
     Component {
         data: data("unordered_list", || ComponentData {
             layout: Layout::Block,
@@ -119,7 +119,7 @@ pub fn unordered_list(
     }
 }
 
-pub fn list_item(_: impl Props<Empty>, children: impl Children<Tui, Tui>) -> impl View<Tui, Tui> {
+pub fn list_item(_: impl Props<Empty>, children: impl Children<Tui, Tml>) -> impl View<Tui, Tml> {
     Component {
         data: data("list_item", || ComponentData {
             layout: Layout::Paragraph,

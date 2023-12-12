@@ -10,6 +10,15 @@ pub trait Markup<P>: Sized + 'static {
     type Cursor: Cursor;
 }
 
+/// A trait that says that some [Markup] language `M` can be nested inside this markup language,
+/// and provides implementation of this for a specific [crate::platform::Platform] `P`.
+pub trait NestMarkup<P, M>: Markup<P> {
+    type Nested: Markup<P>;
+
+    fn nest(cursor: &mut Self::Cursor) -> <Self::Nested as Markup<P>>::Cursor;
+    fn unnest(nested: <Self::Nested as Markup<P>>::Cursor, original: &mut Self::Cursor);
+}
+
 /// A cursor used to traverse some markup language on a given [crate::platform::Platform].
 pub trait Cursor: Clone + Debug {
     type TextHandle: 'static;

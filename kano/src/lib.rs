@@ -176,10 +176,10 @@ macro_rules! define_platform {
 
         /// The concrete view trait for this application.
         #[cfg(feature = "tui")]
-        pub trait $view: kano::View<kano_tui::Tui, kano_tui::Tui> {}
+        pub trait $view: kano::View<kano_tui::Tui, kano_tui::Tml> {}
 
         #[cfg(feature = "tui")]
-        impl<V: kano::View<kano_tui::Tui, kano_tui::Tui>> $view for V {}
+        impl<V: kano::View<kano_tui::Tui, kano_tui::Tml>> $view for V {}
 
         /// Type alias for the current platform.
         #[cfg(feature = "web")]

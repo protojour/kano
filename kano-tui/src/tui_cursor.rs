@@ -2,17 +2,18 @@ use std::rc::Rc;
 
 use kano::{
     attr::{Click, On},
+    markup::NestMarkup,
     vdom::{
         vcursor::{Location, Mode, VCursor},
         vnode::VNodeRef,
     },
 };
-use kano_svg::SvgMarkup;
+use kano_svg::{Svg1_1, SvgMarkup};
 
 use crate::{
     component::{ComponentData, Layout, Style},
     node_data::{NodeData, NodeKind},
-    Tui,
+    Tml, Tui,
 };
 
 type NodeRef = VNodeRef<NodeData>;
@@ -121,7 +122,19 @@ impl kano::markup::Cursor for TuiCursor {
     }
 }
 
-impl SvgMarkup<Tui> for Tui {
+impl NestMarkup<Tui, Svg1_1> for Tml {
+    type Nested = Svg1_1;
+
+    fn nest(cursor: &mut Self::Cursor) -> TuiCursor {
+        cursor.clone()
+    }
+
+    fn unnest(nested: TuiCursor, original: &mut Self::Cursor) {
+        *original = nested;
+    }
+}
+
+impl SvgMarkup<Tui> for Svg1_1 {
     fn svg_element(_tag_name: &'static str, cursor: &mut Self::Cursor) {
         // TODO: Not finished
         cursor.set_component(Rc::new(ComponentData {

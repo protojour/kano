@@ -115,7 +115,7 @@ fn TodoList(todos: State<Vec<Todo>>) -> impl View {
     }
 }
 
-pub fn TestSvg<P, M: kano_svg::SvgMarkup<P>>() -> impl kano::View<P, M> {
+pub fn TestSvg() -> impl View {
     // Source: https://commons.wikimedia.org/wiki/File:Test.svg
     kano::svg_view!("resources/test.svg")
 }

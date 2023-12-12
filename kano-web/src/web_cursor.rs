@@ -3,7 +3,10 @@ use js_sys::wasm_bindgen::*;
 use kano_svg::SvgMarkup;
 use web_sys::{Element, EventTarget};
 
-use kano::attr::{Event, On};
+use kano::{
+    attr::{Event, On},
+    markup::NestMarkup,
+};
 
 use crate::{document, Html5, Svg1_1, Web};
 
@@ -199,39 +202,20 @@ impl kano::markup::Cursor for WebCursor {
     }
 }
 
-impl SvgMarkup<Web> for Svg1_1 {
-    fn svg_element(tag_name: &'static str, cursor: &mut Self::Cursor) {
-        let element = document()
-            .create_element_ns(Some("http://www.w3.org/2000/svg"), tag_name)
-            .unwrap();
-        cursor.append_node(&element);
+/// Ability for Html5 to transition into Svg markup
+impl NestMarkup<Web, Svg1_1> for Html5 {
+    type Nested = Svg1_1;
+
+    fn nest(cursor: &mut Self::Cursor) -> WebCursor {
+        cursor.clone()
     }
 
-    fn set_svg_attribute(name: &str, value: &str, cursor: &mut Self::Cursor) {
-        cursor.get_element().set_attribute(name, value).unwrap();
-    }
-
-    fn remove_svg_attribute(name: &str, cursor: &mut Self::Cursor) {
-        cursor.get_element().remove_attribute(name).unwrap();
-    }
-
-    fn set_xml_attribute(namespace: &str, name: &str, value: &str, cursor: &mut Self::Cursor) {
-        cursor
-            .get_element()
-            .set_attribute_ns(Some(namespace), name, value)
-            .unwrap();
-    }
-
-    fn remove_xml_attribute(namespace: &str, name: &str, cursor: &mut Self::Cursor) {
-        cursor
-            .get_element()
-            .remove_attribute_ns(Some(namespace), name)
-            .unwrap();
+    fn unnest(nested: WebCursor, original: &mut Self::Cursor) {
+        *original = nested;
     }
 }
 
-// FIXME: Should dynamically transition into this instead
-impl SvgMarkup<Web> for Html5 {
+impl SvgMarkup<Web> for Svg1_1 {
     fn svg_element(tag_name: &'static str, cursor: &mut Self::Cursor) {
         let element = document()
             .create_element_ns(Some("http://www.w3.org/2000/svg"), tag_name)

@@ -1,8 +1,8 @@
-use kano::{Children, DiffProps, View};
+use kano::{markup::NestMarkup, Children, DiffProps, View};
 
 use crate::{
     properties::{Property, PropertyValue},
-    SvgAttribute, SvgElement, SvgMarkup, SvgProps,
+    Svg1_1, SvgAttribute, SvgElement, SvgMarkup, SvgProps, SvgRootElement,
 };
 
 impl<P, M, A, C> View<P, M> for SvgElement<A, C>
@@ -24,6 +24,35 @@ where
     fn diff(self, state: &mut Self::State, cursor: &mut M::Cursor) {
         self.props.diff(&mut state.props, cursor);
         self.children.diff(&mut state.children, cursor);
+    }
+}
+
+impl<P, M, A, C> View<P, M> for SvgRootElement<A, C>
+where
+    M: NestMarkup<P, Svg1_1>,
+    <M as NestMarkup<P, Svg1_1>>::Nested: SvgMarkup<P>,
+    SvgProps<A>: DiffProps<P, M::Nested>,
+    C: Children<P, M::Nested>,
+{
+    type State = ElementState<P, M::Nested, A, C>;
+
+    fn init(self, cursor: &mut M::Cursor) -> Self::State {
+        let mut svg_cursor = M::nest(cursor);
+
+        M::Nested::svg_element("svg", &mut svg_cursor);
+        let props = self.props.init(&mut svg_cursor);
+        let children = self.children.init(&mut svg_cursor);
+
+        M::unnest(svg_cursor, cursor);
+
+        ElementState { props, children }
+    }
+
+    fn diff(self, state: &mut Self::State, cursor: &mut M::Cursor) {
+        let mut svg_cursor = M::nest(cursor);
+        self.props.diff(&mut state.props, &mut svg_cursor);
+        self.children.diff(&mut state.children, &mut svg_cursor);
+        M::unnest(svg_cursor, cursor);
     }
 }
 

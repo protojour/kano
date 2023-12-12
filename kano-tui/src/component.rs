@@ -16,7 +16,7 @@ use crate::{
     node_data::{NodeData, NodeKind},
     tui_cursor::TuiCursor,
     tui_state::TuiState,
-    Tui,
+    Tml, Tui,
 };
 
 #[derive(Clone)]
@@ -26,7 +26,7 @@ pub struct Component<C> {
     pub children: C,
 }
 
-impl<C: Children<Tui, Tui>> kano::View<Tui, Tui> for Component<C> {
+impl<C: Children<Tui, Tml>> kano::View<Tui, Tml> for Component<C> {
     type State = (Rc<ComponentData>, C::State);
 
     fn init(self, cursor: &mut TuiCursor) -> Self::State {
