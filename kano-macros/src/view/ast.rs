@@ -38,7 +38,7 @@ impl Parse for View {
                     }
 
                     Some(syn::Path {
-                        leading_colon: element.path.leading_colon.clone(),
+                        leading_colon: element.path.leading_colon,
                         segments: prefix_segments,
                     })
                 } else {
@@ -664,6 +664,7 @@ fn all_nodes_constant(nodes: &[Node]) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use pretty_assertions::assert_eq;
     use quote::quote;
     use syn::parse_quote;
 
@@ -691,10 +692,27 @@ mod tests {
         }
     }
 
+    fn const_html_element<A>(tag_name: &str, attrs_fn: A, children: Vec<Node>) -> Node
+    where
+        A: Fn(&str) -> Vec<Attr>,
+    {
+        let mut el = html_element(tag_name, attrs_fn, children);
+        el.constant = true;
+        el
+    }
+
+    #[allow(unused)]
     fn fragment(nodes: Vec<Node>) -> Node {
         Node {
             kind: NodeKind::Fragment(nodes),
             constant: false,
+        }
+    }
+
+    fn const_fragment(nodes: Vec<Node>) -> Node {
+        Node {
+            kind: NodeKind::Fragment(nodes),
+            constant: true,
         }
     }
 
@@ -716,10 +734,18 @@ mod tests {
         }
     }
 
+    #[allow(unused)]
     fn component(path: syn::Path, attrs: ComponentAttrs) -> Node {
         Node {
             kind: NodeKind::Component(Component { path, attrs }),
             constant: false,
+        }
+    }
+
+    fn const_component(path: syn::Path, attrs: ComponentAttrs) -> Node {
+        Node {
+            kind: NodeKind::Component(Component { path, attrs }),
+            constant: true,
         }
     }
 
@@ -733,8 +759,9 @@ mod tests {
 
     #[allow(unused)]
     fn html_attr(tag: &str, name: &str, value: AttrValue) -> Attr {
+        let ident = quote::format_ident!("{name}");
         Attr::KeyValue(KeyValueAttr {
-            key: parse_quote!(quote::format_ident!("{name}")),
+            key: parse_quote! { #ident },
             value,
         })
     }
@@ -745,7 +772,7 @@ mod tests {
             <p></p>
         })
         .unwrap();
-        assert_eq!(node, html_element("p", |_| vec![], vec![]));
+        assert_eq!(const_html_element("p", |_| vec![], vec![]), node);
     }
 
     #[test]
@@ -762,7 +789,7 @@ mod tests {
             <p/>
         })
         .unwrap();
-        assert_eq!(node, html_element("p", |_| vec![], vec![]));
+        assert_eq!(const_html_element("p", |_| vec![], vec![]), node);
     }
 
     #[test]
@@ -774,7 +801,7 @@ mod tests {
 
         assert_eq!(
             node,
-            component(
+            const_component(
                 syn::parse_quote! {
                     P
                 },
@@ -786,17 +813,17 @@ mod tests {
     #[test]
     fn parse_empty_component_with_path_self_closing() {
         let node: Node = html_parse(quote! {
-            <module::P/>
+            <module:P/>
         })
         .unwrap();
         assert_eq!(
-            node,
-            component(
+            const_component(
                 syn::parse_quote! {
                     module::P
                 },
                 ComponentAttrs::KeyValue(vec![])
-            )
+            ),
+            node,
         );
     }
 
@@ -810,15 +837,15 @@ mod tests {
         })
         .unwrap();
         assert_eq!(
-            node,
-            html_element(
+            const_html_element(
                 "p",
                 |_| vec![],
                 vec![
-                    html_element("strong", |_| vec![], vec![text("Strong")]),
+                    const_html_element("strong", |_| vec![], vec![text("Strong")]),
                     text("not strong")
                 ]
-            )
+            ),
+            node,
         );
     }
 
@@ -832,11 +859,11 @@ mod tests {
         })
         .unwrap();
         assert_eq!(
+            const_fragment(vec![
+                const_html_element("p", |_| vec![], vec![]),
+                const_html_element("div", |_| vec![], vec![])
+            ]),
             node,
-            fragment(vec![
-                html_element("p", |_| vec![], vec![]),
-                html_element("div", |_| vec![], vec![])
-            ])
         );
     }
 
@@ -849,8 +876,8 @@ mod tests {
         })
         .unwrap();
         assert_eq!(
+            html_element("p", |_| vec![], vec![text_var("variable")]),
             node,
-            html_element("p", |_| vec![], vec![text_var("variable")])
         );
     }
 
@@ -861,17 +888,17 @@ mod tests {
         })
         .unwrap();
         assert_eq!(
-            node,
             html_element(
                 "p",
                 |tag| vec![
                     html_attr(tag, "controls", AttrValue::ImplicitTrue),
                     html_attr(tag, "class", AttrValue::Literal(syn::parse_quote! { "b" })),
                     html_attr(tag, "dir", AttrValue::Literal(syn::parse_quote! { 42 })),
-                    html_attr(tag, "id", AttrValue::Block(syn::parse_quote! { foo })),
+                    html_attr(tag, "id", AttrValue::Block(syn::parse_quote! { {foo} })),
                 ],
                 vec![]
-            )
+            ),
+            node,
         );
     }
 
@@ -887,7 +914,6 @@ mod tests {
         })
         .unwrap();
         assert_eq!(
-            node,
             html_element(
                 "div",
                 |_| vec![],
@@ -897,20 +923,24 @@ mod tests {
                         arms: vec![
                             MatchArm {
                                 pat: syn::parse_quote! { true },
-                                node: fragment(vec![
-                                    html_element("p", |_| vec![], vec![]),
-                                    html_element("span", |_| vec![], vec![])
+                                node: const_fragment(vec![
+                                    const_html_element("p", |_| vec![], vec![]),
+                                    const_html_element("span", |_| vec![], vec![])
                                 ])
                             },
                             MatchArm {
                                 pat: syn::parse_quote! { false },
-                                node: fragment(vec![]),
+                                node: Node {
+                                    kind: NodeKind::None,
+                                    constant: true,
+                                },
                             }
                         ],
                     }),
                     constant: false,
                 }]
-            )
+            ),
+            node,
         );
     }
 
@@ -925,7 +955,6 @@ mod tests {
         })
         .unwrap();
         assert_eq!(
-            node,
             html_element(
                 "div",
                 |_| vec![],
@@ -939,13 +968,17 @@ mod tests {
                             },
                             MatchArm {
                                 pat: syn::parse_quote! { _ },
-                                node: fragment(vec![]),
+                                node: Node {
+                                    kind: NodeKind::None,
+                                    constant: true,
+                                },
                             }
                         ],
                     }),
                     constant: false,
                 }]
-            )
+            ),
+            node,
         );
     }
 
@@ -960,7 +993,6 @@ mod tests {
         })
         .unwrap();
         assert_eq!(
-            node,
             html_element(
                 "ul",
                 |_| vec![],
@@ -978,7 +1010,8 @@ mod tests {
                     }),
                     constant: false,
                 }]
-            )
+            ),
+            node,
         );
     }
 }

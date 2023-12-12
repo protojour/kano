@@ -55,7 +55,7 @@ fn generate_svg_view_node(node: SvgNode, root: bool) -> proc_macro2::TokenStream
                     .map(|prefix| quote::format_ident!("{prefix}"))
                     .map(|prefix| quote! { #prefix: });
 
-                let attr_ident = quote::format_ident!("{}", attr.name.local_name.replace("-", "_"));
+                let attr_ident = quote::format_ident!("{}", attr.name.local_name.replace('-', "_"));
                 let value = syn::LitStr::new(&attr.value, Span::call_site());
 
                 out.extend(quote! {
@@ -95,7 +95,7 @@ fn parse_svg(path: &Path) -> SvgNode {
     let nodes = parse_nodes(&mut it);
 
     if nodes.len() == 1 {
-        return nodes.into_iter().next().unwrap();
+        nodes.into_iter().next().unwrap()
     } else {
         panic!("No SVG node found");
     }
