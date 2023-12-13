@@ -92,11 +92,11 @@ where
     type DiffState = Self;
 
     fn init_const(self, cursor: &mut M::Cursor) -> Self::ConstState {
-        set_attributes::<P, M>(cursor, self.0.iter());
+        set_attributes::<P, M>(cursor, &self.0);
     }
 
     fn init_diff(self, cursor: &mut M::Cursor) -> Self::DiffState {
-        set_attributes::<P, M>(cursor, self.0.iter());
+        set_attributes::<P, M>(cursor, &self.0);
         self
     }
 
@@ -131,11 +131,12 @@ where
     }
 }
 
+#[inline(never)]
 fn set_attributes<'a, P, M: SvgMarkup<P>>(
     cursor: &mut M::Cursor,
-    it: impl Iterator<Item = &'a Option<SvgAttribute>>,
+    attributes: &[Option<SvgAttribute>],
 ) {
-    for attr in it {
+    for attr in attributes {
         match attr {
             Some(SvgAttribute::Svg(property)) => {
                 set_svg_attribute::<P, M>(cursor, property);
