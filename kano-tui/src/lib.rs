@@ -87,7 +87,7 @@ impl kano::platform::Platform for Tui {
         terminal.clear()?;
 
         let (mut cursor, root_node) = TuiCursor::new_root();
-        let state = view.init_diff(&mut cursor);
+        let state = view.init_const(&mut cursor);
         std::mem::forget(state);
 
         let mut tui_state = TuiState {
