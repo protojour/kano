@@ -19,15 +19,21 @@ impl<P: 'static, M: Markup<P>> Dyn<P, M> {
 }
 
 trait DynView<P, M: Markup<P>> {
-    fn init(&mut self, cursor: &mut M::Cursor) -> Box<dyn Any + 'static>;
+    fn init_const(&mut self, cursor: &mut M::Cursor) -> Box<dyn Any + 'static>;
+    fn init_diff(&mut self, cursor: &mut M::Cursor) -> Box<dyn Any + 'static>;
     fn diff(&mut self, state: &mut Box<dyn Any + 'static>, cursor: &mut M::Cursor);
 }
 
 impl<P, M: Markup<P>> View<P, M> for Dyn<P, M> {
-    type State = Box<dyn Any + 'static>;
+    type ConstState = Box<dyn Any + 'static>;
+    type DiffState = Box<dyn Any + 'static>;
 
-    fn init(mut self, cursor: &mut M::Cursor) -> Box<dyn Any + 'static> {
-        self.inner.init(cursor)
+    fn init_const(mut self, cursor: &mut M::Cursor) -> Box<dyn Any + 'static> {
+        self.inner.init_const(cursor)
+    }
+
+    fn init_diff(mut self, cursor: &mut M::Cursor) -> Box<dyn Any + 'static> {
+        self.inner.init_diff(cursor)
     }
 
     fn diff(mut self, state: &mut Box<dyn Any + 'static>, cursor: &mut M::Cursor) {
@@ -41,20 +47,26 @@ impl<P, M, V> DynView<P, M> for DynWrapper<V>
 where
     M: Markup<P>,
     V: View<P, M>,
-    <V as View<P, M>>::State: 'static,
+    <V as View<P, M>>::ConstState: 'static,
+    <V as View<P, M>>::DiffState: 'static,
 {
-    fn init(&mut self, cursor: &mut M::Cursor) -> Box<dyn Any + 'static> {
+    fn init_const(&mut self, cursor: &mut M::Cursor) -> Box<dyn Any + 'static> {
         let inner = self.0.take().unwrap();
-        Box::new(inner.init(cursor))
+        Box::new(inner.init_const(cursor))
+    }
+
+    fn init_diff(&mut self, cursor: &mut M::Cursor) -> Box<dyn Any + 'static> {
+        let inner = self.0.take().unwrap();
+        Box::new(inner.init_diff(cursor))
     }
 
     fn diff(&mut self, state: &mut Box<dyn Any + 'static>, cursor: &mut M::Cursor) {
         let inner = self.0.take().unwrap();
-        if let Some(state) = state.downcast_mut::<V::State>() {
+        if let Some(state) = state.downcast_mut::<V::DiffState>() {
             inner.diff(state, cursor);
         } else {
             cursor.replace(|cursor| {
-                *state = Box::new(inner.init(cursor));
+                *state = Box::new(inner.init_diff(cursor));
             });
         }
     }

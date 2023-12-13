@@ -40,7 +40,6 @@ impl WebCursor {
     pub fn on_event(&mut self, on_event: On<Event>) -> EventListener {
         match &mut self.position {
             Position::Node(element) => {
-                kano::log("on_event");
                 let event_target: &EventTarget = element.dyn_ref().unwrap();
                 let event_type = match on_event.event() {
                     Event::Click => "click",

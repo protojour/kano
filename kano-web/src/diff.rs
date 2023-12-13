@@ -11,31 +11,57 @@ use crate::{web_cursor::WebCursor, Html5, Web};
 impl<A: Props<HtmlAttribute> + DiffProps<Web, Html5>, C: Children<Web, Html5>> View<Web, Html5>
     for HtmlElement<A, C>
 {
-    type State = State<A, C>;
+    type ConstState = (A::ConstState, C::ConstState);
+    type DiffState = (A::DiffState, C::DiffState);
 
-    fn init(self, cursor: &mut WebCursor) -> Self::State {
+    fn init_const(self, cursor: &mut WebCursor) -> Self::ConstState {
         let _ = cursor.element(self.tag_name);
-        let props = self.props.init(cursor);
-        let children = self.children.init(cursor);
+        let props = self.props.init_const(cursor);
+        let children = self.children.init_const(cursor);
 
-        State { props, children }
+        (props, children)
     }
 
-    fn diff(self, state: &mut Self::State, cursor: &mut crate::WebCursor) {
-        self.props.diff(&mut state.props, cursor);
-        self.children.diff(&mut state.children, cursor);
-    }
-}
+    fn init_diff(self, cursor: &mut WebCursor) -> Self::DiffState {
+        let _ = cursor.element(self.tag_name);
+        let props = self.props.init_diff(cursor);
+        let children = self.children.init_diff(cursor);
 
-pub struct State<A: DiffProps<Web, Html5>, C: Children<Web, Html5>> {
-    props: A::State,
-    children: C::State,
+        (props, children)
+    }
+
+    fn diff(self, (props, children): &mut Self::DiffState, cursor: &mut crate::WebCursor) {
+        self.props.diff(props, cursor);
+        self.children.diff(children, cursor);
+    }
 }
 
 impl<const N: usize> DiffProps<Web, Html5> for [Option<HtmlAttribute>; N] {
-    type State = (Self, HashMap<usize, gloo::events::EventListener>);
+    /// The responsibility of the ConstState is to own the EventListeners
+    /// and keep them active as long as the element is visible:
+    type ConstState = Vec<gloo::events::EventListener>;
 
-    fn init(self, cursor: &mut WebCursor) -> Self::State {
+    type DiffState = (Self, HashMap<usize, gloo::events::EventListener>);
+
+    fn init_const(self, cursor: &mut WebCursor) -> Self::ConstState {
+        let mut listeners = vec![];
+
+        for prop in self.iter() {
+            match prop {
+                Some(HtmlAttribute::Event(on_event)) => {
+                    listeners.push(cursor.on_event(on_event.clone()));
+                }
+                Some(HtmlAttribute::Attribute(property)) => {
+                    set_html_attribute(cursor.get_element(), property);
+                }
+                _ => {}
+            }
+        }
+
+        listeners
+    }
+
+    fn init_diff(self, cursor: &mut WebCursor) -> Self::DiffState {
         let mut listeners = HashMap::new();
 
         for (index, prop) in self.iter().enumerate() {
@@ -53,7 +79,7 @@ impl<const N: usize> DiffProps<Web, Html5> for [Option<HtmlAttribute>; N] {
         (self, listeners)
     }
 
-    fn diff(self, (old_props, listeners): &mut Self::State, cursor: &mut WebCursor) {
+    fn diff(self, (old_props, listeners): &mut Self::DiffState, cursor: &mut WebCursor) {
         for (index, (new, state)) in self.into_iter().zip(old_props.iter_mut()).enumerate() {
             match (new, &state) {
                 (Some(HtmlAttribute::Event(on_event)), _) => {

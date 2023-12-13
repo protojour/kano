@@ -85,7 +85,7 @@ impl Platform for Web {
 
     fn run(view: impl kano::View<Self, Html5>, _context: PlatformContext) -> anyhow::Result<()> {
         let mut cursor = WebCursor::new_detached();
-        let state = view.init(&mut cursor);
+        let state = view.init_diff(&mut cursor);
 
         let Position::Node(node) = cursor.position else {
             return Err(anyhow!("No node rendered"));

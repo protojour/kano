@@ -23,9 +23,14 @@ where
     V: View<P, M> + 'static,
     F: (Fn() -> V) + 'static,
 {
-    type State = ReactiveState<P, M, V>;
+    type ConstState = ReactiveState<P, M, V>;
+    type DiffState = ReactiveState<P, M, V>;
 
-    fn init(self, cursor: &mut M::Cursor) -> Self::State {
+    fn init_const(self, cursor: &mut M::Cursor) -> Self::ConstState {
+        self.init_diff(cursor)
+    }
+
+    fn init_diff(self, cursor: &mut M::Cursor) -> Self::DiffState {
         let func = self.0;
         mk_reactive_state(
             Box::new(move |prev_state, cursor| {
@@ -33,14 +38,14 @@ where
                     func().diff(&mut state, cursor);
                     state
                 } else {
-                    func().init(cursor)
+                    func().init_diff(cursor)
                 }
             }),
             cursor,
         )
     }
 
-    fn diff(self, state: &mut Self::State, cursor: &mut M::Cursor) {
+    fn diff(self, state: &mut Self::DiffState, cursor: &mut M::Cursor) {
         let view_id = state.view_id;
         let mut data_cell = state.data_cell.borrow_mut();
         if let Some(data) = data_cell.as_mut() {
@@ -90,8 +95,8 @@ where
     M: Markup<P>,
     V: View<P, M>,
 {
-    actual_state: Option<V::State>,
-    update_func: Box<dyn Fn(Option<V::State>, &mut M::Cursor) -> V::State>,
+    actual_state: Option<V::DiffState>,
+    update_func: Box<dyn Fn(Option<V::DiffState>, &mut M::Cursor) -> V::DiffState>,
     cursor: M::Cursor,
 }
 
@@ -109,7 +114,7 @@ where
 }
 
 fn mk_reactive_state<P, M, V>(
-    update_func: Box<dyn Fn(Option<V::State>, &mut M::Cursor) -> V::State>,
+    update_func: Box<dyn Fn(Option<V::DiffState>, &mut M::Cursor) -> V::DiffState>,
     cursor: &mut M::Cursor,
 ) -> ReactiveState<P, M, V>
 where
@@ -192,14 +197,14 @@ mod tests {
 
         let test_sig = Signal(1337);
 
-        let state0 = <Reactive<_> as View<TestPlatform, ()>>::init(
+        let state0 = <Reactive<_> as View<TestPlatform, ()>>::init_diff(
             Reactive(move || {
                 use_state(|| ()); // owned state
                 test_sig.register_reactive_dependency();
             }),
             &mut (),
         );
-        let _state1 = <Reactive<_> as View<TestPlatform, ()>>::init(
+        let _state1 = <Reactive<_> as View<TestPlatform, ()>>::init_diff(
             Reactive(move || {
                 use_state(|| ()); // owned state
                 test_sig.register_reactive_dependency();
@@ -237,7 +242,7 @@ mod tests {
 
         let _state = {
             let call_count = call_count.clone();
-            <Reactive<_> as View<TestPlatform, ()>>::init(
+            <Reactive<_> as View<TestPlatform, ()>>::init_diff(
                 Reactive(move || {
                     // A dependency on its own state
                     use_state(|| ()).get();

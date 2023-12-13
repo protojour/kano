@@ -8,16 +8,21 @@ use crate::{
 pub struct Func<F, A>(pub F, pub A);
 
 impl<P, M: Markup<P>, V: View<P, M>, F: (FnOnce() -> V) + 'static> View<P, M> for Func<F, ()> {
-    type State = FuncState<P, M, V>;
+    type ConstState = FuncState<P, M, V>;
+    type DiffState = FuncState<P, M, V>;
 
-    fn init(self, cursor: &mut M::Cursor) -> Self::State {
+    fn init_const(self, cursor: &mut M::Cursor) -> Self::ConstState {
+        self.init_diff(cursor)
+    }
+
+    fn init_diff(self, cursor: &mut M::Cursor) -> Self::DiffState {
         let Func(func, ()) = self;
         let view_id = REGISTRY.with_borrow_mut(Registry::alloc_view_id);
-        let state = view_id.as_current_func(|| func().init(cursor));
+        let state = view_id.as_current_func(|| func().init_diff(cursor));
         FuncState { state, view_id }
     }
 
-    fn diff(self, state: &mut Self::State, cursor: &mut M::Cursor) {
+    fn diff(self, state: &mut Self::DiffState, cursor: &mut M::Cursor) {
         let Func(func, ()) = self;
         state.view_id.as_current_func(|| {
             func().diff(&mut state.state, cursor);
@@ -28,16 +33,21 @@ impl<P, M: Markup<P>, V: View<P, M>, F: (FnOnce() -> V) + 'static> View<P, M> fo
 macro_rules! tuples {
     ($(($a:ident, $i:tt)),+) => {
         impl<P, M: Markup<P>, V: View<P, M>, $($a),+, F: (FnOnce($($a),+) -> V) + 'static>  View<P, M> for Func<F, ($($a),+,)> {
-            type State = FuncState<P, M, V>;
+            type ConstState = FuncState<P, M, V>;
+            type DiffState = FuncState<P, M, V>;
 
-            fn init(self, cursor: &mut M::Cursor) -> Self::State {
+            fn init_const(self, cursor: &mut M::Cursor) -> Self::ConstState {
+                self.init_diff(cursor)
+            }
+
+            fn init_diff(self, cursor: &mut M::Cursor) -> Self::DiffState {
                 let Func(func, args) = self;
                 let view_id = REGISTRY.with_borrow_mut(Registry::alloc_view_id);
-                let state = view_id.as_current_func(|| func($(args.$i),+,).init(cursor));
+                let state = view_id.as_current_func(|| func($(args.$i),+,).init_diff(cursor));
                 FuncState { state, view_id }
             }
 
-            fn diff(self, state: &mut Self::State, cursor: &mut M::Cursor) {
+            fn diff(self, state: &mut Self::DiffState, cursor: &mut M::Cursor) {
                 let Func(func, args) = self;
                 state.view_id.as_current_func(|| {
                     func($(args.$i),+,).diff(&mut state.state, cursor);
@@ -65,7 +75,7 @@ tuples!(
 
 pub struct FuncState<P, M: Markup<P>, V: View<P, M>> {
     view_id: ViewId,
-    state: V::State,
+    state: V::DiffState,
 }
 
 impl<P, M: Markup<P>, V: View<P, M>> Drop for FuncState<P, M, V> {
@@ -91,7 +101,7 @@ mod tests {
     fn state_gc() {
         REGISTRY.with_borrow_mut(Registry::reset);
 
-        let func_state = <Func<_, _> as View<TestPlatform, ()>>::init(
+        let func_state = <Func<_, _> as View<TestPlatform, ()>>::init_diff(
             Func(
                 || {
                     use_state(|| 42);

@@ -6,14 +6,15 @@ use crate::{
 macro_rules! tuples {
     ($(($t:ident, $i:tt)),+) => {
         impl<P, M: Markup<P>, $($t: View<P, M>),+> Children<P, M> for ($($t),+,) {
-            type State = ($($t::State),+,);
+            type ConstState = ($($t::ConstState),+,);
+            type DiffState = ($($t::DiffState),+,);
 
-            fn init(self, cursor: &mut M::Cursor) -> Self::State {
+            fn init_const(self, cursor: &mut M::Cursor) -> Self::ConstState {
                 cursor.enter_children();
                 // let ret = ($(self.$i.init(cursor)),+,);
                 let ret = (
                     $({
-                        let item = self.$i.init(cursor);
+                        let item = self.$i.init_const(cursor);
                         cursor.next_sibling();
                         item
                     }),+,
@@ -22,7 +23,21 @@ macro_rules! tuples {
                 ret
             }
 
-            fn diff(self, state: &mut Self::State, cursor: &mut M::Cursor) {
+            fn init_diff(self, cursor: &mut M::Cursor) -> Self::DiffState {
+                cursor.enter_children();
+                // let ret = ($(self.$i.init(cursor)),+,);
+                let ret = (
+                    $({
+                        let item = self.$i.init_diff(cursor);
+                        cursor.next_sibling();
+                        item
+                    }),+,
+                );
+                cursor.exit_children();
+                ret
+            }
+
+            fn diff(self, state: &mut Self::DiffState, cursor: &mut M::Cursor) {
                 cursor.enter_children();
                 $(
                     self.$i.diff(&mut state.$i, cursor);

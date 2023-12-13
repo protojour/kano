@@ -52,7 +52,7 @@ pub fn register_web_component<A, V, F>(func: F, config: ComponentConfig)
 where
     A: DeserializeAttribute,
     V: View<Web, Html5> + 'static,
-    <V as View<Web, Html5>>::State: std::any::Any,
+    <V as View<Web, Html5>>::DiffState: std::any::Any,
     F: (Fn(Props<A>, Slot) -> V) + Copy + 'static,
 {
     let shadow = config.shadow.0;
@@ -67,7 +67,7 @@ where
                     let handle = handle.clone();
                     move || func(read_props::<A>(&handle.borrow().properties), Slot)
                 })
-                .init(&mut cursor);
+                .init_diff(&mut cursor);
 
                 let Position::Node(node) = cursor.position else {
                     panic!("No node rendered");

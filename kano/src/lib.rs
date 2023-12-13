@@ -29,26 +29,56 @@ use view::Reactive;
 
 /// A view is a UI node on a platform `P` defined by a markup language `M`.
 pub trait View<P, M: markup::Markup<P>> {
-    type State;
+    /// The state in a constant context
+    type ConstState;
 
-    fn init(self, cursor: &mut M::Cursor) -> Self::State;
-    fn diff(self, state: &mut Self::State, cursor: &mut M::Cursor);
+    /// The state in a diffable context
+    type DiffState;
+
+    /// Initialize the view without support for diffing.
+    fn init_const(self, cursor: &mut M::Cursor) -> Self::ConstState;
+
+    /// Initialize the view with support for diffing.
+    fn init_diff(self, cursor: &mut M::Cursor) -> Self::DiffState;
+
+    /// Apply a diff.
+    fn diff(self, state: &mut Self::DiffState, cursor: &mut M::Cursor);
 }
 
 /// The children of a [View] on a platform `P` defined by a markup language `M`.
 pub trait Children<P, M: markup::Markup<P>> {
-    type State;
+    /// The state in a constant context
+    type ConstState;
 
-    fn init(self, cursor: &mut M::Cursor) -> Self::State;
-    fn diff(self, state: &mut Self::State, cursor: &mut M::Cursor);
+    /// The state in a diffable context
+    type DiffState;
+
+    /// Initialize the children without support for diffing.
+    fn init_const(self, cursor: &mut M::Cursor) -> Self::ConstState;
+
+    /// Initialize the children with support for diffing.
+    fn init_diff(self, cursor: &mut M::Cursor) -> Self::DiffState;
+
+    /// Apply a diff.
+    fn diff(self, state: &mut Self::DiffState, cursor: &mut M::Cursor);
 }
 
 /// Perform diffing of a [View]'s properties on a platform `P` defined by a markup language `M`.
 pub trait DiffProps<P, M: markup::Markup<P>> {
-    type State;
+    /// The state in a constant context
+    type ConstState;
 
-    fn init(self, cursor: &mut M::Cursor) -> Self::State;
-    fn diff(self, state: &mut Self::State, cursor: &mut M::Cursor);
+    /// The state in a diffable context
+    type DiffState;
+
+    /// Initialize the props without support for diffing.
+    fn init_const(self, cursor: &mut M::Cursor) -> Self::ConstState;
+
+    /// Initialize the props with support for diffing.
+    fn init_diff(self, cursor: &mut M::Cursor) -> Self::DiffState;
+
+    /// Apply a diff.
+    fn diff(self, state: &mut Self::DiffState, cursor: &mut M::Cursor);
 }
 
 /// The Props trait marks properties passed into a view function.

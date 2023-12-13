@@ -17,21 +17,25 @@ where
     L: View<P, M>,
     R: View<P, M>,
 {
-    type State = State<P, M, L, R>;
+    type ConstState = Either<L::ConstState, R::ConstState>;
+    type DiffState = Either<L::DiffState, R::DiffState>;
 
-    fn init(self, cursor: &mut M::Cursor) -> Self::State {
+    fn init_const(self, cursor: &mut M::Cursor) -> Self::ConstState {
         match self {
-            Self::Left(left) => State {
-                state: Either::Left(left.init(cursor)),
-            },
-            Self::Right(right) => State {
-                state: Either::Right(right.init(cursor)),
-            },
+            Self::Left(left) => Either::Left(left.init_const(cursor)),
+            Self::Right(right) => Either::Right(right.init_const(cursor)),
         }
     }
 
-    fn diff(self, state: &mut Self::State, cursor: &mut M::Cursor) {
-        match (&mut state.state, self) {
+    fn init_diff(self, cursor: &mut M::Cursor) -> Self::DiffState {
+        match self {
+            Self::Left(left) => Either::Left(left.init_diff(cursor)),
+            Self::Right(right) => Either::Right(right.init_diff(cursor)),
+        }
+    }
+
+    fn diff(self, mut state: &mut Self::DiffState, cursor: &mut M::Cursor) {
+        match (&mut state, self) {
             (Either::Left(left_state), Either::Left(left)) => {
                 left.diff(left_state, cursor);
             }
@@ -39,15 +43,11 @@ where
                 right.diff(right_state, cursor);
             }
             (Either::Left(_), Either::Right(right)) => cursor.replace(|cursor| {
-                state.state = Either::Right(right.init(cursor));
+                *state = Either::Right(right.init_diff(cursor));
             }),
             (Either::Right(_), Either::Left(left)) => cursor.replace(|cursor| {
-                state.state = Either::Left(left.init(cursor));
+                *state = Either::Left(left.init_diff(cursor));
             }),
         }
     }
-}
-
-pub struct State<P, M: Markup<P>, L: View<P, M>, R: View<P, M>> {
-    state: Either<L::State, R::State>,
 }

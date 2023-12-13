@@ -27,19 +27,27 @@ pub struct Component<C> {
 }
 
 impl<C: Children<Tui, Tml>> kano::View<Tui, Tml> for Component<C> {
-    type State = (Rc<ComponentData>, C::State);
+    type ConstState = C::ConstState;
+    type DiffState = (Rc<ComponentData>, C::DiffState);
 
-    fn init(self, cursor: &mut TuiCursor) -> Self::State {
+    fn init_const(self, cursor: &mut TuiCursor) -> Self::ConstState {
+        cursor.set_component(self.data.clone());
+        cursor.set_on_click(self.on_click.clone());
+
+        self.children.init_const(cursor)
+    }
+
+    fn init_diff(self, cursor: &mut TuiCursor) -> Self::DiffState {
         cursor.set_component(self.data.clone());
 
         cursor.set_on_click(self.on_click.clone());
 
-        let children_state = self.children.init(cursor);
+        let children_state = self.children.init_diff(cursor);
 
         (self.data, children_state)
     }
 
-    fn diff(self, state: &mut Self::State, cursor: &mut TuiCursor) {
+    fn diff(self, state: &mut Self::DiffState, cursor: &mut TuiCursor) {
         cursor.set_on_click(self.on_click);
         self.children.diff(&mut state.1, cursor);
     }

@@ -5,13 +5,18 @@ use crate::markup::{Cursor, Markup};
 use crate::View;
 
 impl<P, M: Markup<P>> View<P, M> for &'static str {
-    type State = (<M::Cursor as Cursor>::TextHandle, &'static str);
+    type ConstState = ();
+    type DiffState = (<M::Cursor as Cursor>::TextHandle, &'static str);
 
-    fn init(self, cursor: &mut M::Cursor) -> Self::State {
+    fn init_const(self, cursor: &mut M::Cursor) -> Self::ConstState {
+        cursor.text(self);
+    }
+
+    fn init_diff(self, cursor: &mut M::Cursor) -> Self::DiffState {
         (cursor.text(self), self)
     }
 
-    fn diff(self, (handle, old): &mut Self::State, _cursor: &mut M::Cursor) {
+    fn diff(self, (handle, old): &mut Self::DiffState, _cursor: &mut M::Cursor) {
         if self != *old {
             let mut cursor = M::Cursor::from_text_handle(handle);
             cursor.update_text(self);
@@ -21,13 +26,18 @@ impl<P, M: Markup<P>> View<P, M> for &'static str {
 }
 
 impl<P, M: Markup<P>> View<P, M> for String {
-    type State = (<M::Cursor as Cursor>::TextHandle, String);
+    type ConstState = ();
+    type DiffState = (<M::Cursor as Cursor>::TextHandle, String);
 
-    fn init(self, cursor: &mut M::Cursor) -> Self::State {
+    fn init_const(self, cursor: &mut M::Cursor) -> Self::ConstState {
+        cursor.text(self.as_str());
+    }
+
+    fn init_diff(self, cursor: &mut M::Cursor) -> Self::DiffState {
         (cursor.text(self.as_str()), self)
     }
 
-    fn diff(self, (handle, old): &mut Self::State, _cursor: &mut M::Cursor) {
+    fn diff(self, (handle, old): &mut Self::DiffState, _cursor: &mut M::Cursor) {
         if self != *old {
             let mut cursor = M::Cursor::from_text_handle(handle);
             cursor.update_text(self.as_str());
@@ -41,16 +51,24 @@ impl<P, M: Markup<P>> View<P, M> for String {
 pub struct Fmt<T>(pub T);
 
 impl<P, M: Markup<P>, T: Display + 'static> View<P, M> for Fmt<T> {
-    type State = (<M::Cursor as Cursor>::TextHandle, String);
+    type ConstState = ();
+    type DiffState = (<M::Cursor as Cursor>::TextHandle, String);
 
-    fn init(self, cursor: &mut M::Cursor) -> Self::State {
+    fn init_const(self, cursor: &mut M::Cursor) -> Self::ConstState {
+        let mut string = String::new();
+        write!(&mut string, "{}", self.0).unwrap();
+
+        cursor.text(&string);
+    }
+
+    fn init_diff(self, cursor: &mut M::Cursor) -> Self::DiffState {
         let mut string = String::new();
         write!(&mut string, "{}", self.0).unwrap();
 
         (cursor.text(&string), string)
     }
 
-    fn diff(self, (handle, old): &mut Self::State, _cursor: &mut M::Cursor) {
+    fn diff(self, (handle, old): &mut Self::DiffState, _cursor: &mut M::Cursor) {
         let mut string = String::new();
         write!(&mut string, "{}", self.0).unwrap();
 

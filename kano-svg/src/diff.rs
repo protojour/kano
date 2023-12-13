@@ -5,28 +5,6 @@ use crate::{
     Svg1_1, SvgAttribute, SvgElement, SvgMarkup, SvgProps, SvgRootElement,
 };
 
-impl<P, M, A, C> View<P, M> for SvgElement<A, C>
-where
-    M: SvgMarkup<P>,
-    SvgProps<A>: DiffProps<P, M>,
-    C: Children<P, M>,
-{
-    type State = ElementState<P, M, A, C>;
-
-    fn init(self, cursor: &mut M::Cursor) -> Self::State {
-        M::svg_element(self.tag_name, cursor);
-        let props = self.props.init(cursor);
-        let children = self.children.init(cursor);
-
-        ElementState { props, children }
-    }
-
-    fn diff(self, state: &mut Self::State, cursor: &mut M::Cursor) {
-        self.props.diff(&mut state.props, cursor);
-        self.children.diff(&mut state.children, cursor);
-    }
-}
-
 impl<P, M, A, C> View<P, M> for SvgRootElement<A, C>
 where
     M: NestMarkup<P, Svg1_1>,
@@ -34,66 +12,95 @@ where
     SvgProps<A>: DiffProps<P, M::Nested>,
     C: Children<P, M::Nested>,
 {
-    type State = ElementState<P, M::Nested, A, C>;
+    type ConstState = (
+        <SvgProps<A> as DiffProps<P, M::Nested>>::ConstState,
+        C::ConstState,
+    );
+    type DiffState = (
+        <SvgProps<A> as DiffProps<P, M::Nested>>::DiffState,
+        C::DiffState,
+    );
 
-    fn init(self, cursor: &mut M::Cursor) -> Self::State {
-        let mut svg_cursor = M::nest(cursor);
+    fn init_const(self, outer_cursor: &mut M::Cursor) -> Self::ConstState {
+        let mut svg_cursor = M::nest(outer_cursor);
 
         M::Nested::svg_element("svg", &mut svg_cursor);
-        let props = self.props.init(&mut svg_cursor);
-        let children = self.children.init(&mut svg_cursor);
+        let props = self.props.init_const(&mut svg_cursor);
+        let children = self.children.init_const(&mut svg_cursor);
 
-        M::unnest(svg_cursor, cursor);
+        M::unnest(svg_cursor, outer_cursor);
 
-        ElementState { props, children }
+        (props, children)
     }
 
-    fn diff(self, state: &mut Self::State, cursor: &mut M::Cursor) {
+    fn init_diff(self, outer_cursor: &mut M::Cursor) -> Self::DiffState {
+        let mut svg_cursor = M::nest(outer_cursor);
+
+        M::Nested::svg_element("svg", &mut svg_cursor);
+        let props = self.props.init_diff(&mut svg_cursor);
+        let children = self.children.init_diff(&mut svg_cursor);
+
+        M::unnest(svg_cursor, outer_cursor);
+
+        (props, children)
+    }
+
+    fn diff(self, (props, children): &mut Self::DiffState, cursor: &mut M::Cursor) {
         let mut svg_cursor = M::nest(cursor);
-        self.props.diff(&mut state.props, &mut svg_cursor);
-        self.children.diff(&mut state.children, &mut svg_cursor);
+        self.props.diff(props, &mut svg_cursor);
+        self.children.diff(children, &mut svg_cursor);
         M::unnest(svg_cursor, cursor);
     }
 }
 
-pub struct ElementState<P, M, A, C>
+impl<P, M, A, C> View<P, M> for SvgElement<A, C>
 where
     M: SvgMarkup<P>,
     SvgProps<A>: DiffProps<P, M>,
     C: Children<P, M>,
 {
-    props: <SvgProps<A> as DiffProps<P, M>>::State,
-    children: C::State,
+    type ConstState = (<SvgProps<A> as DiffProps<P, M>>::ConstState, C::ConstState);
+    type DiffState = (<SvgProps<A> as DiffProps<P, M>>::DiffState, C::DiffState);
+
+    fn init_const(self, cursor: &mut M::Cursor) -> Self::ConstState {
+        M::svg_element(self.tag_name, cursor);
+        let props = self.props.init_const(cursor);
+        let children = self.children.init_const(cursor);
+
+        (props, children)
+    }
+
+    fn init_diff(self, cursor: &mut M::Cursor) -> Self::DiffState {
+        M::svg_element(self.tag_name, cursor);
+        let props = self.props.init_diff(cursor);
+        let children = self.children.init_diff(cursor);
+
+        (props, children)
+    }
+
+    fn diff(self, (props, children): &mut Self::DiffState, cursor: &mut M::Cursor) {
+        self.props.diff(props, cursor);
+        self.children.diff(children, cursor);
+    }
 }
 
 impl<P, M, const N: usize> DiffProps<P, M> for SvgProps<[Option<SvgAttribute>; N]>
 where
     M: SvgMarkup<P>,
 {
-    type State = Self;
+    type ConstState = ();
+    type DiffState = Self;
 
-    fn init(self, cursor: &mut M::Cursor) -> Self::State {
-        for attr in self.0.iter() {
-            match attr {
-                Some(SvgAttribute::Svg(property)) => {
-                    set_svg_attribute::<P, M>(cursor, property);
-                }
-                Some(SvgAttribute::Xml(property)) => {
-                    M::set_xml_attribute(
-                        property.namespace.url(),
-                        property.name,
-                        &property.value,
-                        cursor,
-                    );
-                }
-                _ => {}
-            }
-        }
+    fn init_const(self, cursor: &mut M::Cursor) -> Self::ConstState {
+        set_attributes::<P, M>(cursor, self.0.iter());
+    }
 
+    fn init_diff(self, cursor: &mut M::Cursor) -> Self::DiffState {
+        set_attributes::<P, M>(cursor, self.0.iter());
         self
     }
 
-    fn diff(self, old_props: &mut Self::State, cursor: &mut M::Cursor) {
+    fn diff(self, old_props: &mut Self::DiffState, cursor: &mut M::Cursor) {
         for (new, old) in self.0.into_iter().zip(&mut old_props.0) {
             match (new, old) {
                 (Some(SvgAttribute::Svg(new)), None) => {
@@ -120,6 +127,28 @@ where
                 }
                 _ => {}
             }
+        }
+    }
+}
+
+fn set_attributes<'a, P, M: SvgMarkup<P>>(
+    cursor: &mut M::Cursor,
+    it: impl Iterator<Item = &'a Option<SvgAttribute>>,
+) {
+    for attr in it {
+        match attr {
+            Some(SvgAttribute::Svg(property)) => {
+                set_svg_attribute::<P, M>(cursor, property);
+            }
+            Some(SvgAttribute::Xml(property)) => {
+                M::set_xml_attribute(
+                    property.namespace.url(),
+                    property.name,
+                    &property.value,
+                    cursor,
+                );
+            }
+            _ => {}
         }
     }
 }
