@@ -15,5 +15,5 @@ web-component = []
 kano = { version = "0.0.1", path = "../kano", features = ["vdom"] }
 kano-svg = { version = "0.0.1", path = "../kano-svg" }
 anyhow = "1"
-crossterm = "0.27.0"
-ratatui = "0.24.0"
+crossterm = "0.27"
+ratatui = "0.25"
