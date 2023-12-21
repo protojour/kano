@@ -17,3 +17,4 @@ routing = ["matchit"]
 kano-macros = { version = "0.0.1", path = "../kano-macros" }
 anyhow = "1"
 matchit = { version = "0.7", optional = true }
+fnv = "1"

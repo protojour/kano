@@ -1,8 +1,7 @@
-use std::collections::HashMap;
-
+use fnv::FnvHashMap;
 use kano::DeserializeAttribute;
 
-pub type ComponentProperties = HashMap<String, String>;
+pub type ComponentProperties = FnvHashMap<String, String>;
 
 pub fn read_props<A: DeserializeAttribute>(props: &ComponentProperties) -> Vec<Option<A>> {
     let mut output = vec![];

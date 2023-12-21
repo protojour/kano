@@ -1,4 +1,6 @@
-use std::collections::{BTreeSet, HashMap, HashSet};
+use std::collections::BTreeSet;
+
+use fnv::{FnvHashMap, FnvHashSet};
 
 use crate::registry::{ReactiveEntry, Registry, ViewCallback, REGISTRY};
 use crate::view_id::ViewId;
@@ -52,7 +54,7 @@ pub(crate) fn dispatch_pending_signals() {
 ///
 /// Each implicated subscriber will only be notified once,
 /// even if it subscribes to several of the signals.
-fn broadcast(signals: HashSet<Signal>) {
+fn broadcast(signals: FnvHashSet<Signal>) {
     let callbacks_by_view_id = REGISTRY.with_borrow(|registry| {
         let view_id_set: BTreeSet<ViewId> = signals
             .iter()
@@ -60,8 +62,8 @@ fn broadcast(signals: HashSet<Signal>) {
             .flat_map(|subscriptions| subscriptions.iter().cloned())
             .collect();
 
-        let mut checked_parents: HashMap<ViewId, bool> = HashMap::default();
-        let mut callbacks: HashMap<ViewId, ViewCallback> = Default::default();
+        let mut checked_parents: FnvHashMap<ViewId, bool> = FnvHashMap::default();
+        let mut callbacks: FnvHashMap<ViewId, ViewCallback> = Default::default();
 
         // The view_id_set is sorted, iterate over this _backwards_.
         // Reactive nodes deeper in the tree will be traversed before parents,
@@ -91,7 +93,7 @@ fn broadcast(signals: HashSet<Signal>) {
 fn check_parents(
     reactive_entry: &ReactiveEntry,
     view_id_set: &BTreeSet<ViewId>,
-    checked_parents: &mut HashMap<ViewId, bool>,
+    checked_parents: &mut FnvHashMap<ViewId, bool>,
     registry: &Registry,
 ) -> bool {
     if let Some(reactive_parent) = reactive_entry.reactive_parent {
@@ -167,7 +169,7 @@ mod tests {
         });
         parent1.as_current_reactive(|| signals[2].register_reactive_dependency());
 
-        broadcast(HashSet::from(signals));
+        broadcast(FnvHashSet::from_iter(signals));
 
         assert_eq!(
             &*tester.notified_views.borrow(),
@@ -199,7 +201,7 @@ mod tests {
         });
         parent1.as_current_reactive(|| signals[2].register_reactive_dependency());
 
-        broadcast(HashSet::from(signals));
+        broadcast(FnvHashSet::from_iter(signals));
 
         assert_eq!(
             &*tester.notified_views.borrow(),

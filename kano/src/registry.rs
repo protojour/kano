@@ -1,13 +1,13 @@
-#![allow(unused_imports, unused_mut, dead_code)]
-
 use std::any::Any;
 use std::cell::RefCell;
-use std::collections::{BTreeSet, HashMap, HashSet};
+use std::collections::BTreeSet;
 use std::fmt::Debug;
 use std::ops::AddAssign;
 use std::rc::Rc;
 
-use crate::history::{self, History, HistoryAPI, HistoryState};
+use fnv::{FnvHashMap, FnvHashSet};
+
+use crate::history::{HistoryAPI, HistoryState};
 use crate::signal::Signal;
 use crate::view_id::ViewId;
 
@@ -20,18 +20,18 @@ pub(crate) struct Registry {
     pub initialized: bool,
 
     pub platform_on_signal_tick: Option<Rc<dyn Fn()>>,
-    pub pending_signals: HashSet<Signal>,
+    pub pending_signals: FnvHashSet<Signal>,
 
-    pub subscriptions_by_signal: HashMap<Signal, BTreeSet<ViewId>>,
-    pub subscriptions_by_view: HashMap<ViewId, BTreeSet<Signal>>,
+    pub subscriptions_by_signal: FnvHashMap<Signal, BTreeSet<ViewId>>,
+    pub subscriptions_by_view: FnvHashMap<ViewId, BTreeSet<Signal>>,
 
     pub current_reactive_view: Option<ViewId>,
     pub current_func_view: Option<ViewId>,
     pub current_func_view_signal_tracker: usize,
 
-    pub reactive_entries: HashMap<ViewId, ReactiveEntry>,
-    pub owned_signals_ordered: HashMap<ViewId, Vec<Signal>>,
-    pub state_values: HashMap<Signal, Rc<RefCell<dyn Any>>>,
+    pub reactive_entries: FnvHashMap<ViewId, ReactiveEntry>,
+    pub owned_signals_ordered: FnvHashMap<ViewId, Vec<Signal>>,
+    pub state_values: FnvHashMap<Signal, Rc<RefCell<dyn Any>>>,
 
     pub globals: Globals,
 }
@@ -178,7 +178,7 @@ impl Registry {
     }
 }
 
-fn remove_set_entry<K, V>(from_map: &mut HashMap<K, BTreeSet<V>>, key: &K, value: &V)
+fn remove_set_entry<K, V>(from_map: &mut FnvHashMap<K, BTreeSet<V>>, key: &K, value: &V)
 where
     K: Eq + core::hash::Hash + Debug,
     V: Ord,

@@ -1,5 +1,4 @@
-use std::collections::HashMap;
-
+use fnv::FnvHashMap;
 use kano::{Children, DiffProps, Props, View};
 use kano_html::{
     properties::{Property, PropertyValue},
@@ -41,7 +40,7 @@ impl<const N: usize> DiffProps<Web, Html5> for [Option<HtmlAttribute>; N] {
     /// and keep them active as long as the element is visible:
     type ConstState = Vec<gloo::events::EventListener>;
 
-    type DiffState = (Self, HashMap<usize, gloo::events::EventListener>);
+    type DiffState = (Self, FnvHashMap<usize, gloo::events::EventListener>);
 
     fn init_const(self, cursor: &mut WebCursor) -> Self::ConstState {
         let mut listeners = vec![];
@@ -62,7 +61,7 @@ impl<const N: usize> DiffProps<Web, Html5> for [Option<HtmlAttribute>; N] {
     }
 
     fn init_diff(self, cursor: &mut WebCursor) -> Self::DiffState {
-        let mut listeners = HashMap::new();
+        let mut listeners = FnvHashMap::default();
 
         for (index, prop) in self.iter().enumerate() {
             match prop {
