@@ -1,12 +1,13 @@
 #![allow(clippy::type_complexity)]
 
 use std::{
+    any::Any,
     cell::RefCell,
     rc::{Rc, Weak},
 };
 
 use crate::{
-    markup::Markup,
+    markup::{Cursor, Markup},
     registry::{ViewCallback, REGISTRY},
     view_id::ViewId,
     View,
@@ -23,8 +24,8 @@ where
     V: View<P, M> + 'static,
     F: (Fn() -> V) + 'static,
 {
-    type ConstState = ReactiveState<P, M, V>;
-    type DiffState = ReactiveState<P, M, V>;
+    type ConstState = ReactiveState<P, M>;
+    type DiffState = ReactiveState<P, M>;
 
     fn init_const(self, cursor: &mut M::Cursor) -> Self::ConstState {
         self.init_diff(cursor)
@@ -34,11 +35,14 @@ where
         let func = self.0;
         mk_reactive_state(
             Box::new(move |prev_state, cursor| {
-                if let Some(mut state) = prev_state {
-                    func().diff(&mut state, cursor);
-                    state
+                // note: This function is called when the reactive view needs to update itself
+
+                if let Some(inner_state) = prev_state {
+                    func().diff(inner_state.downcast_mut::<V::DiffState>().unwrap(), cursor);
+                    None
                 } else {
-                    func().init_diff(cursor)
+                    let state = func().init_diff(cursor);
+                    Some(Box::new(state))
                 }
             }),
             cursor,
@@ -46,30 +50,42 @@ where
     }
 
     fn diff(self, state: &mut Self::DiffState, cursor: &mut M::Cursor) {
-        let view_id = state.view_id;
+        // note: This is called when there is an _external_ reason for the reactive view to update.
+
         let mut data_cell = state.data_cell.borrow_mut();
-        if let Some(data) = data_cell.as_mut() {
-            if let Some(actual_state) = data.actual_state.as_mut() {
-                view_id.as_current_reactive(|| (self.0)().diff(actual_state, cursor));
-            } else {
-                panic!("No actual state");
-            }
+        let data = data_cell.as_mut().expect("No data cell");
+
+        if let Some(inner_state) = data.boxed_state.downcast_mut::<V::DiffState>() {
+            let func = self.0;
+            state
+                .view_id
+                .as_current_reactive(|| func().diff(inner_state, cursor));
         } else {
-            panic!("No data cell");
+            drop(data_cell);
+
+            // Since the reactive state is not type-dependent on the inner state `V::DiffState`,
+            // We may be in a situation where this is logically a different view than before,
+            // but the external state holder was not able to distinguish a type change in state.
+            // Now just replace/re-init and the reactive state will receive a new ViewId
+            // (this will invoke mk_reactive_state).
+            cursor.replace(|cursor| {
+                let new_state = self.init_diff(cursor);
+                // Overwrite the whole state; this drops the old ViewId:
+                *state = new_state;
+            });
         }
     }
 }
 
-pub struct ReactiveState<P, M: Markup<P>, V: View<P, M>> {
+pub struct ReactiveState<P, M: Markup<P>> {
     view_id: ViewId,
-    data_cell: Rc<RefCell<Option<Data<P, M, V>>>>,
+    data_cell: Rc<RefCell<Option<Data<P, M>>>>,
 }
 
-impl<P, M, V> ReactiveState<P, M, V>
+impl<P, M> ReactiveState<P, M>
 where
     P: 'static,
     M: Markup<P>,
-    V: View<P, M> + 'static,
 {
     pub fn update_fn(&self) -> impl (Fn() -> bool) + Clone {
         let view_id = self.view_id;
@@ -78,10 +94,9 @@ where
     }
 }
 
-impl<P, M, V> Clone for ReactiveState<P, M, V>
+impl<P, M> Clone for ReactiveState<P, M>
 where
     M: Markup<P>,
-    V: View<P, M>,
 {
     fn clone(&self) -> Self {
         Self {
@@ -91,20 +106,9 @@ where
     }
 }
 
-struct Data<P, M, V>
+impl<P, M> Drop for ReactiveState<P, M>
 where
     M: Markup<P>,
-    V: View<P, M>,
-{
-    actual_state: Option<V::DiffState>,
-    update_func: Box<dyn Fn(Option<V::DiffState>, &mut M::Cursor) -> V::DiffState>,
-    cursor: M::Cursor,
-}
-
-impl<P, M, V> Drop for ReactiveState<P, M, V>
-where
-    M: Markup<P>,
-    V: View<P, M>,
 {
     fn drop(&mut self) {
         REGISTRY.with_borrow_mut(|registry| {
@@ -114,17 +118,26 @@ where
     }
 }
 
-fn mk_reactive_state<P, M, V>(
-    update_func: Box<dyn Fn(Option<V::DiffState>, &mut M::Cursor) -> V::DiffState>,
+struct Data<P, M>
+where
+    M: Markup<P>,
+{
+    boxed_state: Box<dyn Any>,
+    update_func: Box<dyn Fn(Option<&mut dyn Any>, &mut M::Cursor) -> Option<Box<dyn Any>>>,
+    cursor: M::Cursor,
+}
+
+#[inline(never)]
+fn mk_reactive_state<P, M>(
+    update_func: Box<dyn Fn(Option<&mut dyn Any>, &mut M::Cursor) -> Option<Box<dyn Any>>>,
     cursor: &mut M::Cursor,
-) -> ReactiveState<P, M, V>
+) -> ReactiveState<P, M>
 where
     P: 'static,
     M: Markup<P>,
-    V: View<P, M> + 'static,
 {
     // Initialize this to None..
-    let data_cell: Rc<RefCell<Option<Data<P, M, V>>>> = Rc::new(RefCell::new(None));
+    let data_cell: Rc<RefCell<Option<Data<P, M>>>> = Rc::new(RefCell::new(None));
 
     let view_id = REGISTRY.with_borrow_mut(|registry| {
         let view_id = registry.alloc_view_id();
@@ -137,11 +150,13 @@ where
     });
 
     // Perform the initial "hydration" while registering reactive subscriptions
-    let actual_state = view_id.as_current_reactive(|| update_func(None, cursor));
+    let boxed_state = view_id
+        .as_current_reactive(|| update_func(None, cursor))
+        .expect("no initial state");
 
     // Now all information is ready to store the data, including the cursor.
     *data_cell.borrow_mut() = Some(Data {
-        actual_state: Some(actual_state),
+        boxed_state,
         update_func,
         cursor: cursor.clone(),
     });
@@ -149,13 +164,10 @@ where
     ReactiveState { view_id, data_cell }
 }
 
-fn mk_reactive_callback<P, M, V>(
-    weak_data_cell: Weak<RefCell<Option<Data<P, M, V>>>>,
-) -> ViewCallback
+fn mk_reactive_callback<P, M>(weak_data_cell: Weak<RefCell<Option<Data<P, M>>>>) -> ViewCallback
 where
     P: 'static,
     M: Markup<P>,
-    V: View<P, M> + 'static,
 {
     Rc::new(move |view_id| {
         let Some(strong_data_cell) = weak_data_cell.upgrade() else {
@@ -165,14 +177,9 @@ where
         let mut data_mut_borrow = strong_data_cell.borrow_mut();
         let data = Option::unwrap(data_mut_borrow.as_mut());
 
-        {
-            let old_state = data.actual_state.take();
-
-            let new_state =
-                view_id.as_current_reactive(|| (data.update_func)(old_state, &mut data.cursor));
-
-            data.actual_state = Some(new_state);
-        }
+        view_id.as_current_reactive(|| {
+            (data.update_func)(Some(data.boxed_state.as_mut()), &mut data.cursor)
+        });
 
         true
     })
