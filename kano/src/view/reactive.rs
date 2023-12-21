@@ -64,6 +64,7 @@ pub struct ReactiveState<P, M: Markup<P>, V: View<P, M>> {
     view_id: ViewId,
     data_cell: Rc<RefCell<Option<Data<P, M, V>>>>,
 }
+
 impl<P, M, V> ReactiveState<P, M, V>
 where
     P: 'static,
@@ -122,17 +123,17 @@ where
     M: Markup<P>,
     V: View<P, M> + 'static,
 {
-    let (view_id, data_cell) = REGISTRY.with_borrow_mut(|registry| {
-        let view_id = registry.alloc_view_id();
+    // Initialize this to None..
+    let data_cell: Rc<RefCell<Option<Data<P, M, V>>>> = Rc::new(RefCell::new(None));
 
-        // Initialize this to None..
-        let data_cell: Rc<RefCell<Option<Data<P, M, V>>>> = Rc::new(RefCell::new(None));
+    let view_id = REGISTRY.with_borrow_mut(|registry| {
+        let view_id = registry.alloc_view_id();
 
         // ..so we can make a weak reference to the cell
         // for the reactive callback (it should not own the view).
         registry.add_reactive_view(view_id, mk_reactive_callback(Rc::downgrade(&data_cell)));
 
-        (view_id, data_cell.clone())
+        view_id
     });
 
     // Perform the initial "hydration" while registering reactive subscriptions
